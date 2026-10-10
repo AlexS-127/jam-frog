@@ -41,6 +41,8 @@ export interface AnswerEngineDeps {
 }
 
 const BEATS_PER_BAR = 4;
+/** Time allowed for generating answer candidates. */
+const PLAN_BUDGET_MS = 60;
 /** While Live sends bars, the backup clock only steps in if a bar is this late (Live stopped). */
 const BACKUP_SLACK = 1.25;
 
@@ -272,7 +274,7 @@ export class AnswerEngine {
 
   private phraseKey(): string {
     const s = this.d.settings();
-    return `${this.phrase.map((c) => c.name).join(' ')}|${s.weirdness}|${s.genre}|${s.phraseBars}`;
+    return `${this.d.model.name}|${this.phrase.map((c) => c.name).join(' ')}|${s.weirdness}|${s.genre}|${s.phraseBars}`;
   }
 
   /** Plan in the background after each chord, so the answer is ready the moment the phrase ends. */
@@ -297,7 +299,9 @@ export class AnswerEngine {
     const prior = priorFor(this.d.model, s.genre);
     const cands: { chords: ChordSymbol[]; score: number }[] = [];
     const seen = new Set<string>();
-    for (let k = 0; k < this.candidates; k++) {
+    // Stop early if the model is slow (the GRU), so planning never stalls the overlay: at least 8 candidates.
+    const deadline = this.now() + PLAN_BUDGET_MS;
+    for (let k = 0; k < this.candidates && (k < 8 || this.now() < deadline); k++) {
       const ctx = [...this.history];
       const chords: ChordSymbol[] = [];
       let logp = 0;

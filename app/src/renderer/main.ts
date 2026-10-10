@@ -2,10 +2,14 @@ import { AnswerEngine, type AnswerProgress } from '../core/answer';
 import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
 import { buildMidi, keepFileName } from '../core/keep';
+import { cached } from '../core/cached';
+import { GruModel, type GruWeights } from '../core/gru';
+import type { ChordModel } from '../core/model';
 import { NgramModel } from '../core/ngram';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord } from '../core/types';
 import { GENRES } from '../core/vocab';
+import gruText from '../../../model/export/gru_weights.json?raw';
 import ngramText from '../../../model/export/ngram.json?raw';
 import type { NgramJson } from '../core/ngram';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
@@ -27,7 +31,20 @@ const weirdInput = $<HTMLInputElement>('weird');
 const answersOn = $<HTMLInputElement>('answersOn');
 const phraseSel = $<HTMLSelectElement>('phrase');
 
-const model = new NgramModel(JSON.parse(ngramText) as NgramJson);
+// Both models behind the same ChordModel interface; the Model picker switches between them.
+// The GRU only replaces the n-gram for good if it also wins the listening test.
+const models: Record<string, ChordModel> = {
+  ngram: cached(new NgramModel(JSON.parse(ngramText) as NgramJson)),
+  gru: cached(new GruModel(JSON.parse(gruText) as GruWeights)),
+};
+const modelSel = $<HTMLSelectElement>('model');
+const model: ChordModel = {
+  get name() {
+    return models[modelSel.value].name;
+  },
+  predictNext: (context, genre) => models[modelSel.value].predictNext(context, genre),
+};
+modelSel.onchange = () => showSuggestions();
 const history: Chord[] = [];
 for (const g of ['all', ...GENRES]) genreSel.add(new Option(g, g));
 weirdInput.oninput = () => {

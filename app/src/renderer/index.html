@@ -30,6 +30,12 @@
         <label class="ports-only">From Ableton <select id="input"></select></label>
         <label class="ports-only">To frog track <select id="output"></select></label>
         <label>BPM <input id="bpm" type="number" min="40" max="240" value="120" /></label>
+        <label>Model
+          <select id="model">
+            <option value="ngram">n-gram</option>
+            <option value="gru">GRU</option>
+          </select>
+        </label>
         <label>Genre <select id="genre"></select></label>
         <label>Frog answers <input id="answersOn" type="checkbox" checked /></label>
         <button id="keep" class="keep" title="Save your last phrase and the frog's answer as a .mid file">Keep 🐸</button>

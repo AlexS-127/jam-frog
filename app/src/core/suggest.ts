@@ -22,8 +22,9 @@ const priors = new WeakMap<ChordModel, Map<string, Float32Array>>();
 export function priorFor(model: ChordModel, genre: string): Float32Array {
   let byGenre = priors.get(model);
   if (!byGenre) priors.set(model, (byGenre = new Map()));
-  let p = byGenre.get(genre);
-  if (!p) byGenre.set(genre, (p = model.predictNext([BOS], genre)));
+  const key = `${model.name}|${genre}`; // name too: a switchable model wrapper keeps one identity
+  let p = byGenre.get(key);
+  if (!p) byGenre.set(key, (p = model.predictNext([BOS], genre)));
   return p;
 }
 
