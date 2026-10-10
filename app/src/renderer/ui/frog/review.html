@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jam Frog Frame Review</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 24px; background: #101b14; color: #e8f3e6; font: 13px system-ui; }
+      a { color: #b4e79b; }
+      h1 { font-size: 22px; }
+      h2 { margin: 16px 0 8px; font-size: 14px; }
+      .frames { display: flex; gap: 8px; flex-wrap: wrap; }
+      figure { margin: 0; }
+      canvas { display: block; width: 128px; height: 144px; image-rendering: pixelated;
+        background: repeating-conic-gradient(#203728 0% 25%, #314a36 0% 50%) 0 0 / 16px 16px; }
+      figcaption { padding-top: 4px; color: #a8bca6; }
+    </style>
+  </head>
+  <body>
+    <h1>Jam Frog · frame review</h1>
+    <p>All used frames, with the same scale and foot anchor as the pet renderer. <a href="../demo.html">Back to demo</a></p>
+    <main id="frames"></main>
+    <script type="module" src="./review.ts"></script>
+  </body>
+</html>
