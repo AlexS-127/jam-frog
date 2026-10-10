@@ -68,10 +68,11 @@ export const QUALITY_INTERVALS: Record<Quality, number[]> = {
   dom7: [0, 4, 7, 10],
   maj7: [0, 4, 7, 11],
   min7: [0, 3, 7, 10],
+  pow: [0, 7, 12],
 };
 
 const QUALITY_SUFFIX: Record<Quality, string> = {
-  maj: '', min: 'm', dim: 'dim', aug: 'aug', sus: 'sus4', dom7: '7', maj7: 'maj7', min7: 'm7',
+  maj: '', min: 'm', dim: 'dim', aug: 'aug', sus: 'sus4', dom7: '7', maj7: 'maj7', min7: 'm7', pow: '5',
 };
 
 export function chordName(root: number, quality: Quality): string {

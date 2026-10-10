@@ -23,15 +23,15 @@ export interface NoteSink {
   close(): void;
 }
 
-/** The 8 chord quality classes shared with the model (see model/prepare.py). */
-export const QUALITIES = ['maj', 'min', 'dim', 'aug', 'sus', 'dom7', 'maj7', 'min7'] as const;
+/** The 9 chord quality classes shared with the model, in model/export/vocab.json order. */
+export const QUALITIES = ['maj', 'min', 'dim', 'aug', 'sus', 'dom7', 'maj7', 'min7', 'pow'] as const;
 export type Quality = (typeof QUALITIES)[number];
 
 export interface Chord {
   /** root pitch class, 0 = C */
   root: number;
   quality: Quality;
-  /** display name, e.g. "Am7", "F#dim", "Csus4" */
+  /** display name, e.g. "Am7", "F#dim", "Csus4", "E5" */
   name: string;
   /** the MIDI notes that formed it, ascending */
   pitches: number[];

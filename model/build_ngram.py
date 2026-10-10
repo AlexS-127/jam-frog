@@ -9,7 +9,7 @@ app/src/core/ngram.ts:
 
     P(w | a b) = max(c(a b w) - D, 0) / c(a b)  +  D * n(a b) / c(a b) * P(w | b)
     P(w | b)   = same form, backing off to P(w)
-    P(w)       = (c(w) + 1) / (N + V)            (add-one over the 96 chord tokens)
+    P(w)       = (c(w) + 1) / (N + V)            (add-one over the 108 chord tokens)
 
 where c(..) are counts and n(..) is the number of distinct followers of a context.
 Contexts not stored in the file fall straight through to the next order down.
@@ -32,7 +32,7 @@ VOCAB = json.loads((EXPORT / "vocab.json").read_text())
 
 V = VOCAB["size"]
 I0 = VOCAB["interval0"]
-N_TARGETS = V - I0  # predictions are always one of the 96 interval tokens
+N_TARGETS = V - I0  # predictions are always one of the 108 interval tokens
 GENRES = VOCAB["genres"]
 MODELS = ["all"] + GENRES
 D = 0.75

@@ -1,9 +1,9 @@
 {
-  "size": 106,
+  "size": 119,
   "pad": 0,
   "bos": 1,
   "start0": 2,
-  "interval0": 10,
+  "interval0": 11,
   "qualities": [
     "maj",
     "min",
@@ -12,7 +12,8 @@
     "sus",
     "dom7",
     "maj7",
-    "min7"
+    "min7",
+    "pow"
   ],
   "genres": [
     "pop",

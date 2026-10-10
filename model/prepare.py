@@ -6,11 +6,13 @@ Outputs (under model/data/, gitignored):
     train.tsv.gz, val.tsv.gz, test.tsv.gz   one sequence per line: "<genre>\t<tok> <tok> ..."
 and model/export/vocab.json, the token layout shared with the app.
 
-Token layout (106 tokens):
+Token layout (119 tokens, 9 qualities):
     0            PAD
     1            BOS   (start of a section)
-    2..9         START_<quality>: the first chord of a section, which has no previous root
-    10..105      10 + interval*8 + quality, interval = (root - previous root) mod 12
+    2..10        START_<quality>: the first chord of a section, which has no previous root
+    11..118      11 + interval*9 + quality, interval = (root - previous root) mod 12
+
+Qualities: maj, min, dim, aug, sus, dom7, maj7, min7, pow (power chord: root + fifth, no third).
 """
 
 from __future__ import annotations
@@ -32,17 +34,18 @@ EXPORT = HERE / "export"
 CSV = DATA / "chordonomicon_v2.csv"
 CSV_URL = "https://huggingface.co/datasets/ailsntua/Chordonomicon/resolve/main/chordonomicon_v2.csv"
 
-QUALITIES = ["maj", "min", "dim", "aug", "sus", "dom7", "maj7", "min7"]
+QUALITIES = ["maj", "min", "dim", "aug", "sus", "dom7", "maj7", "min7", "pow"]
 GENRES = ["pop", "rock", "country", "alternative", "pop rock", "punk",
           "metal", "rap", "soul", "jazz", "reggae", "electronic"]
 NO_GENRE = "none"  # about half the songs have no main_genre; they only feed the "all" model
 
-PAD, BOS, START0, INTERVAL0 = 0, 1, 2, 10
+PAD, BOS, START0 = 0, 1, 2
+INTERVAL0 = START0 + len(QUALITIES)
 VOCAB_SIZE = INTERVAL0 + 12 * len(QUALITIES)
 
 # Every suffix in chordonomicon_v2.csv, folded into the 8 classes.
 SUFFIX_CLASS = {
-    "": "maj", "no3d": "maj", "add9": "maj", "add11": "maj", "add13": "maj", "majs9": "maj",
+    "": "maj", "no3d": "pow", "add9": "maj", "add11": "maj", "add13": "maj", "majs9": "maj",
     "min": "min", "minadd9": "min", "minadd11": "min", "minadd13": "min", "minb9": "min",
     "minmaj7": "min", "minmaj9": "min", "minmaj11": "min", "minmaj13": "min",
     "dim": "dim", "dim7": "dim", "dimb7": "dim", "dim9": "dim", "dimb9": "dim", "dim11": "dim",
