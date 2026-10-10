@@ -1,5 +1,6 @@
 import { app, BrowserWindow, session } from 'electron';
 import path from 'node:path';
+import { handleKeep } from './keep';
 import { startOsc } from './osc';
 
 function createWindow(): void {
@@ -22,6 +23,7 @@ function createWindow(): void {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
   startOsc(win.webContents);
+  handleKeep(win);
 
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) win.loadURL(devUrl);

@@ -180,6 +180,31 @@ describe('AnswerEngine (phrase call and response)', () => {
     expect(progress.at(-1)!.status).toBe('listening');
   });
 
+  it('without Live, counts bars from when the chord was struck, not when it was recognised', () => {
+    const { engine, sink, until } = setup();
+    for (const p of V.C) engine.note({ pitch: p, velocity: 100, time: 0 });
+    until(60); // the chord detector names the chord 60 ms later
+    engine.chord(detectChord(V.C)!);
+    until(2000);
+    for (const p of V.Am) engine.note({ pitch: p, velocity: 100, time: Date.now() });
+    until(2060);
+    engine.chord(detectChord(V.Am)!);
+    until(8000);
+    expect(sink.chordTimes()[0]).toBe(8000); // bar 5 counted from t = 0, not 60
+  });
+
+  it('gives Keep the answered phrase and answer, or the phrase in progress', () => {
+    const { engine, play, until } = setup();
+    play('C', 0);
+    expect(engine.keepNotes().phrase.filter((e) => e.velocity > 0)).toHaveLength(3);
+    expect(engine.keepNotes().answer).toHaveLength(0);
+    play('Am', 2000);
+    until(16000);
+    const kept = engine.keepNotes();
+    expect(kept.phrase.filter((e) => e.velocity > 0)).toHaveLength(6);
+    expect(kept.answer.filter((e) => e.velocity > 0).length).toBeGreaterThan(0);
+  });
+
   it('reports bar-by-bar progress', () => {
     const { progress, play, until } = setup();
     play('C', 0);

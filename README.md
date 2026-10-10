@@ -9,7 +9,7 @@ You play chords in Ableton. A frog overlay floats above Live and:
 
 A weirdness knob and a genre picker reshape both. **Keep** saves your last phrase plus the answer as a `.mid`.
 
-> Status: spike done over both bridges (IAC ports and Max for Live). The overlay names the chord you play and answers with its IV chord on the frog track. Next: live suggestions and frog answers.
+> Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) and Keep (.mid) work over both bridges. Next: Kevin's overlay UI, the listening test page, and the GRU experiment.
 
 ## Repo layout (one lane per folder)
 

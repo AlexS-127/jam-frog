@@ -153,7 +153,7 @@ Window constraints:
 
 **Done when:** the demo page cycles through all four moods and real-looking suggestions at 360×480. Alex wires it into `main.ts`.
 
-### Lane C (Claude): Keep (`app/src/core/keep.ts`, `app/src/main/keep.ts`)
+### Lane C (Claude): Keep (`app/src/core/keep.ts`, `app/src/main/keep.ts`). **Done**; hand test in Live pending
 
 Feature 6. **Can start now.**
 

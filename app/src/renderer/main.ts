@@ -1,6 +1,7 @@
 import { AnswerEngine, type AnswerProgress } from '../core/answer';
 import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
+import { buildMidi, keepFileName } from '../core/keep';
 import { NgramModel } from '../core/ngram';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord } from '../core/types';
@@ -236,6 +237,21 @@ onOsc((msg) => {
 window.jamFrog.osc.onError((text) => (status.textContent = `OSC: ${text}`));
 
 bridgeSel.onchange = connect;
+$<HTMLButtonElement>('keep').onclick = async () => {
+  const { phrase, answer } = answers.keepNotes();
+  if (!phrase.some((e) => e.velocity > 0)) {
+    status.textContent = 'Play a phrase first, then Keep it.';
+    return;
+  }
+  const bytes = buildMidi(phrase, answer, Number(bpmInput.value) || 120);
+  try {
+    const saved = await window.jamFrog.saveMidi(bytes, keepFileName());
+    status.textContent = saved ? `Kept: ${saved}` : '';
+  } catch (err) {
+    status.textContent = `Could not save: ${String(err)}`;
+  }
+};
+
 $('close').onclick = () => {
   answers.cancel();
   window.close();

@@ -111,6 +111,12 @@ export class AnswerEngine {
     this.emit();
   }
 
+  /** What Keep saves: the last answered phrase and the frog's answer, or the phrase in progress if none yet. */
+  keepNotes(): { phrase: NoteEvent[]; answer: NoteEvent[] } {
+    if (this.lastPhraseNotes.length) return { phrase: this.lastPhraseNotes, answer: this.lastAnswerNotes };
+    return { phrase: this.phraseNotes, answer: [] };
+  }
+
   /** a /bar from Frog Voice: Live's transport is running and a bar just started */
   bar(): void {
     this.tick(true);
@@ -175,13 +181,16 @@ export class AnswerEngine {
         this.clock = setTimeout(() => this.tick(false), this.lastBarLive ? untilNext + 0.1 * this.barMs() : untilNext);
       }
     } else {
-      // No grid: bar 1 of the phrase starts with this chord.
+      // No grid: bar 1 of the phrase starts when this chord was struck (its first note-on, which the
+      // chord detector saw up to ~60 ms before it named the chord).
+      const onsets = this.phraseNotes.filter((n) => n.velocity > 0).map((n) => n.time);
+      const struck = onsets.length ? Math.min(...onsets) : t;
       this.barIndex = 0;
-      this.lastBarAt = t;
+      this.lastBarAt = struck;
       this.lastBarLive = false;
       this.phraseStart = 0;
       this.stopClock();
-      this.clock = setTimeout(() => this.tick(false), this.barMs());
+      this.clock = setTimeout(() => this.tick(false), Math.max(0, this.barMs() - (t - struck)));
     }
     this.status = 'listening';
   }
