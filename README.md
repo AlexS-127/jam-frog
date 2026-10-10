@@ -7,9 +7,9 @@ You play chords in Ableton. A frog overlay floats above Live and:
 1. **Suggests** the top 3 next chords every time it recognises one, with a mini keyboard for each.
 2. **Answers** (toggle): when you pause, it plays a 2–4 chord continuation on its own track.
 
-A weirdness knob and a genre picker reshape both. **Keep** saves your last phrase plus the answer as a `.mid`.
+A weirdness knob and a genre picker reshape both. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
 
-> Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) and Keep (.mid) work over both bridges. The overlay is Kevin's animated frog-on-an-amp UI; a Model picker switches between the n-gram and Katie's GRU. Next: the listening test page.
+> Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) work over both bridges. The overlay is Kevin's animated frog-on-an-amp UI; a Model picker switches between the n-gram and Katie's GRU. The listening test compares the two models blind.
 
 ## Repo layout (one lane per folder)
 
@@ -45,7 +45,7 @@ Nothing.
 - Jam Frog has no login, no analytics, no cookies, and keeps no persistent storage.
 - MIDI travels only between Ableton and the app on your own Mac: through the IAC Driver virtual ports, or over UDP on `127.0.0.1` (localhost) for the Max for Live devices.
 - The chord models ship inside the app and run locally; no notes are sent to any server.
-- The only file Jam Frog writes is a `.mid` that you choose to save with **Keep**.
+- Jam Frog writes no files. To keep what you played, record it in Live.
 
 ## Credits
 

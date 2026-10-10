@@ -13,7 +13,7 @@ Reduced motion freezes the displayed pose and disables ambient gestures and flin
 
 The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from the engine. This browser demo does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
 
-The overlay implements the Lane B “What to build” checklist: four music moods plus a looping playing animation, current chord and answer progress, recent trail, three mini-keyboard suggestions, an amplifier with one weirdness knob and one genre dropdown, answer/phrase/Keep controls, bridge and BPM selectors, and Live tempo/bar/status. The amp display shows next-chord suggestions while the player phrase is being recorded and the frog's answer between phrases. Dragging moves the frog in its idle pose; there are no running animations. Controls call the supplied handlers; mock state stays in the demo.
+The overlay implements the Lane B “What to build” checklist: four music moods plus a looping playing animation, current chord and answer progress, recent trail, three mini-keyboard suggestions, an amplifier with one weirdness knob and one genre dropdown, answer/phrase/model controls, bridge and BPM selectors, and Live tempo/bar/status. The amp display shows next-chord suggestions while the player phrase is being recorded and the frog's answer between phrases. Dragging moves the frog in its idle pose; there are no running animations. Controls call the supplied handlers; mock state stays in the demo.
 
 ## Files
 

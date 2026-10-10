@@ -1,6 +1,5 @@
 import { app, BrowserWindow, Menu, session } from 'electron';
 import path from 'node:path';
-import { handleKeep } from './keep';
 import { startOsc } from './osc';
 
 function createWindow(): void {
@@ -23,7 +22,6 @@ function createWindow(): void {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
   startOsc(win.webContents);
-  handleKeep(win);
 
   loadPage(win, 'index.html');
 }

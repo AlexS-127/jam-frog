@@ -221,18 +221,6 @@ describe('AnswerEngine (phrase call and response)', () => {
     expect(sink.chordTimes()[0]).toBe(8000); // bar 5 counted from t = 0, not 60
   });
 
-  it('gives Keep the answered phrase and answer, or the phrase in progress', () => {
-    const { engine, play, until } = setup();
-    play('C', 0);
-    expect(engine.keepNotes().phrase.filter((e) => e.velocity > 0)).toHaveLength(3);
-    expect(engine.keepNotes().answer).toHaveLength(0);
-    play('Am', 2000);
-    until(16000);
-    const kept = engine.keepNotes();
-    expect(kept.phrase.filter((e) => e.velocity > 0)).toHaveLength(6);
-    expect(kept.answer.filter((e) => e.velocity > 0).length).toBeGreaterThan(0);
-  });
-
   it('reports bar-by-bar progress', () => {
     const { progress, play, until } = setup();
     play('C', 0);
@@ -242,15 +230,6 @@ describe('AnswerEngine (phrase call and response)', () => {
     expect(progress.at(-1)).toEqual({ status: 'playing', bar: 1, bars: 4 });
     until(16000);
     expect(progress.at(-1)!.status).toBe('idle');
-  });
-
-  it('keeps the last phrase and answer as timed notes for Keep', () => {
-    const { engine, play, until } = setup();
-    play('C', 0);
-    play('Am', 2000);
-    until(16000);
-    expect(engine.lastPhraseNotes.filter((e) => e.velocity > 0).map((e) => e.pitch)).toEqual([...V.C, ...V.Am]);
-    expect(engine.lastAnswerNotes.filter((e) => e.velocity > 0)).toHaveLength(6);
   });
 
   it('plans with the real n-gram: C Am F G gets an answer that resolves', () => {

@@ -72,8 +72,6 @@ html, body { overflow: hidden; background: transparent; font: 12px/1.3 -apple-sy
 .jf-controls select, .jf-controls input[type="number"] { width: 100%; min-width: 0; max-width: none; height: 19px; padding: 1px 4px; border: 1px solid rgba(164, 229, 142, .2); border-radius: 5px; background: #101d14; color: #eff8ec; font-size: 8px; }
 .jf-toggle { justify-content: flex-start !important; }
 .jf-toggle input { width: 12px; height: 12px; margin: 0; accent-color: #91d77d; }
-.jf-keep { min-height: 20px; border: 1px solid rgba(164, 229, 142, .28); border-radius: 5px; background: rgba(122, 196, 103, .15); color: #dff5d4; font: inherit; font-size: 8px; font-weight: 650; cursor: pointer; -webkit-app-region: no-drag; }
-.jf-keep:hover { background: rgba(122, 196, 103, .27); }
 .jf-footer { display: flex; flex: 0 0 12px; min-height: 12px; align-items: center; gap: 7px; }
 .jf-live { flex: 0 0 auto; color: #77947c; font-size: 6px; letter-spacing: .08em; }
 .jf-live b { color: #b8cbb8; }

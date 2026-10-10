@@ -100,9 +100,7 @@ export class AnswerEngine {
   private planTimer: ReturnType<typeof setTimeout> | null = null;
   private job: PlanJob | null = null;
 
-  /** the last phrase the player played and the frog's answer to it, as timed notes (for Keep) */
-  lastPhraseNotes: NoteEvent[] = [];
-  lastAnswerNotes: NoteEvent[] = [];
+  /** the player's recent notes, to find when a phrase's first chord was struck */
   private phraseNotes: NoteEvent[] = [];
 
   private readonly now: () => number;
@@ -148,12 +146,6 @@ export class AnswerEngine {
   /** The session's key: every chord so far, recent phrases weighted most, phrase openings as tonic cues. */
   key(): Key {
     return estimateKey(this.history, { phraseStarts: this.phraseStarts });
-  }
-
-  /** What Keep saves: the last answered phrase and the frog's answer, or the phrase in progress if none yet. */
-  keepNotes(): { phrase: NoteEvent[]; answer: NoteEvent[] } {
-    if (this.lastPhraseNotes.length) return { phrase: this.lastPhraseNotes, answer: this.lastAnswerNotes };
-    return { phrase: this.phraseNotes, answer: [] };
   }
 
   /** a /bar from Frog Voice: Live's transport is running and a bar just started */
@@ -278,9 +270,7 @@ export class AnswerEngine {
     else if (this.job && this.job.forKey === key && this.job.cands.length) plan = this.finishJob(this.job);
     else plan = this.makePlan(s, QUICK_PLAN_MS);
     this.cancelPlanning();
-    this.lastPhraseNotes = this.phraseNotes;
     this.phraseNotes = [];
-    this.lastAnswerNotes = [];
     this.plan = plan;
     this.status = 'playing';
     this.answerStart = this.barIndex;
@@ -313,7 +303,6 @@ export class AnswerEngine {
 
   private send(pitch: number, velocity: number): void {
     this.d.sink()?.send(pitch, velocity);
-    this.lastAnswerNotes.push({ pitch, velocity, time: this.now() });
   }
 
   private phraseKey(): string {

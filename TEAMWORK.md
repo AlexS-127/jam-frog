@@ -26,7 +26,7 @@ Alex verifies everything in Live at the two integration points (9 PM and 11 PM).
 | **Alex** | Integration in `main.ts`, Ableton demo Set, hand tests at each integration, merging PRs, demo rehearsal, Max stretch | Yes | Playing it in Live |
 | **Kevin** | **B** overlay UI → **E** listening test page → put **F**'s sprites in the UI → demo video + slides | No | `ui/demo.html` with mock data in a browser; `npm test` |
 | **Katie** | **D** GRU (5-hour box) + `gru.ts` → **F** frog sprites in Adobe tools → pitch story | No | Test accuracy vs the n-gram (56.2% / 79.6%) |
-| **Claude** (in Alex's session) | **A1** suggestions engine → **A2** answers + voicing → **C** Keep | No | Unit tests; Alex checks in Live |
+| **Claude** (in Alex's session) | **A1** suggestions engine → **A2** answers + voicing → **E** listening test | No | Unit tests; Alex checks in Live |
 
 **Why this shape:**
 - Alex's hours in Live are the scarcest resource, so they go to integration and the demo, not lane code.
@@ -133,7 +133,7 @@ interface UiState {
 }
 interface Handlers {
   onWeirdness(v: number): void; onGenre(g: string): void; onAnswersToggle(on: boolean): void;
-  onKeep(): void; onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void; onPhraseBars(bars: 4 | 8): void;
+  onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void; onPhraseBars(bars: 4 | 8): void;
 }
 ```
 
@@ -143,7 +143,7 @@ What to build:
 - 3 suggestion cards with a **mini keyboard** drawing each card's `voicing`
 - weirdness knob (0 to 1)
 - genre dropdown (`GENRES` + "all")
-- answer toggle, phrase length (4 / 8 bars) with a "bar 2/4" counter, and Keep button
+- answer toggle, phrase length (4 / 8 bars) with a "bar 2/4" counter, and model picker
 - bridge selector, BPM, and the Live tempo/bar line
 
 Window constraints:
@@ -153,16 +153,9 @@ Window constraints:
 
 **Done when:** the demo page cycles through all four moods and real-looking suggestions at 360×480. Alex wires it into `main.ts`.
 
-### Lane C (Claude): Keep (`app/src/core/keep.ts`, `app/src/main/keep.ts`). **Done**; hand test in Live pending
+### Lane C: Keep. **Removed** at Alex's request
 
-Feature 6. **Can start now.**
-
-- `keep.ts` in core: `buildMidi(phrase: NoteEvent[], answer: NoteEvent[], bpm: number): Uint8Array` using `@tonejs/midi`.
-  Use two tracks, "You" and "Frog", with times relative to the first note.
-- `keep.ts` in main: a save dialog (`dialog.showSaveDialog`) that writes the bytes. This is the **only** file the app ever writes.
-- Needs one new preload entry, `jamFrog.saveMidi(bytes)`. Ask Alex to add it to `preload.ts` and `env.d.ts`.
-
-**Done when:** a unit test reads the bytes back with `@tonejs/midi` and finds the right notes, and a saved file drags into Ableton and plays.
+Recording in Live replaces it (`ableton/SETUP.md`, "Recording a jam"). The app now writes no files.
 
 ### Lane D (Katie): GRU model (`model/train_gru.py`, `model/export/gru.onnx`, `app/src/core/gru.ts`)
 
@@ -203,15 +196,14 @@ Feature 8. **Can start now with a fake model**; it uses A1/A2 when they land.
 - Owns the shared files: `app/src/core/types.ts`, `vocab.ts`, `model.ts`; `app/src/renderer/main.ts` (the wiring);
   `app/src/main/preload.ts` and `main.ts`; `app/package.json`; `ableton/`; `README.md`.
 - Merges the lanes, keeps the demo Ableton Set working, runs the hand tests.
-- Stretch work (only after the core is done), starting with the genre radar and then Keep writing clips into Live, the second of which uses the Max `js` walkthrough.
+- Stretch work (only after the core is done), starting with the genre radar. ("Keep writes a clip into Live" is dropped along with Keep.)
 
 ## Dependencies
 
 ```
 contracts (done) ──┬── A1 engine ──────┬── integration in main.ts (Alex) ── demo
                    ├── A2 answers ─────┤        ▲
-                   ├── B  UI (mocks) ──┤        │
-                   ├── C  Keep ────────┘        │
+                   ├── B  UI (mocks) ──┘        │
                    ├── D  GRU ── gru.ts ── E listening test
                    ├── E  listening (fake model first)
                    └── F  art ── B swaps placeholder frogs
@@ -230,7 +222,7 @@ const fake: ChordModel = { name: 'fake', predictNext: () => { const p = new Floa
 | **6 PM** | A1 n-gram TS matches Python. B demo page shows the layout. D first training run. F sketch of the frogs. |
 | **8 PM** | A1 suggestions + sampler. A2 answers in tests. C `buildMidi` tested. |
 | **9 PM** | **Integration 1:** live suggestions in the overlay with Ableton. GRU time box ends (if D started at 4 PM): ship or drop. |
-| **11 PM** | **Integration 2:** answers land on the bar; Keep saves; real frog sprites in. |
+| **11 PM** | **Integration 2:** answers land on the bar; recording in Live works; real frog sprites in. |
 | **1 AM** | E listening test run with the team; pick the model. README current. |
 | **3 AM** | **Feature freeze.** Only bug fixes after this. |
 | 3–8 AM | Demo rehearsal, recording, pitch. Stretch work only if everything above is solid. |
@@ -302,7 +294,7 @@ After a merge, keep working on the same branch. Run `git pull origin main` first
 
 ## House rules that apply to every lane
 
-- **Privacy:** no login, no analytics, no cookies, no persistent storage, no network calls. The only file written is the `.mid` from Keep.
+- **Privacy:** no login, no analytics, no cookies, no persistent storage, no network calls, and no files written.
 - **Out of scope:** a VST/AU plugin, Ableton Remote Scripts or MCP, logic inside Max, audio or guitar recognition, computer vision,
   LLM chord prediction, accounts, a database, a phone app, melody generation.
 - **Overruns:** if a task is running past 1.5× its expected time, tell Alex before continuing.

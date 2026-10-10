@@ -28,7 +28,6 @@ export interface Handlers {
   onWeirdness(value: number): void;
   onGenre(genre: string): void;
   onAnswersToggle(on: boolean): void;
-  onKeep(): void;
   onPhraseBars(bars: 4 | 8): void;
   onBridge(bridge: 'osc' | 'ports'): void;
   onBpm(bpm: number): void;
@@ -148,7 +147,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       <section class="jf-trail" aria-label="Recent chords"><span class="jf-kicker">TRAIL</span><ol data-ref="trail"></ol></section>
       <section class="jf-controls" aria-label="Jam settings">
         <label class="jf-toggle"><input data-control="answers" type="checkbox" checked /><span>Answers on</span></label>
-        <button class="jf-keep" type="button" data-action="keep">Keep MIDI</button>
         <label class="jf-bridge">Bridge<select data-control="bridge"><option value="osc">Max for Live</option><option value="ports">Ports / IAC</option></select></label>
         <label class="jf-bpm">BPM<input data-control="bpm" type="number" min="40" max="240" value="120" inputmode="numeric" /></label>
         <label class="jf-phrase">Phrase<select data-control="phrase"><option value="4">4 bars</option><option value="8">8 bars</option></select></label>
@@ -185,7 +183,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   weirdness.addEventListener('input', () => handlers.onWeirdness(Number(weirdness.value)), { signal });
   genre.addEventListener('change', () => handlers.onGenre(genre.value), { signal });
   answers.addEventListener('change', () => handlers.onAnswersToggle(answers.checked), { signal });
-  query<HTMLButtonElement>('[data-action="keep"]').addEventListener('click', () => handlers.onKeep(), { signal });
   query<HTMLButtonElement>('[data-action="close"]').addEventListener('click', () => window.close(), { signal });
   bridge.addEventListener('change', () => handlers.onBridge(bridge.value as UiState['bridge']), { signal });
   bpm.addEventListener('change', () => {

@@ -2,7 +2,6 @@ import { AnswerEngine, type AnswerProgress } from '../core/answer';
 import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
-import { buildMidi, keepFileName } from '../core/keep';
 import type { ChordModel } from '../core/model';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord, FrogMood, NoteEvent, NoteSink, NoteSource, Suggestion } from '../core/types';
@@ -143,7 +142,6 @@ const overlay = createOverlay(root, {
     if (m in models) settings.model = m;
     refreshSuggestions();
   },
-  onKeep: keep,
 });
 
 function mood(): FrogMood {
@@ -186,19 +184,6 @@ function render(): void {
 function setStatus(text: string): void {
   status = text;
   render();
-}
-
-// ---- Keep ----
-
-async function keep(): Promise<void> {
-  const { phrase, answer } = answers.keepNotes();
-  if (!phrase.some((e) => e.velocity > 0)) return setStatus('Play a phrase first, then Keep it.');
-  try {
-    const saved = await window.jamFrog.saveMidi(buildMidi(phrase, answer, settings.bpm), keepFileName());
-    setStatus(saved ? `Kept ${saved.split('/').pop()}` : '');
-  } catch (err) {
-    setStatus(`Could not save: ${String(err)}`);
-  }
 }
 
 // ---- bridges ----

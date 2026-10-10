@@ -87,7 +87,6 @@ const handlers: Handlers = {
   onWeirdness(value) { state.weirdness = value; overlay.update(state); },
   onGenre(value) { state.genre = value; overlay.update(state); },
   onAnswersToggle(value) { state.answersOn = value; overlay.update(state); },
-  onKeep() { state.status = 'Demo only — Keep is connected in the app'; overlay.update(state); },
   onPhraseBars(value) { state.phraseBars = value; state.progress = { ...state.progress, bars: value }; overlay.update(state); },
   onBridge(value) { state.bridge = value; state.status = `Demo bridge: ${value === 'osc' ? 'Max for Live' : 'Ports / IAC'}`; overlay.update(state); },
   onBpm(value) { state.bpm = value; overlay.update(state); },

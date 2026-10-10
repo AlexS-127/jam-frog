@@ -114,3 +114,26 @@ silent until the app answers.
 ### Switching from the computer keyboard to a USB keyboard later
 
 Change **MIDI From** on both `Tap` and `Me` to the keyboard's notes port (and tick its Track box in Settings).
+
+## Recording a jam
+
+Record in Arrangement View; you get your chords and the frog's answers as clips on Live's bar grid.
+
+**Why arming the Frog track records nothing (Max for Live bridge):** a MIDI track records the MIDI arriving at
+its input, but Frog Voice *creates* the frog's notes inside the track, after the input. So the frog is recorded
+on a separate track that listens to the Frog track's output.
+
+One-time setup:
+
+1. **Create a MIDI track** (Cmd+Shift+T) and rename it `Frog Rec` (Cmd+R). No instrument.
+2. Set its **MIDI From** to **Frog**, and the box under it to **Post FX** (or **Frog Voice** if Live lists it).
+3. Turn off **Settings → Record, Warp & Launch → Exclusive Arm**, or Cmd-click arm buttons to arm more than one.
+
+Each jam:
+
+1. **Arm `Me` and `Frog Rec`** (not `Frog`).
+2. Tab to **Arrangement View**, press **Record** (F9), play. Space to stop.
+
+**Ports bridge:** the frog's notes arrive at the Frog track's input from "JamFrog Out", so arm and record the
+**Frog** track itself; `Frog Rec` isn't needed. Live 12's **Capture MIDI** also works on armed tracks if you forgot to
+press Record.
