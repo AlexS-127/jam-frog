@@ -26,3 +26,5 @@ A section starts with `BOS, START_<quality>`. Train/val/test is 90/5/5 by song, 
 | Unigram baseline | 16.7% | — |
 | N-gram, "all" | 37.6% | 69.8% |
 | N-gram, per genre | 38.2% | 69.8% |
+| GRU, "all" | 60.5% | 82.5% |
+| GRU, per genre | 60.5% | 82.6% |
