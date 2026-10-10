@@ -7,7 +7,7 @@ You play chords in Ableton. A frog overlay floats above Live and:
 1. **Suggests** the top 3 next chords every time it recognises one, with a mini keyboard for each.
 2. **Answers** (toggle): when you pause, it plays a 2–4 chord continuation on its own track.
 
-A weirdness knob and a genre picker reshape both. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
+A weirdness knob and a genre picker reshape both. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
 
 > Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) work over both bridges. The overlay is Kevin's animated frog-on-an-amp UI; a Model picker switches between the n-gram and Katie's GRU. The listening test compares the two models blind.
 

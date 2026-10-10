@@ -15,6 +15,8 @@ export interface AnswerSettings {
   bpm: number;
   /** how long the player's phrase is; the frog's answer is just as long */
   phraseBars: number;
+  /** play the answer in the rhythm (and dynamics) of the player's phrase instead of one chord per bar */
+  rhythm?: boolean;
 }
 
 export type AnswerStatus = 'idle' | 'listening' | 'playing';
@@ -49,6 +51,54 @@ const PLAN_SLICE_MS = 12;
 const QUICK_PLAN_MS = 30;
 /** How many chords of the session are remembered (for the key and the model context). */
 const SESSION_CHORDS = 256;
+
+interface Strike {
+  /** ms */
+  onset: number;
+  /** beats from bar 1 of the phrase */
+  beats: number;
+  /** held for this many beats; null while still held */
+  len: number | null;
+  velocity: number;
+  /** index of its chord in the phrase's chord changes */
+  chord: number;
+  pitches: number[];
+  open: Set<number>;
+}
+
+interface RhythmEvent {
+  /** beats from the answer's first bar line */
+  start: number;
+  end: number;
+  velocity: number;
+  /** index into the answer's chords */
+  chord: number;
+}
+
+/**
+ * The player's strikes as the answer's: same positions, lengths and velocities. Strike k of player chord c
+ * goes to answer chord floor(c * answerChords / phraseChords). Each strike ends where the player let go,
+ * or just before the next strike, or at the end of the answer.
+ */
+export function mirrorRhythm(
+  strikes: { beats: number; len: number | null; velocity: number; chord: number }[],
+  phraseChords: number,
+  answerChords: number,
+  totalBeats: number,
+): RhythmEvent[] {
+  const sorted = [...strikes].filter((s) => s.beats < totalBeats).sort((a, b) => a.beats - b.beats);
+  return sorted.map((s, i) => {
+    const next = i + 1 < sorted.length ? sorted[i + 1].beats : totalBeats;
+    const held = s.len === null ? next - s.beats : s.len;
+    const end = Math.min(s.beats + held, next - 0.08, totalBeats); // a hair before the next strike, so it re-triggers
+    return {
+      start: s.beats,
+      end: Math.max(end, s.beats + 0.1),
+      velocity: s.velocity,
+      chord: Math.min(answerChords - 1, Math.floor((s.chord * answerChords) / Math.max(1, phraseChords))),
+    };
+  });
+}
 
 interface PlanJob {
   forKey: string;
@@ -95,7 +145,14 @@ export class AnswerEngine {
   private plan: AnswerPlan | null = null;
   private planFor = '';
   private chordStarts: number[] = [];
-  private sounding: number[] = [];
+  private sounding = new Set<number>();
+  /** every strike of the current phrase (re-strikes too), for rhythm and dynamics */
+  private strikes: Strike[] = [];
+  /** when bar 1 of the current phrase starts (ms) */
+  private phraseStartTime = 0;
+  /** the answer's strikes, mapped from the player's, while it plays in rhythm mode */
+  private rhythm: RhythmEvent[] = [];
+  private noteTimers: ReturnType<typeof setTimeout>[] = [];
   private clock: ReturnType<typeof setTimeout> | null = null;
   private planTimer: ReturnType<typeof setTimeout> | null = null;
   private job: PlanJob | null = null;
@@ -122,14 +179,27 @@ export class AnswerEngine {
   /** every note the player plays */
   note(e: NoteEvent): void {
     this.phraseNotes.push(e);
+    if (e.velocity === 0) {
+      // A strike ends when all of its notes are released.
+      for (const st of this.strikes) {
+        if (st.len !== null || !st.pitches.includes(e.pitch)) continue;
+        st.open.delete(e.pitch);
+        if (st.open.size === 0) st.len = (e.time - st.onset) / this.beatLen();
+      }
+    }
   }
 
   /** every chord the player plays (from the chord detector) */
   chord(c: Chord): void {
-    this.history.push({ root: c.root, quality: c.quality });
-    if (this.history.length > SESSION_CHORDS) {
-      this.history.shift();
-      this.phraseStarts = this.phraseStarts.map((i) => i - 1).filter((i) => i >= 0);
+    // The models and the key see each chord change once (the training data has repeats collapsed);
+    // re-strikes of the same chord only count for the rhythm.
+    const last = this.history[this.history.length - 1];
+    if (!last || last.root !== c.root || last.quality !== c.quality) {
+      this.history.push({ root: c.root, quality: c.quality });
+      if (this.history.length > SESSION_CHORDS) {
+        this.history.shift();
+        this.phraseStarts = this.phraseStarts.map((i) => i - 1).filter((i) => i >= 0);
+      }
     }
 
     if (this.status === 'playing') {
@@ -138,9 +208,34 @@ export class AnswerEngine {
       this.stopAnswer();
     }
     if (this.status === 'idle') this.startPhrase();
-    this.phrase.push(c);
-    this.schedulePlan();
+    const prev = this.phrase[this.phrase.length - 1];
+    const change = !prev || prev.root !== c.root || prev.quality !== c.quality;
+    if (change) this.phrase.push(c);
+    this.recordStrike(c);
+    if (change) this.schedulePlan();
     this.emit();
+  }
+
+  /** Where in the phrase this chord was struck, how hard, and (once released) for how long. */
+  private recordStrike(c: Chord): void {
+    const t = this.now();
+    const ons = this.phraseNotes.filter((n) => n.velocity > 0 && n.time >= t - 250 && c.pitches.includes(n.pitch));
+    const onset = ons.length ? Math.min(...ons.map((n) => n.time)) : t;
+    const velocity = ons.length ? ons.reduce((a, n) => a + n.velocity, 0) / ons.length : this.velocity;
+    this.strikes.push({
+      onset,
+      beats: Math.max(0, (onset - this.phraseStartTime) / this.beatLen()),
+      len: null,
+      velocity,
+      chord: this.phrase.length - 1,
+      pitches: [...c.pitches],
+      open: new Set(c.pitches),
+    });
+  }
+
+  /** One beat on the bar grid in use (Live's measured bar / 4, or the BPM setting). */
+  private beatLen(): number {
+    return this.barMs() / BEATS_PER_BAR;
   }
 
   /** The session's key: every chord so far, recent phrases weighted most, phrase openings as tonic cues. */
@@ -211,6 +306,7 @@ export class AnswerEngine {
 
   private startPhrase(): void {
     this.phrase = [];
+    this.strikes = [];
     this.phraseStarts.push(this.history.length - 1);
     // Notes from just before this chord belong to it (the chord detector waits ~60 ms); older ones don't.
     const t = this.now();
@@ -220,6 +316,7 @@ export class AnswerEngine {
       // A bar grid is running (Live's, or ours from the last phrase): stay on it. A chord in the last
       // quarter of a bar is an anticipation of the next bar.
       this.phraseStart = intoBar > 0.75 * this.barMs() ? this.barIndex + 1 : this.barIndex;
+      this.phraseStartTime = this.lastBarAt + (this.phraseStart - this.barIndex) * this.barMs();
       if (!this.clock) {
         const untilNext = Math.max(0, this.barMs() - (intoBar % this.barMs()));
         const slack = this.lastBarLive ? (this.backupSlack() - 1) * this.barMs() : 0;
@@ -234,6 +331,7 @@ export class AnswerEngine {
       this.lastBarAt = struck;
       this.lastBarLive = false;
       this.phraseStart = 0;
+      this.phraseStartTime = struck;
       this.stopClock();
       this.clock = setTimeout(() => this.tick(false), Math.max(0, this.barMs() - (t - struck)));
     }
@@ -248,13 +346,17 @@ export class AnswerEngine {
       return;
     }
     if (this.status === 'playing') {
-      const i = this.chordStarts.indexOf(this.barIndex - this.answerStart);
-      if (this.barIndex - this.answerStart >= s.phraseBars) {
+      const bar = this.barIndex - this.answerStart;
+      if (bar >= s.phraseBars) {
         this.stopAnswer();
         this.cancel();
         return;
       }
-      if (i >= 0) this.playChord(i);
+      if (this.rhythm.length) this.playRhythmBar(bar);
+      else {
+        const i = this.chordStarts.indexOf(bar);
+        if (i >= 0) this.playChord(i);
+      }
     }
     this.emit();
   }
@@ -276,8 +378,43 @@ export class AnswerEngine {
     this.answerStart = this.barIndex;
     const n = plan.chords.length;
     this.chordStarts = plan.chords.map((_, i) => Math.floor((i * s.phraseBars) / n));
-    this.playChord(0);
+    this.dynamics = this.strikes.length ? this.strikes.reduce((a, st) => a + st.velocity, 0) / this.strikes.length : this.velocity;
+    this.rhythm = s.rhythm ? mirrorRhythm(this.strikes, this.phrase.length, n, s.phraseBars * BEATS_PER_BAR) : [];
+    if (this.rhythm.length) this.playRhythmBar(0);
+    else this.playChord(0);
     this.emit();
+  }
+
+  /** Average velocity of the player's phrase: the answer follows their dynamics. */
+  private dynamics = 85;
+
+  /** Schedule the answer strikes that fall in this bar, timed from this bar line (so they never drift). */
+  private playRhythmBar(bar: number): void {
+    const plan = this.plan;
+    if (!plan) return;
+    const beat = this.beatLen();
+    for (const ev of this.rhythm) {
+      if (Math.floor(ev.start / BEATS_PER_BAR) !== bar) continue;
+      const voicing = plan.chords[ev.chord].voicing;
+      const at = (ev.start - bar * BEATS_PER_BAR) * beat;
+      const play = () => {
+        for (const p of voicing) if (this.sounding.has(p)) this.send(p, 0);
+        voicing.forEach((p, i) => this.send(p, this.humanize(ev.velocity, i, voicing.length)));
+        this.noteTimers.push(setTimeout(() => {
+          for (const p of voicing) this.send(p, 0);
+        }, (ev.end - ev.start) * beat));
+      };
+      // On the bar line itself: play now, in the bar tick (a 0 ms timer still fires a little late).
+      if (at < 1) play();
+      else this.noteTimers.push(setTimeout(play, at));
+    }
+  }
+
+  /** Per-note velocity: the strike's velocity, the top voice a little louder, and a small random variation. */
+  private humanize(velocity: number, index: number, count: number): number {
+    const top = index === count - 1 ? 5 : 0;
+    const jitter = Math.round((this.rng() - 0.5) * 10);
+    return Math.max(1, Math.min(127, Math.round(velocity + top + jitter)));
   }
 
   private cancelPlanning(): void {
@@ -288,26 +425,31 @@ export class AnswerEngine {
 
   private stopAnswer(): void {
     this.cancelPlanning();
-    for (const p of this.sounding) this.send(p, 0);
-    this.sounding = [];
+    this.noteTimers.forEach(clearTimeout);
+    this.noteTimers = [];
+    this.rhythm = [];
+    for (const p of [...this.sounding]) this.send(p, 0);
     if (this.status === 'playing') this.status = 'idle';
   }
 
   private playChord(i: number): void {
     const plan = this.plan;
     if (!plan) return;
-    for (const p of this.sounding) this.send(p, 0);
-    this.sounding = plan.chords[i].voicing;
-    for (const p of this.sounding) this.send(p, this.velocity);
+    for (const p of [...this.sounding]) this.send(p, 0);
+    const voicing = plan.chords[i].voicing;
+    voicing.forEach((p, j) => this.send(p, this.humanize(this.dynamics + (i === 0 ? 6 : 0), j, voicing.length)));
   }
 
   private send(pitch: number, velocity: number): void {
+    if (velocity > 0) this.sounding.add(pitch);
+    else if (this.sounding.has(pitch)) this.sounding.delete(pitch);
+    else return; // never send a note-off for a note that isn't sounding
     this.d.sink()?.send(pitch, velocity);
   }
 
   private phraseKey(): string {
     const s = this.d.settings();
-    return `${this.d.model.name}|${this.phrase.map((c) => c.name).join(' ')}|${s.weirdness}|${s.genre}|${s.phraseBars}`;
+    return `${this.d.model.name}|${this.phrase.map((c) => c.name).join(' ')}|${s.weirdness}|${s.genre}|${s.phraseBars}|${s.rhythm ? 'r' : ''}`;
   }
 
   /**
@@ -347,7 +489,8 @@ export class AnswerEngine {
     return {
       forKey: this.phraseKey(),
       s,
-      length: Math.min(4, Math.max(2, this.phrase.length)),
+      // one answer chord per chord change; up to 8 when mirroring the rhythm (so every change has a partner)
+      length: Math.min(s.rhythm ? 8 : 4, Math.max(2, this.phrase.length)),
       key: this.key(),
       prior: priorFor(this.d.model, s.genre),
       history: [...this.history],

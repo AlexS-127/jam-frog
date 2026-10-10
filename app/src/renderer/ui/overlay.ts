@@ -22,6 +22,8 @@ export interface UiState {
   musicPlaying?: boolean;
   /** which chord model is in use ('ngram' | 'gru') */
   model?: string;
+  /** the frog copies the rhythm and dynamics of the player's phrase */
+  rhythm?: boolean;
 }
 
 export interface Handlers {
@@ -32,6 +34,7 @@ export interface Handlers {
   onBridge(bridge: 'osc' | 'ports'): void;
   onBpm(bpm: number): void;
   onModel?(model: string): void;
+  onRhythm?(on: boolean): void;
 }
 
 const PITCH_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
@@ -147,6 +150,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       <section class="jf-trail" aria-label="Recent chords"><span class="jf-kicker">TRAIL</span><ol data-ref="trail"></ol></section>
       <section class="jf-controls" aria-label="Jam settings">
         <label class="jf-toggle"><input data-control="answers" type="checkbox" checked /><span>Answers on</span></label>
+        <label class="jf-toggle" title="The frog answers in the rhythm and dynamics you played"><input data-control="rhythm" type="checkbox" /><span>Copy my rhythm</span></label>
         <label class="jf-bridge">Bridge<select data-control="bridge"><option value="osc">Max for Live</option><option value="ports">Ports / IAC</option></select></label>
         <label class="jf-bpm">BPM<input data-control="bpm" type="number" min="40" max="240" value="120" inputmode="numeric" /></label>
         <label class="jf-phrase">Phrase<select data-control="phrase"><option value="4">4 bars</option><option value="8">8 bars</option></select></label>
@@ -177,6 +181,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   const bpm = query<HTMLInputElement>('[data-control="bpm"]');
   const phrase = query<HTMLSelectElement>('[data-control="phrase"]');
   const model = query<HTMLSelectElement>('[data-control="model"]');
+  const rhythm = query<HTMLInputElement>('[data-control="rhythm"]');
   genre.add(new Option('All styles', 'all'));
   for (const item of GENRES) genre.add(new Option(item, item));
 
@@ -192,6 +197,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   }, { signal });
   phrase.addEventListener('change', () => handlers.onPhraseBars(Number(phrase.value) === 8 ? 8 : 4), { signal });
   model.addEventListener('change', () => handlers.onModel?.(model.value), { signal });
+  rhythm.addEventListener('change', () => handlers.onRhythm?.(rhythm.checked), { signal });
 
   // Bug fix: update() runs on every note and bar in the app, so never overwrite a control the player is
   // using (typing a BPM, dragging the knob, an open dropdown).
@@ -242,6 +248,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       setValue(bpm, String(state.bpm));
       setValue(phrase, String(state.phraseBars));
       if (state.model) setValue(model, state.model);
+      if (document.activeElement !== rhythm) rhythm.checked = Boolean(state.rhythm);
       query<HTMLElement>('[data-ref="tempo"]').textContent = state.liveTempo === null ? '— BPM' : `${state.liveTempo} BPM`;
       query<HTMLElement>('[data-ref="bar"]').textContent = state.bar === null ? '—' : String(state.bar);
       query<HTMLElement>('[data-ref="live-tempo"]').textContent = state.liveTempo === null ? 'WAITING FOR LIVE' : 'LIVE';

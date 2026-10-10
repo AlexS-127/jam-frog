@@ -128,12 +128,12 @@ Build `createOverlay(root: HTMLElement, handlers: Handlers): { update(state: UiS
 interface UiState {
   mood: FrogMood; current: string | null; trail: string[]; suggestions: Suggestion[];
   answer: AnswerPlan | null; progress: AnswerProgress; // {status: 'idle'|'listening'|'playing', bar, bars}
-  weirdness: number; genre: string; answersOn: boolean; phraseBars: 4 | 8;
+  weirdness: number; genre: string; answersOn: boolean; phraseBars: 4 | 8; rhythm?: boolean; model?: string;
   bridge: 'osc' | 'ports'; bpm: number; liveTempo: number | null; bar: number | null; status: string;
 }
 interface Handlers {
   onWeirdness(v: number): void; onGenre(g: string): void; onAnswersToggle(on: boolean): void;
-  onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void; onPhraseBars(bars: 4 | 8): void;
+  onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void; onPhraseBars(bars: 4 | 8): void; onRhythm?(on: boolean): void; onModel?(m: string): void;
 }
 ```
 

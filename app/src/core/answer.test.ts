@@ -247,6 +247,82 @@ describe('AnswerEngine (phrase call and response)', () => {
   });
 });
 
+describe('AnswerEngine rhythm and dynamics', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** strike a chord at `at` ms with `velocity`, release it `hold` ms later (120 BPM: a beat is 500 ms) */
+  function strike(engine: AnswerEngine, pitches: number[], at: number, velocity: number, hold: number) {
+    vi.advanceTimersByTime(at - Date.now());
+    for (const p of pitches) engine.note({ pitch: p, velocity, time: Date.now() });
+    vi.advanceTimersByTime(60); // the chord detector's window
+    engine.chord(detectChord(pitches)!);
+    vi.advanceTimersByTime(hold - 60);
+    for (const p of pitches) engine.note({ pitch: p, velocity: 0, time: Date.now() });
+  }
+
+  function rig(rhythm: boolean) {
+    vi.setSystemTime(0);
+    const sink = new RecordingSink();
+    const engine = new AnswerEngine({
+      model: alwaysIV,
+      sink: () => sink,
+      settings: () => ({ answersOn: true, weirdness: 0.1, genre: 'all', bpm: 120, phraseBars: 4, rhythm }),
+      now: () => Date.now(),
+      rng: () => 0.5, // no random velocity variation, so velocities can be checked exactly
+    });
+    return { engine, sink };
+  }
+
+  it('copies the rhythm: strike positions, re-strikes and lengths, starting at the answer', () => {
+    const { engine, sink } = rig(true);
+    // bar 1: C on beat 1 (held 1 beat), C again on beat 3 (held half a beat); bar 2: Am on beat 2 (held 2 beats)
+    strike(engine, V.C, 0, 100, 500);
+    strike(engine, V.C, 1000, 60, 250);
+    strike(engine, V.Am, 2500, 80, 1000);
+    vi.advanceTimersByTime(16000 - Date.now());
+    const ons = sink.log.filter((e) => e.velocity > 0);
+    const starts = [...new Set(ons.map((e) => e.t))];
+    expect(starts).toEqual([8000, 9000, 10500]); // the same offsets, from bar 5
+    const offAfter = (t: number) => sink.log.find((e) => e.velocity === 0 && e.t > t)!.t;
+    expect(offAfter(8000)).toBe(8500); // held a beat
+    expect(offAfter(9000)).toBe(9250); // half a beat
+    expect(offAfter(10500)).toBe(11500); // two beats
+    expect(sink.held.size).toBe(0);
+  });
+
+  it('follows the dynamics of each strike, top voice a little louder', () => {
+    const { engine, sink } = rig(true);
+    strike(engine, V.C, 0, 100, 500);
+    strike(engine, V.C, 1000, 40, 250);
+    strike(engine, V.Am, 2500, 80, 1000);
+    vi.advanceTimersByTime(16000 - Date.now());
+    const velAt = (t: number) => sink.log.filter((e) => e.t === t && e.velocity > 0).map((e) => e.velocity);
+    expect(velAt(8000)).toEqual([100, 100, 105]); // loud strike: loud answer, top voice +5
+    expect(velAt(9000)).toEqual([40, 40, 45]); // soft ghost strike: soft answer
+  });
+
+  it('without rhythm mode, plays one chord per bar at the phrase\'s average dynamics', () => {
+    const { engine, sink } = rig(false);
+    strike(engine, V.C, 0, 50, 500);
+    strike(engine, V.Am, 2000, 50, 500);
+    vi.advanceTimersByTime(16000 - Date.now());
+    expect(sink.chordTimes()).toEqual([8000, 12000]); // 2 chords over 4 bars
+    const first = sink.log.filter((e) => e.t === 8000 && e.velocity > 0).map((e) => e.velocity);
+    expect(first).toEqual([56, 56, 61]); // soft player -> soft frog (first chord accented +6, top voice +5)
+  });
+
+  it('counts a re-struck chord once for the model and the answer length', () => {
+    const { engine, sink } = rig(false);
+    strike(engine, V.C, 0, 90, 300);
+    strike(engine, V.C, 500, 90, 300);
+    strike(engine, V.C, 1000, 90, 300);
+    strike(engine, V.Am, 2000, 90, 300);
+    vi.advanceTimersByTime(16000 - Date.now());
+    expect(sink.chordTimes()).toHaveLength(2); // C, Am -> a 2-chord answer, not 4
+  });
+});
+
 describe('AnswerEngine background planning', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());

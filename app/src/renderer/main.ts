@@ -23,6 +23,7 @@ const settings = {
   answersOn: true,
   phraseBars: 4 as 4 | 8,
   bpm: 120,
+  rhythm: false,
 };
 
 // ---- models: both behind ChordModel; the GRU replaces the n-gram only if it also wins the listening test ----
@@ -138,6 +139,10 @@ const overlay = createOverlay(root, {
     settings.bpm = bpm;
     render();
   },
+  onRhythm(on) {
+    settings.rhythm = on;
+    render();
+  },
   onModel(m) {
     if (m in models) settings.model = m;
     refreshSuggestions();
@@ -168,6 +173,7 @@ function uiState(): UiState {
     status,
     musicPlaying: progress.status === 'playing',
     model: settings.model,
+    rhythm: settings.rhythm,
   };
 }
 
