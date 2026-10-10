@@ -15,6 +15,44 @@ blocking each other or colliding in git.
 | Chordonomicon prep + n-gram (top-1 38.2%, top-3 69.8%) | `model/`, `model/export/ngram.json` |
 | Shared contracts: `NoteSource`, `NoteSink`, `ChordModel`, tokens, `Suggestion`, `AnswerPlan`, `FrogMood` | `app/src/core/` |
 
+## Who does what
+
+Only **Alex** has Ableton Live Suite, so anything that has to be tested in Live goes to Alex. Kevin and Katie build
+against the shared contracts and check their work without Live, using mock data, a fake model, unit tests or Python.
+Alex verifies everything in Live at the two integration points (9 PM and 11 PM).
+
+| Who | Lanes, in order | Needs Live? | How they check their own work |
+| --- | --- | --- | --- |
+| **Alex** | Integration in `main.ts`, Ableton demo Set, hand tests at each integration, merging PRs, demo rehearsal, Max stretch | Yes | Playing it in Live |
+| **Kevin** | **B** overlay UI → **E** listening test page → put **F**'s sprites in the UI → demo video + slides | No | `ui/demo.html` with mock data in a browser; `npm test` |
+| **Katie** | **D** GRU (5-hour box) + `gru.ts` → **F** frog sprites in Adobe tools → pitch story | No | Test accuracy vs the n-gram (38.2% / 69.8%) |
+| **Claude** (in Alex's session) | **A1** suggestions engine → **A2** answers + voicing → **C** Keep | No | Unit tests; Alex checks in Live |
+
+**Why this shape:**
+- Alex's hours in Live are the scarcest resource, so they go to integration and the demo, not lane code.
+- Kevin and Katie have work with no Ableton dependency at all, so neither waits on Alex.
+- If the GRU misses its 5-hour box, Katie moves straight on to art and pitch; nobody goes idle.
+
+**Hearing the app without Live (optional):**
+- **Ableton's free 30-day trial of Live 12 Suite** (Max for Live included) runs the full setup from `ableton/SETUP.md`.
+- **GarageBand** (free on Mac) can play the frog's notes through the IAC ports, using the overlay's **Ports** bridge.
+  Set up the ports with steps 1–2 of the Ports bridge section in `ableton/SETUP.md`.
+
+### Kevin's order of work
+
+1. **B, overlay UI.** Build `ui/overlay.ts` and `ui/demo.html` against the `UiState` / `Handlers` interfaces below, using placeholder frogs.
+   Deliver it by the **9 PM** integration.
+2. **E, listening test page.** Start with the fake model; switch to the real n-gram when A1 lands on `main`.
+3. Swap Katie's sprites into the UI when she pushes them.
+4. Demo video (screen recording of Alex's run-through) and pitch slides.
+
+### Katie's order of work
+
+1. **D, GRU.** Run `prepare.py`, then `train_gru.py`, ONNX export, `gru.ts`, accuracy report. **Hard stop 5 hours after you start;**
+   tell Alex your start time.
+2. **F, frog sprites** in Illustrator/Express/Firefly: 4 moods as SVG. Push them early, even rough, so Kevin can wire them in.
+3. The pitch story for the Adobe Creative track: how the sprites and visuals were made with Adobe tools.
+
 ## The contracts (frozen; ask Alex before changing)
 
 Everything in a lane codes against these, so nobody waits for anybody else's implementation.
@@ -44,7 +82,7 @@ MIDI 60 is C3 (Ableton's naming), so "C3 to C5" means MIDI 60 to 84.
 Each lane lists the files it **owns**. Only edit your own files. If you need a change in someone else's file or
 in a shared file, ask its owner.
 
-### Lane A1: prediction engine (`app/src/core`)
+### Lane A1 (Claude): prediction engine (`app/src/core`)
 
 Feature 3, live suggestions. **Can start now.**
 
@@ -63,7 +101,7 @@ Feature 3, live suggestions. **Can start now.**
 **Done when:** the Python and TS n-gram give the same probabilities on 3 contexts (±1e-4), `predictNext` takes under
 5 ms, and suggestions come back under 50 ms after a chord.
 
-### Lane A2: answers and voicing (`app/src/core`)
+### Lane A2 (Claude): answers and voicing (`app/src/core`)
 
 Feature 4, frog answers. **Can start now** with a fake `ChordModel`.
 
@@ -77,7 +115,7 @@ Feature 4, frog answers. **Can start now** with a fake `ChordModel`.
 
 **Done when:** an answer lands on the bar in Live over the Max for Live bridge, with no stuck notes.
 
-### Lane B: overlay UI (`app/src/renderer/ui/`, `app/src/renderer/style.css`)
+### Lane B (Kevin): overlay UI (`app/src/renderer/ui/`, `app/src/renderer/style.css`)
 
 Feature 7. **Can start now with mock data**; no engine needed.
 
@@ -111,7 +149,7 @@ Window constraints:
 
 **Done when:** the demo page cycles through all four moods and real-looking suggestions at 360×480. Alex wires it into `main.ts`.
 
-### Lane C: Keep (`app/src/core/keep.ts`, `app/src/main/keep.ts`)
+### Lane C (Claude): Keep (`app/src/core/keep.ts`, `app/src/main/keep.ts`)
 
 Feature 6. **Can start now.**
 
@@ -122,7 +160,7 @@ Feature 6. **Can start now.**
 
 **Done when:** a unit test reads the bytes back with `@tonejs/midi` and finds the right notes, and a saved file drags into Ableton and plays.
 
-### Lane D: GRU model (`model/train_gru.py`, `model/export/gru.onnx`, `app/src/core/gru.ts`)
+### Lane D (Katie): GRU model (`model/train_gru.py`, `model/export/gru.onnx`, `app/src/core/gru.ts`)
 
 **Time box: 5 hours from start.** Needs a laptop with PyTorch; Apple Silicon `mps` is fine.
 
@@ -138,7 +176,7 @@ Feature 6. **Can start now.**
 **The GRU replaces the n-gram only if it's at least as accurate and passes the listening test (lane E).**
 If the box runs out, we ship the n-gram.
 
-### Lane E: listening test page (`app/src/renderer/listening.html`, `listening.ts`)
+### Lane E (Kevin): listening test page (`app/src/renderer/listening.html`, `listening.ts`)
 
 Feature 8. **Can start now with a fake model**; it uses A1/A2 when they land.
 
@@ -148,7 +186,7 @@ Feature 8. **Can start now with a fake model**; it uses A1/A2 when they land.
 
 **Done when:** it plays all 20 cases through Ableton (5 progressions × 2 weirdness × 2 models).
 
-### Lane F: art and pitch (`app/src/renderer/assets/`, `docs/`)
+### Lane F (Katie, Kevin): art and pitch (`app/src/renderer/assets/`, `docs/`)
 
 **Can start now.** This lane makes the case for the **Adobe Creative track**, so use Adobe tools (Illustrator, Express, Firefly) and say so in the pitch.
 
@@ -193,14 +231,70 @@ const fake: ChordModel = { name: 'fake', predictNext: () => { const p = new Floa
 | **3 AM** | **Feature freeze.** Only bug fixes after this. |
 | 3–8 AM | Demo rehearsal, recording, pitch. Stretch work only if everything above is solid. |
 
-## Git rules
+## How to push your work
 
-- **Integration branch:** `main`. Branch off it as `lane/<letter>-<name>`, for example `lane/b-ui`, and open a PR back into `main`.
-- **Pull often** (`git pull origin main`); keep PRs small and merge at least every 2 hours.
-- **Before pushing:** `cd app && npm test && npm run typecheck`.
-- **New dependencies:** ask Alex. The approved list is electron, vite, typescript, node-osc, @tonejs/midi,
+`main` is the shared branch. **Never push straight to `main`.** Work on your own branch and open a pull request (PR).
+
+### Once, when you start
+
+```sh
+git clone https://github.com/AlexS-127/jam-frog.git
+cd jam-frog
+git checkout main
+git checkout -b lane/b-ui            # Kevin: lane/b-ui (then lane/e-listening)   Katie: lane/d-gru (then lane/f-art)
+cd app && npm install && cd ..       # everyone (Node 20+)
+python3 -m venv .venv && source .venv/bin/activate && pip install -r model/requirements.txt torch onnx   # Katie only
+```
+
+### Every time you've got something working (at least every 2 hours)
+
+```sh
+# 1. Get everyone else's latest work into your branch
+git pull origin main                 # if it reports a conflict, see "If git says CONFLICT" below
+
+# 2. Check nothing is broken (must pass before you push)
+cd app && npm test && npm run typecheck && cd ..
+
+# 3. Commit only your own lane's files
+git status                           # look: only files your lane owns should be listed
+git add <your files>                 # e.g. git add app/src/renderer/ui
+git commit -m "UI: suggestion cards with mini keyboards"
+
+# 4. Push your branch (the first push needs -u)
+git push -u origin lane/b-ui
+```
+
+### Open the pull request
+
+1. Go to https://github.com/AlexS-127/jam-frog. A yellow bar says **"lane/b-ui had recent pushes"**.
+   Click **Compare & pull request**.
+2. Check that **base** is `main` and **compare** is your branch.
+3. Title it with what works now ("UI: overlay with mock data, all 4 moods"). In the description, say how to try it in 1–3 steps.
+4. Click **Create pull request**.
+
+### Who merges
+
+- **If your PR only touches your own lane's files** and the tests pass, merge it yourself: **Merge pull request** →
+  **Confirm merge**. Then post in the team chat so others pull.
+- **If it touches a shared file** (`app/src/core/types.ts`, `vocab.ts`, `model.ts`, `app/src/renderer/main.ts`,
+  `app/src/main/*`, `app/package.json`, `ableton/`, `README.md`), don't merge it. Ask Alex to review and merge.
+- **Claude** pushes to its own branch (`claude/beautiful-wozniak-0p6ot6`); Alex asks Claude to merge it into `main`.
+
+After a merge, keep working on the same branch. Run `git pull origin main` first, so you start from the merged state.
+
+### If git says CONFLICT
+
+1. Run `git status`. The conflicted files are listed under "both modified".
+2. Open each one. Keep the right lines between the `<<<<<<<`, `=======` and `>>>>>>>` markers, then delete the markers.
+3. Run `git add <file>`, then `git commit`, then re-run the tests.
+4. **If the conflict is in a file you don't own,** stop and ask Alex. Don't guess.
+
+### Other rules
+
+- **New dependencies:** ask Alex first. The approved list is electron, vite, typescript, node-osc, @tonejs/midi,
   onnxruntime-web and vitest; for Python, datasets, pandas, torch and onnx.
-- **Never commit** `model/data/` (it's in `.gitignore`).
+- **Never commit** `model/data/` or `.venv/` (both in `.gitignore`), or any `node_modules/`.
+- **Never force-push** (`git push -f`) a branch someone else might have pulled, and never to `main`.
 
 ## House rules that apply to every lane
 
