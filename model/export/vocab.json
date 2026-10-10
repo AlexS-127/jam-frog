@@ -1,0 +1,32 @@
+{
+  "size": 106,
+  "pad": 0,
+  "bos": 1,
+  "start0": 2,
+  "interval0": 10,
+  "qualities": [
+    "maj",
+    "min",
+    "dim",
+    "aug",
+    "sus",
+    "dom7",
+    "maj7",
+    "min7"
+  ],
+  "genres": [
+    "pop",
+    "rock",
+    "country",
+    "alternative",
+    "pop rock",
+    "punk",
+    "metal",
+    "rap",
+    "soul",
+    "jazz",
+    "reggae",
+    "electronic"
+  ],
+  "layout": "interval token = interval0 + ((root - prevRoot) mod 12) * len(qualities) + quality"
+}

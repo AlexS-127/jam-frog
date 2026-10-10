@@ -44,4 +44,4 @@ Nothing.
 
 ## Credits
 
-- Chord data: [Chordonomicon](https://huggingface.co/datasets/ailsntua/Chordonomicon) (`ailsntua/Chordonomicon` on Hugging Face), a dataset of about 666k songs' chord progressions with genre labels. Kantarelis et al., *Chordonomicon: A Dataset of 666,000 Songs and their Chord Progressions*, 2024.
+- Chord data: [Chordonomicon](https://huggingface.co/datasets/ailsntua/Chordonomicon) (`ailsntua/Chordonomicon` on Hugging Face), licensed CC BY-NC 4.0. Kantarelis et al., *Chordonomicon: A Dataset of 666,000 Songs and their Chord Progressions*, arXiv:2410.22046, 2024.
