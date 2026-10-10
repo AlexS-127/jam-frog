@@ -218,23 +218,37 @@ def evaluate_and_export(model: ChordGRU, rng_seed: int, quick: bool, out: Path) 
     x, g, y = windows(tg, ts)
     genre_top = accuracy(predict(model, x, g, cpu), y)
     all_top = accuracy(predict(model, x, np.full_like(g, ALL_ID), cpu), y)
+
+    # Compare with the shipped n-gram and with the GRU currently exported (read before anything is overwritten).
+    def read_eval(path: Path):
+        return json.loads(path.read_text())["genre_models"] if path.exists() else None
+    ngram = read_eval(EXPORT / "ngram_eval.json")
+    previous = None if quick else read_eval(EXPORT / "gru_eval.json")
     results = {
         "test_sequences_sampled": n,
         "all_model": list(all_top),
         "genre_models": list(genre_top),
-        "ngram_for_comparison": {"all_model": [0.376, 0.698], "genre_models": [0.382, 0.698]},
+        "ngram_for_comparison": {"genre_models": ngram},
     }
     print(json.dumps(results, indent=2))
-    (out / "gru_eval.json").write_text(json.dumps(results, indent=2) + "\n")
 
+    t1, t3 = genre_top
+    pct = lambda pair: f"{pair[0]:.1%} / {pair[1]:.1%}" if pair else "n/a"
+    print(f"\nthis GRU (per genre): {pct(genre_top)}   n-gram: {pct(ngram)}   previous GRU: {pct(previous)}")
+    if previous and t1 < previous[0]:
+        # Never replace a better exported model; keep this run aside for inspection.
+        out = HERE / "checkpoints" / "not-better"
+        out.mkdir(parents=True, exist_ok=True)
+        print(f"not better than the exported GRU: kept the old one; this run is in {out}")
+    elif ngram and (t1 < ngram[0] or t3 < ngram[1]):
+        print("not better than the n-gram: ship the n-gram")
+    else:
+        print("better: exporting; then run `cd app && npm test` and commit model/export/gru_*")
+
+    (out / "gru_eval.json").write_text(json.dumps(results, indent=2) + "\n")
     export_weights(model, out)
     export_check(model, tg, ts, out)
     export_onnx(model, out)
-
-    t1, t3 = genre_top
-    beats = t1 >= 0.382 and t3 >= 0.698
-    print(f"\nGRU (per genre) top-1 {t1:.1%} top-3 {t3:.1%}  vs  n-gram 38.2% / 69.8%  ->  "
-          + ("at least as accurate: on to gru.ts and the listening test" if beats else "not better: ship the n-gram"))
     if quick:
         print(f"(quick run: {n:,} test sections, files in {out}; not comparable, don't report these numbers)")
 
