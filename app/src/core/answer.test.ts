@@ -111,6 +111,34 @@ describe('AnswerEngine (phrase call and response)', () => {
     expect(sink.chordTimes()[0]).toBe(10000); // bar 2 + 4 bars = bar 6, at 10 s
   });
 
+  it('follows the bar length of Live, even when the BPM setting is wrong (Live 93 BPM, app still on 120)', () => {
+    const { engine, progress, play, until } = setup({ bpm: 120 });
+    const timedProgress: (AnswerProgress & { t: number })[] = [];
+    const seen = progress.push.bind(progress);
+    progress.push = (...ps: AnswerProgress[]) => {
+      ps.forEach((p) => timedProgress.push({ ...p, t: Date.now() }));
+      return seen(...ps);
+    };
+    const LIVE_BAR = 2581; // 4 beats at 93 BPM
+    const bars: number[] = [];
+    for (let t = 0; t <= 9 * LIVE_BAR; t += LIVE_BAR) bars.push(t);
+    const chords: [string, number][] = [['C', 300], ['Am', 1500], ['F', LIVE_BAR + 300], ['G', 2 * LIVE_BAR + 300]];
+    const events = [...bars.map((t) => [t, () => engine.bar()] as const), ...chords.map(([n, t]) => [t, () => play(n, t)] as const)]
+      .sort((a, b) => a[0] - b[0]);
+    for (const [t, f] of events) {
+      until(t);
+      f();
+    }
+    // The counter may only change at Live's bar lines: never on a chord, never from the backup clock.
+    // (the phrase starting, idle -> bar 1, happens on the chord itself; that is the one allowed exception)
+    const changes = timedProgress
+      .filter((p, i) => i > 0 && (p.bar !== timedProgress[i - 1].bar || p.status !== timedProgress[i - 1].status))
+      .filter((p, i, all) => !(p.status === 'listening' && p.bar === 1 && (i === 0 || all[i - 1].status !== 'listening')))
+      .map((p) => p.t);
+    expect(changes.every((t) => bars.includes(t))).toBe(true);
+    expect(timedProgress.find((p) => p.status === 'playing')?.t).toBe(4 * LIVE_BAR); // phrase = Live bars 1-4
+  });
+
   it('keeps counting bars itself if Live stops mid-phrase', () => {
     const { sink, play, until, liveBars } = setup();
     liveBars(2000, [['C', 100]]); // Live sends bars at 0 and 2 s, then stops

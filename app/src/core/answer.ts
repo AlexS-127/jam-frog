@@ -41,6 +41,8 @@ export interface AnswerEngineDeps {
 }
 
 const BEATS_PER_BAR = 4;
+/** While Live sends bars, the backup clock only steps in if a bar is this late (Live stopped). */
+const BACKUP_SLACK = 1.25;
 
 /**
  * Call and response in bars. The player's phrase starts on the bar of their first chord (or the next bar,
@@ -60,6 +62,9 @@ export class AnswerEngine {
   private lastBarAt = -Infinity;
   /** whether the last bar line came from Live (true) or from the engine's own clock (false) */
   private lastBarLive = false;
+  /** Live's bar length, measured between consecutive /bar messages (right even if the BPM setting is stale) */
+  private liveBarMs: number | null = null;
+  private prevLiveBarAt = -Infinity;
   private phraseStart = 0;
   private answerStart = 0;
   private plan: AnswerPlan | null = null;
@@ -138,7 +143,9 @@ export class AnswerEngine {
     return 60000 / (this.d.settings().bpm || 120);
   }
 
+  /** Bar length: measured from Live while its bars are coming in, otherwise 4 beats at the BPM setting. */
   private barMs(): number {
+    if (this.lastBarLive && this.liveBarMs && this.now() - this.lastBarAt < 2 * this.liveBarMs) return this.liveBarMs;
     return BEATS_PER_BAR * this.beatMs();
   }
 
@@ -148,6 +155,11 @@ export class AnswerEngine {
 
   /** One bar line. From Live (`live`) or from the engine's own clock when Live's transport is stopped. */
   private tick(live: boolean): void {
+    if (live) {
+      const gap = this.now() - this.prevLiveBarAt;
+      if (gap > 250 && gap < 10000) this.liveBarMs = gap;
+      this.prevLiveBarAt = this.now();
+    }
     if (live || this.status !== 'idle') {
       this.barIndex++;
       this.lastBarAt = this.now();
@@ -156,9 +168,14 @@ export class AnswerEngine {
     // Keep a fallback tick running while busy: Live's next /bar normally arrives first and re-arms it.
     this.stopClock();
     if (this.status !== 'idle') {
-      this.clock = setTimeout(() => this.tick(false), this.barMs() * (live ? 1.1 : 1));
+      this.clock = setTimeout(() => this.tick(false), this.barMs() * (live ? this.backupSlack() : 1));
     }
     this.onBar();
+  }
+
+  /** How late a Live bar may be before the backup clock steps in: more slack until Live's bar length is known. */
+  private backupSlack(): number {
+    return this.liveBarMs ? BACKUP_SLACK : 1.5;
   }
 
   private stopClock(): void {
@@ -178,7 +195,8 @@ export class AnswerEngine {
       this.phraseStart = intoBar > 0.75 * this.barMs() ? this.barIndex + 1 : this.barIndex;
       if (!this.clock) {
         const untilNext = Math.max(0, this.barMs() - (intoBar % this.barMs()));
-        this.clock = setTimeout(() => this.tick(false), this.lastBarLive ? untilNext + 0.1 * this.barMs() : untilNext);
+        const slack = this.lastBarLive ? (this.backupSlack() - 1) * this.barMs() : 0;
+        this.clock = setTimeout(() => this.tick(false), untilNext + slack);
       }
     } else {
       // No grid: bar 1 of the phrase starts when this chord was struck (its first note-on, which the

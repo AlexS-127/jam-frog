@@ -223,13 +223,24 @@ async function initPorts(): Promise<void> {
 
 // Transport info from Frog Voice: /tempo <bpm> and /bar at every bar start.
 let bars = 0;
+let tempoFromLive = false;
 onOsc((msg) => {
   if (msg[0] === '/tempo') {
+    tempoFromLive = true;
     const bpm = Math.round(Number(msg[1]) * 100) / 100;
     bpmInput.value = String(bpm);
     $('liveTempo').textContent = `${bpm} BPM`;
   } else if (msg[0] === '/bar') {
-    lastBarAt = performance.now();
+    const now = performance.now();
+    // Frog Voice only sends /tempo when it loads or the tempo changes. If the app started later and never
+    // got it, take the BPM from the bar length instead (assumes 4/4) so the BPM box isn't left wrong.
+    const gap = now - lastBarAt;
+    if (!tempoFromLive && gap > 250 && gap < 10000) {
+      const bpm = Math.round(240000 / gap);
+      bpmInput.value = String(bpm);
+      $('liveTempo').textContent = `~${bpm} BPM (from bars)`;
+    }
+    lastBarAt = now;
     answers.bar();
     $('bar').textContent = String(++bars);
   }
