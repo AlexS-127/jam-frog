@@ -1,5 +1,11 @@
 import { chordName, detectChord, QUALITY_INTERVALS } from '../core/chords';
 import { EchoFilter } from '../core/echo';
+import { NgramModel } from '../core/ngram';
+import { suggest } from '../core/suggest';
+import type { Chord } from '../core/types';
+import { GENRES } from '../core/vocab';
+import ngramText from '../../../model/export/ngram.json?raw';
+import type { NgramJson } from '../core/ngram';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
 import type { NoteEvent, NoteSink, NoteSource } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
@@ -13,6 +19,17 @@ const inputSel = $<HTMLSelectElement>('input');
 const outputSel = $<HTMLSelectElement>('output');
 const bpmInput = $<HTMLInputElement>('bpm');
 const bridgeSel = $<HTMLSelectElement>('bridge');
+const genreSel = $<HTMLSelectElement>('genre');
+const weirdInput = $<HTMLInputElement>('weird');
+
+const model = new NgramModel(JSON.parse(ngramText) as NgramJson);
+const history: Chord[] = [];
+for (const g of ['all', ...GENRES]) genreSel.add(new Option(g, g));
+weirdInput.oninput = () => {
+  $('weirdVal').textContent = Number(weirdInput.value).toFixed(2);
+  showSuggestions();
+};
+genreSel.onchange = () => showSuggestions();
 const status = $('status');
 
 let source: NoteSource | null = null;
@@ -42,10 +59,37 @@ function onGroup(g: NoteGroup): void {
   const chord = detectChord(g.pitches);
   if (!chord) return; // single notes and non-chords are ignored
   $('chord').textContent = chord.name;
+  history.push(chord);
+  if (history.length > 16) history.shift();
+  const t0 = performance.now(); // chord recognised (the 60 ms grouping window has closed)
+  showSuggestions();
+  $('suggestMs').textContent = `${(performance.now() - t0).toFixed(1)} ms`;
   const ivRoot = (chord.root + 5) % 12;
   $('answer').textContent = chordName(ivRoot, 'maj');
   playChord(QUALITY_INTERVALS.maj.map((i) => 60 + ivRoot + i));
   $('latency').textContent = `${Math.round(performance.now() - g.firstTime)} ms`;
+}
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+// Ableton naming: MIDI 60 = C3
+const noteName = (p: number) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 2}`;
+
+function showSuggestions(): void {
+  const last = history[history.length - 1];
+  const list = suggest(history, model, {
+    weirdness: Number(weirdInput.value),
+    genre: genreSel.value,
+    lastVoicing: last?.pitches,
+  });
+  const box = $('suggestions');
+  box.innerHTML = '';
+  for (const s of list) {
+    const el = document.createElement('div');
+    el.className = s.borrowed ? 'sugg borrowed' : 'sugg';
+    el.title = `${Math.round(s.prob * 100)}%${s.borrowed ? ' · borrowed' : ''}`;
+    el.innerHTML = `<b>${s.name}</b><small>${s.voicing.map(noteName).join(' ')}</small>`;
+    box.append(el);
+  }
 }
 
 function playChord(pitches: number[]): void {

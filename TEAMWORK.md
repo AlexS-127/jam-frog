@@ -82,18 +82,17 @@ MIDI 60 is C3 (Ableton's naming), so "C3 to C5" means MIDI 60 to 84.
 Each lane lists the files it **owns**. Only edit your own files. If you need a change in someone else's file or
 in a shared file, ask its owner.
 
-### Lane A1 (Claude): prediction engine (`app/src/core`)
+### Lane A1 (Claude): prediction engine (`app/src/core`). **Done** (`ngram.ts`, `key.ts`, `sampler.ts`, `suggest.ts`, `voicing.ts`)
 
 Feature 3, live suggestions. **Can start now.**
 
 - `ngram.ts`: `NgramModel implements ChordModel`. A TypeScript port of `Predictor` in `model/build_ngram.py`
   (interpolated absolute discounting; the formula is in that file's docstring). Loads `model/export/ngram.json`.
-- `sampler.ts`, built around this signature:
-  `reshape(probs: Float32Array, weirdness: number, prevRoot: number, key: {tonic: number; minor: boolean}): Float32Array`
-  - **Low weirdness:** rank by probability.
-  - **High weirdness:** raise the temperature, widen top-k, and boost borrowed chords from the parallel key (♭VI, ♭VII in major).
-  - **Never sample uniformly at random.**
-  - Also `sampleNext(...)`, for answers.
+- `sampler.ts`: `reshape(probs, {weirdness, prev, key, prior?})` returns a reshaped distribution;
+  `sampleToken(dist, rng)` draws from it (for answers); `ranked(dist)` lists tokens best first.
+  - **Low weirdness (0.3 and below):** plain probability ranking, sharpened, top 4.
+  - **High weirdness:** higher temperature, wider top-k, rare moves and borrowed chords (♭VI, ♭VII, iv in major) boosted.
+  - **Never uniform**, and never repeats the chord just played.
 - `suggest.ts`: `suggest(history: Chord[], model, genre, weirdness): Suggestion[]` returns the 3 distinct best chords, each voiced near the last chord the player played.
 - `key.ts`: estimate the key from the recent phrase. The sampler needs it for "borrowed".
 - Tests for each.
