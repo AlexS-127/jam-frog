@@ -1,0 +1,9 @@
+node_modules/
+app/dist/
+app/dist-electron/
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+model/data/
+model/checkpoints/

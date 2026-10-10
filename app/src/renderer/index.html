@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Jam Frog</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="card">
+      <header class="drag">
+        <svg class="frog" viewBox="0 0 64 48" aria-hidden="true">
+          <ellipse cx="32" cy="30" rx="26" ry="16" fill="#5fbf5a" />
+          <circle cx="18" cy="14" r="9" fill="#5fbf5a" /><circle cx="46" cy="14" r="9" fill="#5fbf5a" />
+          <circle cx="18" cy="14" r="4" fill="#fff" /><circle cx="46" cy="14" r="4" fill="#fff" />
+          <circle cx="19" cy="15" r="2" fill="#123" /><circle cx="47" cy="15" r="2" fill="#123" />
+          <path d="M20 34 Q32 42 44 34" stroke="#234" stroke-width="2.5" fill="none" stroke-linecap="round" />
+        </svg>
+        <span class="title">Jam Frog <small>spike</small></span>
+        <button id="close" class="nodrag" title="Quit">×</button>
+      </header>
+
+      <section class="ports">
+        <label>From Ableton <select id="input"></select></label>
+        <label>To frog track <select id="output"></select></label>
+        <label>BPM <input id="bpm" type="number" min="40" max="240" value="120" /></label>
+      </section>
+
+      <section class="now">
+        <div class="label">You played</div>
+        <div id="chord" class="chord">—</div>
+        <div class="label">Frog answers (IV)</div>
+        <div id="answer" class="answer">—</div>
+      </section>
+
+      <section class="stats">
+        <div>Round trip <b id="latency">—</b></div>
+        <div>Notes in <b id="in">0</b> · out <b id="out">0</b></div>
+        <div>Doubled <b id="doubled">0</b> · echoes dropped <b id="echo">0</b></div>
+      </section>
+      <div id="status" class="status"></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
