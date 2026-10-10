@@ -9,7 +9,7 @@ You play chords in Ableton. A frog overlay floats above Live and:
 
 A weirdness knob and a genre picker reshape both. **Keep** saves your last phrase plus the answer as a `.mid`.
 
-> Status: **IAC spike** — the overlay names the chord you play and answers with its IV chord on the frog track.
+> Status: spike done over both bridges (IAC ports and Max for Live). The overlay names the chord you play and answers with its IV chord on the frog track. Next: live suggestions and frog answers.
 
 ## Repo layout (one lane per folder)
 
@@ -18,6 +18,8 @@ A weirdness knob and a genre picker reshape both. **Keep** saves your last phras
 | `app/` | Electron overlay. Shared interfaces live in `app/src/core`. |
 | `model/` | Python data prep and training, plus exported model files. |
 | `ableton/` | Max for Live devices and [`ableton/SETUP.md`](ableton/SETUP.md). |
+
+Teammates: see [`TEAMWORK.md`](TEAMWORK.md) for the lanes, contracts, milestones and git rules.
 
 ## Setup
 

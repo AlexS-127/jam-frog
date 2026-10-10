@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.electron.json && vite build",
     "start": "npm run build && electron .",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.electron.json"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
