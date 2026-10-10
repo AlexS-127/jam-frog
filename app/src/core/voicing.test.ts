@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { candidateVoicings, movement, voiceChord, voiceNearPlayer } from './voicing';
+import { candidateVoicings, movement, registerOf, voiceChord, voiceInRegister, voiceNearPlayer } from './voicing';
 
 const C = { root: 0, quality: 'maj' as const };
 const F = { root: 5, quality: 'maj' as const };
@@ -42,5 +42,21 @@ describe('voicing', () => {
   it('measures movement across different note counts', () => {
     expect(movement([60, 64, 67], [60, 64, 67])).toBe(0);
     expect(movement([60, 64, 67, 70], [60, 64, 67])).toBe(1.5);
+  });
+
+  it('finds the register of a phrase, and a bass line when most chords have one', () => {
+    expect(registerOf([[60, 64, 67], [57, 60, 64]])).toEqual({ lo: 56, hi: 71, bass: null }); // 58..69 widened to 14
+    const reg = registerOf([[36, 52, 55, 60], [31, 50, 55, 59], [33, 52, 57, 60]])!;
+    expect(reg.bass).toBe(33);
+    expect(reg.lo).toBeGreaterThanOrEqual(45);
+    expect(reg.hi).toBeLessThanOrEqual(66);
+  });
+
+  it('voices in the register with the root in the bass', () => {
+    const reg = { lo: 48, hi: 62, bass: 36 };
+    const v = voiceInRegister(F, [36, 52, 55, 60], reg);
+    expect(v[0] % 12).toBe(5); // F in the bass
+    expect(Math.abs(v[0] - 36)).toBeLessThanOrEqual(6);
+    expect(v.slice(1).every((p) => p >= 48 && p <= 62)).toBe(true);
   });
 });

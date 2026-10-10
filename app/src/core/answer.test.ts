@@ -129,15 +129,30 @@ describe('AnswerEngine (phrase call and response)', () => {
     expect(sink.held.size).toBe(0);
   });
 
-  it('voices answers inside C3..C5 (MIDI 60..84)', () => {
+  it('answers in the register the player used', () => {
     const { sink, play, until } = setup();
-    play('F', 0);
+    play('F', 0); // F A C around F2..C3
     play('G', 2000);
     until(16000);
-    for (const e of sink.log) {
-      expect(e.pitch).toBeGreaterThanOrEqual(60);
-      expect(e.pitch).toBeLessThanOrEqual(84);
+    const ons = sink.log.filter((e) => e.velocity > 0).map((e) => e.pitch);
+    expect(Math.min(...ons)).toBeGreaterThanOrEqual(53 - 6);
+    expect(Math.max(...ons)).toBeLessThanOrEqual(62 + 6);
+  });
+
+  it('plays low when the player plays low, with a bass note when they play one', () => {
+    const { sink, engine, until } = setup();
+    // left-hand root two octaves down + right-hand triad, low on the keyboard
+    const low = { C: [36, 52, 55, 60], G: [31, 50, 55, 59] };
+    for (const [name, at] of [['C', 0], ['G', 2000]] as const) {
+      vi.advanceTimersByTime(at - Date.now());
+      engine.chord(detectChord(low[name])!);
     }
+    until(16000);
+    const first = sink.log.filter((e) => e.t === 8000 && e.velocity > 0).map((e) => e.pitch).sort((a, b) => a - b);
+    expect(first).toHaveLength(4); // bass + triad, like the player
+    expect(first[0]).toBeLessThan(43); // bass near the player's bass line (31..36)
+    expect(first[1] - first[0]).toBeGreaterThanOrEqual(7);
+    expect(Math.max(...first)).toBeLessThan(66);
   });
 
   it('needs at least 2 chords, and stays quiet when answers are off', () => {
@@ -194,7 +209,7 @@ describe('AnswerEngine (phrase call and response)', () => {
     vi.advanceTimersByTime(1); // the background plan
     const p = plan()!;
     expect(p.chords).toHaveLength(4);
-    expect(p.chords.every((c) => c.voicing.every((n) => n >= 60 && n <= 84))).toBe(true);
+    expect(p.chords.every((c) => c.voicing.every((n) => n >= 50 && n <= 74))).toBe(true); // near C Am F G as played
     const last = p.chords.at(-1)!.chord;
     expect([0, 7]).toContain(last.root); // ends on I or V
   });

@@ -104,7 +104,7 @@ Feature 3, live suggestions. **Can start now.**
 
 Feature 4, frog answers, as call and response in bars (changed at Alex's request from the original 1.5 s silence trigger):
 
-- `voicing.ts`: voices a `ChordSymbol` between MIDI 60 and 84 with the least total movement from the previous voicing.
+- `voicing.ts`: voices answers in the register of the player's phrase (and with a bass note if they play a bass line), with the least total movement from the previous voicing.
 - `answer.ts`, `AnswerEngine`:
   - **The phrase:** you pick a phrase length of **4 or 8 bars**. The phrase starts on the bar of your first chord (a chord in
     the last quarter of a bar counts for the next bar).

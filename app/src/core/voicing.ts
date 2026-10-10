@@ -50,3 +50,51 @@ export function voiceNearPlayer(chord: ChordSymbol, played: number[]): number[] 
   const hi = Math.max(Math.max(...played) + 5, lo + 16);
   return voiceChord(chord, played, lo, hi);
 }
+
+/** Where the player's hands were: the range of their upper voicing, and their bass line if they play one. */
+export interface Register {
+  lo: number;
+  hi: number;
+  /** typical bass pitch when the player plays a separate bass note under the chord, else null */
+  bass: number | null;
+}
+
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+};
+
+/**
+ * The register of a phrase (one array of MIDI notes per chord). A chord has a separate bass when its lowest
+ * note sits at least a fifth below the next one; if most chords do, the phrase has a bass line.
+ * The upper range is the median low/high of the chords (without bass), widened to at least 14 semitones.
+ */
+export function registerOf(voicings: number[][]): Register | null {
+  const chords = voicings.filter((v) => v.length > 0).map((v) => [...v].sort((a, b) => a - b));
+  if (chords.length === 0) return null;
+  const split = chords.filter((v) => v.length >= 3 && v[1] - v[0] >= 7);
+  const hasBass = split.length * 2 >= chords.length;
+  const uppers = chords.map((v) => (hasBass && v.length >= 3 && v[1] - v[0] >= 7 ? v.slice(1) : v));
+  let lo = median(uppers.map((v) => v[0])) - 2;
+  let hi = median(uppers.map((v) => v[v.length - 1])) + 2;
+  if (hi - lo < 14) {
+    const pad = Math.ceil((14 - (hi - lo)) / 2);
+    lo -= pad;
+    hi += pad;
+  }
+  return { lo, hi, bass: hasBass ? median(split.map((v) => v[0])) : null };
+}
+
+/**
+ * Voice a chord in the player's register: least movement from `prev` within the register's upper range,
+ * plus the chord's root as a bass note near the player's bass line when they play one.
+ */
+export function voiceInRegister(chord: ChordSymbol, prev: number[] | null, reg: Register): number[] {
+  const prevUpper = prev && reg.bass !== null ? [...prev].sort((a, b) => a - b).slice(1) : prev;
+  const upper = voiceChord(chord, prevUpper, reg.lo, reg.hi);
+  if (reg.bass === null) return upper;
+  // the root nearest the player's bass, kept below the upper voicing
+  let bass = reg.bass + ((((chord.root - reg.bass) % 12) + 18) % 12) - 6;
+  while (bass >= upper[0]) bass -= 12;
+  return [bass, ...upper];
+}

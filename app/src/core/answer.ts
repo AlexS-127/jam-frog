@@ -5,7 +5,7 @@ import { reshape, sampleToken } from './sampler';
 import { CONTEXT_CHORDS, priorFor } from './suggest';
 import type { AnswerPlan, Chord, ChordSymbol, NoteEvent, NoteSink } from './types';
 import { decode, encode } from './vocab';
-import { voiceChord } from './voicing';
+import { registerOf, voiceInRegister } from './voicing';
 
 export interface AnswerSettings {
   answersOn: boolean;
@@ -299,9 +299,11 @@ export class AnswerEngine {
       let r = this.rng() * weights.reduce((a, b) => a + b, 0);
       pick = top.find((_, i) => (r -= weights[i]) <= 0) ?? top[0];
     }
+    // Play where the player played: their phrase's register (and bass line, if they had one).
+    const reg = registerOf(this.phrase.map((c) => c.pitches)) ?? { lo: 60, hi: 84, bass: null };
     let prevVoicing: number[] | null = this.phrase.at(-1)?.pitches ?? null;
     const chords = pick.chords.map((chord) => {
-      const voicing = voiceChord(chord, prevVoicing);
+      const voicing = voiceInRegister(chord, prevVoicing, reg);
       prevVoicing = voicing;
       return { chord, name: chordName(chord.root, chord.quality), voicing };
     });
