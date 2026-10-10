@@ -26,10 +26,16 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  // Web MIDI (the IAC "ports" bridge) needs the midi permission. Nothing else is granted.
-  const allowed = new Set(['midi']);
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(allowed.has(permission)));
-  session.defaultSession.setPermissionCheckHandler((_wc, permission) => allowed.has(permission));
+  // Web MIDI (the IAC "ports" bridge) is the only permission granted. Recent Chromium asks for
+  // Web MIDI as "midiSysex" even when sysex is off, so both names are allowed.
+  const allowed = new Set(['midi', 'midiSysex']);
+  const check = (permission: string): boolean => {
+    const ok = allowed.has(permission);
+    if (!ok) console.log(`[permission] denied ${permission}`);
+    return ok;
+  };
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(check(permission)));
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) => check(permission));
   createWindow();
 });
 
