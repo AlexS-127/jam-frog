@@ -11,5 +11,5 @@
     "types": []
   },
   "include": ["src/core", "src/renderer"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts", "src/core/testdata.ts"]
 }

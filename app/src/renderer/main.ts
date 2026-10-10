@@ -1,18 +1,39 @@
-import { chordName, detectChord, QUALITY_INTERVALS } from '../core/chords';
+import { AnswerEngine, type AnswerProgress } from '../core/answer';
+import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
+import { NgramModel } from '../core/ngram';
+import { suggest } from '../core/suggest';
+import type { AnswerPlan, Chord } from '../core/types';
+import { GENRES } from '../core/vocab';
+import ngramText from '../../../model/export/ngram.json?raw';
+import type { NgramJson } from '../core/ngram';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
 import type { NoteEvent, NoteSink, NoteSource } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { getMidiAccess, WebMidiNoteSink, WebMidiNoteSource } from './bridges/webmidi';
 
-// Spike: chord in from Live -> name it -> play its IV chord on the frog track.
+// Dev overlay: chord in from Live -> name it -> live suggestions; after a pause the frog answers.
 // Bridge is either the Max for Live devices (OSC) or the IAC ports (Web MIDI).
+// Kevin's overlay UI (lane B) replaces the DOM code here.
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const inputSel = $<HTMLSelectElement>('input');
 const outputSel = $<HTMLSelectElement>('output');
 const bpmInput = $<HTMLInputElement>('bpm');
 const bridgeSel = $<HTMLSelectElement>('bridge');
+const genreSel = $<HTMLSelectElement>('genre');
+const weirdInput = $<HTMLInputElement>('weird');
+const answersOn = $<HTMLInputElement>('answersOn');
+const phraseSel = $<HTMLSelectElement>('phrase');
+
+const model = new NgramModel(JSON.parse(ngramText) as NgramJson);
+const history: Chord[] = [];
+for (const g of ['all', ...GENRES]) genreSel.add(new Option(g, g));
+weirdInput.oninput = () => {
+  $('weirdVal').textContent = Number(weirdInput.value).toFixed(2);
+  showSuggestions();
+};
+genreSel.onchange = () => showSuggestions();
 const status = $('status');
 
 let source: NoteSource | null = null;
@@ -20,13 +41,38 @@ let sink: NoteSink | null = null;
 const echo = new EchoFilter();
 const held = new Set<number>();
 const counts = { in: 0, out: 0, doubled: 0 };
-let sounding: number[] = [];
-let releaseTimer: ReturnType<typeof setTimeout> | null = null;
+let lastBarAt = -Infinity;
+
+// Everything the frog plays goes through here: echo bookkeeping, counters, then the current bridge.
+const frogSink: NoteSink = {
+  name: 'frog',
+  send: (pitch, velocity) => send(pitch, velocity),
+  close: () => {},
+};
+
+const answers = new AnswerEngine({
+  model,
+  sink: () => (sink ? frogSink : null),
+  settings: () => ({
+    answersOn: answersOn.checked,
+    weirdness: Number(weirdInput.value),
+    genre: genreSel.value,
+    bpm: Number(bpmInput.value) || 120,
+    phraseBars: Number(phraseSel.value) || 4,
+  }),
+  onPlan: showAnswer,
+});
+answersOn.onchange = () => {
+  if (!answersOn.checked) answers.cancel();
+};
+phraseSel.onchange = () => answers.cancel();
 
 const grouper = new OnsetGrouper(onGroup, 60);
 
 function onNote(e: NoteEvent): void {
-  if (echo.isEcho(e)) return render();
+  // Only the ports bridge can loop the frog's notes back in (a track on "All Ins"); over OSC,
+  // filtering would only throw away the player's own notes when they match a frog note.
+  if (bridgeSel.value === 'ports' && echo.isEcho(e)) return render();
   if (e.velocity > 0) {
     counts.in++;
     if (held.has(e.pitch)) counts.doubled++; // a second note-on without a note-off: doubled routing
@@ -35,6 +81,7 @@ function onNote(e: NoteEvent): void {
     held.delete(e.pitch);
   }
   grouper.push(e);
+  answers.note(e);
   render();
 }
 
@@ -42,30 +89,53 @@ function onGroup(g: NoteGroup): void {
   const chord = detectChord(g.pitches);
   if (!chord) return; // single notes and non-chords are ignored
   $('chord').textContent = chord.name;
-  const ivRoot = (chord.root + 5) % 12;
-  $('answer').textContent = chordName(ivRoot, 'maj');
-  playChord(QUALITY_INTERVALS.maj.map((i) => 60 + ivRoot + i));
+  history.push(chord);
+  if (history.length > 16) history.shift();
+  const t0 = performance.now(); // chord recognised (the 60 ms grouping window has closed)
+  showSuggestions();
+  $('suggestMs').textContent = `${(performance.now() - t0).toFixed(1)} ms`;
   $('latency').textContent = `${Math.round(performance.now() - g.firstTime)} ms`;
+  answers.chord(chord);
 }
 
-function playChord(pitches: number[]): void {
-  if (!sink) return;
-  releaseAll();
-  for (const p of pitches) send(p, 90);
-  sounding = pitches;
-  const beatMs = 60000 / (Number(bpmInput.value) || 120);
-  releaseTimer = setTimeout(releaseAll, 2 * beatMs);
+let wasPlaying = false;
+
+function showAnswer(plan: AnswerPlan | null, p: AnswerProgress): void {
+  $('answer').textContent = plan ? plan.chords.map((c) => c.name).join(' → ') : '—';
+  $('answerStatus').textContent =
+    p.status === 'listening' ? ` · your phrase, bar ${p.bar}/${p.bars}` : p.status === 'playing' ? ` · playing, bar ${p.bar}/${p.bars}` : '';
+  // How far after Live's bar line the answer started (only meaningful while the transport runs).
+  if (p.status === 'playing' && !wasPlaying) {
+    const sinceBar = performance.now() - lastBarAt;
+    $('barLag').textContent = sinceBar < 50 ? `${sinceBar.toFixed(0)} ms after Live's bar` : 'on the frog\'s own bar clock';
+  }
+  wasPlaying = p.status === 'playing';
 }
 
-function releaseAll(): void {
-  if (releaseTimer) clearTimeout(releaseTimer);
-  releaseTimer = null;
-  for (const p of sounding) send(p, 0);
-  sounding = [];
+const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+// Ableton naming: MIDI 60 = C3
+const noteName = (p: number) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 2}`;
+
+function showSuggestions(): void {
+  const last = history[history.length - 1];
+  const list = suggest(history, model, {
+    weirdness: Number(weirdInput.value),
+    genre: genreSel.value,
+    lastVoicing: last?.pitches,
+  });
+  const box = $('suggestions');
+  box.innerHTML = '';
+  for (const s of list) {
+    const el = document.createElement('div');
+    el.className = s.borrowed ? 'sugg borrowed' : 'sugg';
+    el.title = `${Math.round(s.prob * 100)}%${s.borrowed ? ' · borrowed' : ''}`;
+    el.innerHTML = `<b>${s.name}</b><small>${s.voicing.map(noteName).join(' ')}</small>`;
+    box.append(el);
+  }
 }
 
 function send(pitch: number, velocity: number): void {
-  echo.sent(pitch, velocity, performance.now());
+  if (bridgeSel.value === 'ports') echo.sent(pitch, velocity, performance.now());
   sink?.send(pitch, velocity);
   if (velocity > 0) counts.out++;
   render();
@@ -91,7 +161,7 @@ let access: MIDIAccess | null = null;
 
 function connect(): void {
   source?.close();
-  releaseAll();
+  answers.cancel();
   sink?.close();
   held.clear();
   source = null;
@@ -158,6 +228,8 @@ onOsc((msg) => {
     bpmInput.value = String(bpm);
     $('liveTempo').textContent = `${bpm} BPM`;
   } else if (msg[0] === '/bar') {
+    lastBarAt = performance.now();
+    answers.bar();
     $('bar').textContent = String(++bars);
   }
 });
@@ -165,11 +237,11 @@ window.jamFrog.osc.onError((text) => (status.textContent = `OSC: ${text}`));
 
 bridgeSel.onchange = connect;
 $('close').onclick = () => {
-  releaseAll();
+  answers.cancel();
   window.close();
 };
 window.addEventListener('beforeunload', () => {
-  releaseAll();
+  answers.cancel();
   sink?.close();
 });
 
