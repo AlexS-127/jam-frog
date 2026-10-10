@@ -15,6 +15,9 @@ const cases: [string, number[], string, string][] = [
   ['F#m with doubled notes across octaves', [54, 61, 66, 69, 73, 78], 'F#m', 'min'],
   ['C7 without the 5th', [48, 64, 70], 'C7', 'dom7'],
   ['Cadd9 still reads as C', [60, 62, 64, 67], 'C', 'maj'],
+  ['C5 power chord with octave', [48, 55, 60], 'C5', 'pow'],
+  ['E5 power chord, bare fifth', [40, 47], 'E5', 'pow'],
+  ['inverted power chord (fourth) still names the root', [55, 60], 'C5', 'pow'],
 ];
 
 describe('detectChord', () => {
@@ -24,10 +27,12 @@ describe('detectChord', () => {
     expect(c?.quality).toBe(quality);
   });
 
-  it('ignores single notes and dyads', () => {
+  it('ignores single notes, octaves and two-note shapes that are not fifths', () => {
     expect(detectChord([60])).toBeNull();
     expect(detectChord([60, 72])).toBeNull();
-    expect(detectChord([60, 67, 72])).toBeNull();
+    expect(detectChord([60, 64])).toBeNull(); // major third
+    expect(detectChord([60, 69])).toBeNull(); // major sixth
+    expect(detectChord([60, 66])).toBeNull(); // tritone
   });
 
   it('rejects clusters that are not chords', () => {

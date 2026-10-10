@@ -27,11 +27,13 @@ const TEMPLATES: Template[] = [
 
 /**
  * Name the chord formed by a set of MIDI notes. Handles inversions and doubled
- * notes; returns null for fewer than 3 distinct pitch classes or no good match.
+ * notes. Needs 3 distinct pitch classes, except a root plus its perfect fifth,
+ * which is a power chord. Returns null for anything else.
  */
 export function detectChord(pitches: number[]): Chord | null {
   const sorted = [...pitches].sort((a, b) => a - b);
   const pcs = new Set(sorted.map((p) => ((p % 12) + 12) % 12));
+  if (pcs.size === 2) return powerChord(pcs, sorted);
   if (pcs.size < 3) return null;
   const bass = sorted[0] % 12;
 
@@ -56,6 +58,14 @@ export function detectChord(pitches: number[]): Chord | null {
     name: PITCH_NAMES[best.root] + best.t.suffix,
     pitches: sorted,
   };
+}
+
+/** Two pitch classes a perfect fifth apart (in either order, e.g. G under C) form a power chord. */
+function powerChord(pcs: Set<number>, sorted: number[]): Chord | null {
+  const [a, b] = [...pcs];
+  const root = (a + 7) % 12 === b ? a : (b + 7) % 12 === a ? b : null;
+  if (root === null) return null;
+  return { root, quality: 'pow', name: PITCH_NAMES[root] + '5', pitches: sorted };
 }
 
 /** Basic triad/7th intervals for a model chord class, used to voice chords we generate. */
