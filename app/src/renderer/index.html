@@ -3,69 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <meta name="color-scheme" content="dark" />
     <title>Jam Frog</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./ui/overlay.css" />
   </head>
   <body>
-    <div class="card">
-      <header class="drag">
-        <svg class="frog" viewBox="0 0 64 48" aria-hidden="true">
-          <ellipse cx="32" cy="30" rx="26" ry="16" fill="#5fbf5a" />
-          <circle cx="18" cy="14" r="9" fill="#5fbf5a" /><circle cx="46" cy="14" r="9" fill="#5fbf5a" />
-          <circle cx="18" cy="14" r="4" fill="#fff" /><circle cx="46" cy="14" r="4" fill="#fff" />
-          <circle cx="19" cy="15" r="2" fill="#123" /><circle cx="47" cy="15" r="2" fill="#123" />
-          <path d="M20 34 Q32 42 44 34" stroke="#234" stroke-width="2.5" fill="none" stroke-linecap="round" />
-        </svg>
-        <span class="title">Jam Frog <small>dev</small></span>
-        <button id="close" class="nodrag" title="Quit">×</button>
-      </header>
-
-      <section class="ports">
-        <label>Bridge
-          <select id="bridge">
-            <option value="osc">Max for Live</option>
-            <option value="ports">Ports (IAC)</option>
-          </select>
-        </label>
-        <label class="ports-only">From Ableton <select id="input"></select></label>
-        <label class="ports-only">To frog track <select id="output"></select></label>
-        <label>BPM <input id="bpm" type="number" min="40" max="240" value="120" /></label>
-        <label>Model
-          <select id="model">
-            <option value="ngram">n-gram</option>
-            <option value="gru">GRU</option>
-          </select>
-        </label>
-        <label>Genre <select id="genre"></select></label>
-        <label>Frog answers <input id="answersOn" type="checkbox" checked /></label>
-        <button id="keep" class="keep" title="Save your last phrase and the frog's answer as a .mid file">Keep 🐸</button>
-        <label>Phrase
-          <select id="phrase">
-            <option value="4">4 bars</option>
-            <option value="8">8 bars</option>
-          </select>
-        </label>
-        <label>Weirdness <input id="weird" type="range" min="0" max="1" step="0.05" value="0.2" /><b id="weirdVal">0.2</b></label>
-        <div class="osc-only live">Live: <b id="liveTempo">no tempo yet</b> · bar <b id="bar">—</b></div>
-      </section>
-
-      <section class="now">
-        <div class="label">You played</div>
-        <div id="chord" class="chord">—</div>
-        <div class="label">Try next</div>
-        <div id="suggestions" class="suggestions"></div>
-        <div class="label">Frog answers<span id="answerStatus"></span></div>
-        <div id="answer" class="answer">—</div>
-      </section>
-
-      <section class="stats">
-        <div>Chord <b id="latency">—</b> · suggestions <b id="suggestMs">—</b></div>
-        <div>Answer start <b id="barLag">—</b></div>
-        <div>Notes in <b id="in">0</b> · out <b id="out">0</b></div>
-        <div>Doubled <b id="doubled">0</b> · echoes dropped <b id="echo">0</b></div>
-      </section>
-      <div id="status" class="status"></div>
-    </div>
+    <div id="overlay-root"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

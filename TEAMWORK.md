@@ -118,7 +118,7 @@ Feature 4, frog answers, as call and response in bars (changed at Alex's request
 
 **Done when:** an answer lands on the bar in Live over the Max for Live bridge, with no stuck notes.
 
-### Lane B (Kevin): overlay UI (`app/src/renderer/ui/`, `app/src/renderer/style.css`)
+### Lane B (Kevin): overlay UI (`app/src/renderer/ui/`). **Done and wired into the app** (`app/src/renderer/main.ts`)
 
 Feature 7. **Can start now with mock data**; no engine needed.
 

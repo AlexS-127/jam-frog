@@ -1,290 +1,287 @@
-import { AnswerEngine, type AnswerProgress } from '../core/answer';
-import { detectChord } from '../core/chords';
-import { EchoFilter } from '../core/echo';
-import { buildMidi, keepFileName } from '../core/keep';
-import { cached } from '../core/cached';
-import { GruModel, type GruWeights } from '../core/gru';
-import type { ChordModel } from '../core/model';
-import { NgramModel } from '../core/ngram';
-import { suggest } from '../core/suggest';
-import type { AnswerPlan, Chord } from '../core/types';
-import { GENRES } from '../core/vocab';
 import gruText from '../../../model/export/gru_weights.json?raw';
 import ngramText from '../../../model/export/ngram.json?raw';
-import type { NgramJson } from '../core/ngram';
+import { AnswerEngine, type AnswerProgress } from '../core/answer';
+import { cached } from '../core/cached';
+import { detectChord } from '../core/chords';
+import { EchoFilter } from '../core/echo';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
-import type { NoteEvent, NoteSink, NoteSource } from '../core/types';
+import { GruModel, type GruWeights } from '../core/gru';
+import { buildMidi, keepFileName } from '../core/keep';
+import type { ChordModel } from '../core/model';
+import { NgramModel, type NgramJson } from '../core/ngram';
+import { suggest } from '../core/suggest';
+import type { AnswerPlan, Chord, FrogMood, NoteEvent, NoteSink, NoteSource, Suggestion } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { getMidiAccess, WebMidiNoteSink, WebMidiNoteSource } from './bridges/webmidi';
+import { createOverlay, type UiState } from './ui/overlay';
 
-// Dev overlay: chord in from Live -> name it -> live suggestions; after a pause the frog answers.
-// Bridge is either the Max for Live devices (OSC) or the IAC ports (Web MIDI).
-// Kevin's overlay UI (lane B) replaces the DOM code here.
+// The app: notes in from Live (Max for Live over OSC, or the IAC ports) -> chord detection -> live
+// suggestions; the AnswerEngine answers each 4/8-bar phrase on the frog track. Kevin's overlay draws it all.
 
-const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const inputSel = $<HTMLSelectElement>('input');
-const outputSel = $<HTMLSelectElement>('output');
-const bpmInput = $<HTMLInputElement>('bpm');
-const bridgeSel = $<HTMLSelectElement>('bridge');
-const genreSel = $<HTMLSelectElement>('genre');
-const weirdInput = $<HTMLInputElement>('weird');
-const answersOn = $<HTMLInputElement>('answersOn');
-const phraseSel = $<HTMLSelectElement>('phrase');
+// ---- settings (owned here, shown and changed through the overlay) ----
 
-// Both models behind the same ChordModel interface; the Model picker switches between them.
-// The GRU only replaces the n-gram for good if it also wins the listening test.
+const settings = {
+  bridge: 'osc' as 'osc' | 'ports',
+  model: 'ngram',
+  genre: 'all',
+  weirdness: 0.2,
+  answersOn: true,
+  phraseBars: 4 as 4 | 8,
+  bpm: 120,
+};
+
+// ---- models: both behind ChordModel; the GRU replaces the n-gram only if it also wins the listening test ----
+
 const models: Record<string, ChordModel> = {
   ngram: cached(new NgramModel(JSON.parse(ngramText) as NgramJson)),
   gru: cached(new GruModel(JSON.parse(gruText) as GruWeights)),
 };
-const modelSel = $<HTMLSelectElement>('model');
 const model: ChordModel = {
   get name() {
-    return models[modelSel.value].name;
+    return models[settings.model].name;
   },
-  predictNext: (context, genre) => models[modelSel.value].predictNext(context, genre),
+  predictNext: (context, genre) => models[settings.model].predictNext(context, genre),
 };
-modelSel.onchange = () => showSuggestions();
-const history: Chord[] = [];
-for (const g of ['all', ...GENRES]) genreSel.add(new Option(g, g));
-weirdInput.oninput = () => {
-  $('weirdVal').textContent = Number(weirdInput.value).toFixed(2);
-  showSuggestions();
-};
-genreSel.onchange = () => showSuggestions();
-const status = $('status');
+
+// ---- live state ----
 
 let source: NoteSource | null = null;
 let sink: NoteSink | null = null;
+let access: MIDIAccess | null = null;
 const echo = new EchoFilter();
-const held = new Set<number>();
-const counts = { in: 0, out: 0, doubled: 0 };
+const history: Chord[] = [];
+let suggestions: Suggestion[] = [];
+let plan: AnswerPlan | null = null;
+let progress: AnswerProgress = { status: 'idle', bar: 0, bars: 4 };
+let liveTempo: number | null = null;
+let tempoFromLive = false;
+let liveBars = 0;
 let lastBarAt = -Infinity;
+let status = '';
 
-// Everything the frog plays goes through here: echo bookkeeping, counters, then the current bridge.
+// Everything the frog plays goes through here: echo bookkeeping (ports bridge only), then the bridge.
 const frogSink: NoteSink = {
   name: 'frog',
-  send: (pitch, velocity) => send(pitch, velocity),
-  close: () => {},
+  send(pitch, velocity) {
+    if (settings.bridge === 'ports') echo.sent(pitch, velocity, performance.now());
+    sink?.send(pitch, velocity);
+  },
+  close() {},
 };
 
 const answers = new AnswerEngine({
   model,
   sink: () => (sink ? frogSink : null),
-  settings: () => ({
-    answersOn: answersOn.checked,
-    weirdness: Number(weirdInput.value),
-    genre: genreSel.value,
-    bpm: Number(bpmInput.value) || 120,
-    phraseBars: Number(phraseSel.value) || 4,
-  }),
-  onPlan: showAnswer,
+  settings: () => ({ ...settings }),
+  onPlan: (p, pr) => {
+    if (pr.status === 'playing' && progress.status !== 'playing') {
+      const sinceBar = performance.now() - lastBarAt;
+      console.info(sinceBar < 50 ? `[answer] started ${sinceBar.toFixed(0)} ms after Live's bar` : '[answer] started on the frog\'s own bar clock');
+    }
+    plan = p;
+    progress = pr;
+    render();
+  },
 });
-answersOn.onchange = () => {
-  if (!answersOn.checked) answers.cancel();
-};
-phraseSel.onchange = () => answers.cancel();
 
 const grouper = new OnsetGrouper(onGroup, 60);
 
 function onNote(e: NoteEvent): void {
   // Only the ports bridge can loop the frog's notes back in (a track on "All Ins"); over OSC,
   // filtering would only throw away the player's own notes when they match a frog note.
-  if (bridgeSel.value === 'ports' && echo.isEcho(e)) return render();
-  if (e.velocity > 0) {
-    counts.in++;
-    if (held.has(e.pitch)) counts.doubled++; // a second note-on without a note-off: doubled routing
-    held.add(e.pitch);
-  } else {
-    held.delete(e.pitch);
-  }
+  if (settings.bridge === 'ports' && echo.isEcho(e)) return;
   grouper.push(e);
   answers.note(e);
-  render();
 }
 
 function onGroup(g: NoteGroup): void {
   const chord = detectChord(g.pitches);
   if (!chord) return; // single notes and non-chords are ignored
-  $('chord').textContent = chord.name;
   history.push(chord);
-  if (history.length > 256) history.shift(); // the whole session; the model only looks at the last 8
+  if (history.length > 256) history.shift(); // the whole session; the models only look at the last 8
   answers.chord(chord); // first, so the session key includes this chord
-  const t0 = performance.now(); // chord recognised (the 60 ms grouping window has closed)
-  showSuggestions();
-  $('suggestMs').textContent = `${(performance.now() - t0).toFixed(1)} ms`;
-  $('latency').textContent = `${Math.round(performance.now() - g.firstTime)} ms`;
+  refreshSuggestions();
 }
 
-let wasPlaying = false;
-
-function showAnswer(plan: AnswerPlan | null, p: AnswerProgress): void {
-  $('answer').textContent = plan ? plan.chords.map((c) => c.name).join(' → ') : '—';
-  $('answerStatus').textContent =
-    p.status === 'listening' ? ` · your phrase, bar ${p.bar}/${p.bars}` : p.status === 'playing' ? ` · playing, bar ${p.bar}/${p.bars}` : '';
-  // How far after Live's bar line the answer started (only meaningful while the transport runs).
-  if (p.status === 'playing' && !wasPlaying) {
-    const sinceBar = performance.now() - lastBarAt;
-    $('barLag').textContent = sinceBar < 50 ? `${sinceBar.toFixed(0)} ms after Live's bar` : 'on the frog\'s own bar clock';
-  }
-  wasPlaying = p.status === 'playing';
-}
-
-const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-// Ableton naming: MIDI 60 = C3
-const noteName = (p: number) => `${NOTE_NAMES[p % 12]}${Math.floor(p / 12) - 2}`;
-
-function showSuggestions(): void {
+function refreshSuggestions(): void {
   const last = history[history.length - 1];
-  const list = suggest(history, model, {
-    weirdness: Number(weirdInput.value),
-    genre: genreSel.value,
-    lastVoicing: last?.pitches,
-    key: answers.key(), // the session key, shared with the frog's answers
-  });
-  const box = $('suggestions');
-  box.innerHTML = '';
-  for (const s of list) {
-    const el = document.createElement('div');
-    el.className = s.borrowed ? 'sugg borrowed' : 'sugg';
-    el.title = `${Math.round(s.prob * 100)}%${s.borrowed ? ' · borrowed' : ''}`;
-    el.innerHTML = `<b>${s.name}</b><small>${s.voicing.map(noteName).join(' ')}</small>`;
-    box.append(el);
-  }
-}
-
-function send(pitch: number, velocity: number): void {
-  if (bridgeSel.value === 'ports') echo.sent(pitch, velocity, performance.now());
-  sink?.send(pitch, velocity);
-  if (velocity > 0) counts.out++;
+  suggestions = last
+    ? suggest(history, model, {
+        weirdness: settings.weirdness,
+        genre: settings.genre,
+        lastVoicing: last.pitches,
+        key: answers.key(), // the session key, shared with the frog's answers
+      })
+    : [];
   render();
 }
 
+// ---- the overlay ----
+
+const root = document.getElementById('overlay-root')!;
+const overlay = createOverlay(root, {
+  onWeirdness(v) {
+    settings.weirdness = v;
+    refreshSuggestions();
+  },
+  onGenre(g) {
+    settings.genre = g;
+    refreshSuggestions();
+  },
+  onAnswersToggle(on) {
+    settings.answersOn = on;
+    if (!on) answers.cancel();
+    render();
+  },
+  onPhraseBars(bars) {
+    settings.phraseBars = bars;
+    answers.cancel();
+    render();
+  },
+  onBridge(b) {
+    settings.bridge = b;
+    connect();
+  },
+  onBpm(bpm) {
+    settings.bpm = bpm;
+    render();
+  },
+  onModel(m) {
+    if (m in models) settings.model = m;
+    refreshSuggestions();
+  },
+  onKeep: keep,
+});
+
+function mood(): FrogMood {
+  if (progress.status === 'listening') return progress.bar >= progress.bars ? 'thinking' : 'listening';
+  return 'idle'; // the overlay switches to 'weird' itself (high weirdness or a borrowed suggestion)
+}
+
+function uiState(): UiState {
+  return {
+    mood: mood(),
+    current: history.at(-1)?.name ?? null,
+    trail: history.slice(-6).map((c) => c.name),
+    suggestions,
+    answer: plan,
+    progress,
+    weirdness: settings.weirdness,
+    genre: settings.genre,
+    phraseBars: settings.phraseBars,
+    answersOn: settings.answersOn,
+    bridge: settings.bridge,
+    bpm: settings.bpm,
+    liveTempo,
+    bar: liveBars > 0 ? liveBars : null,
+    status,
+    musicPlaying: progress.status === 'playing',
+    model: settings.model,
+  };
+}
+
+// Notes, bars and plans can arrive many times a frame; draw at most once per frame.
+let frame: number | null = null;
 function render(): void {
-  $('in').textContent = String(counts.in);
-  $('out').textContent = String(counts.out);
-  $('doubled').textContent = String(counts.doubled);
-  $('echo').textContent = String(echo.ignored);
+  if (frame !== null) return;
+  frame = requestAnimationFrame(() => {
+    frame = null;
+    overlay.update(uiState());
+  });
 }
 
-function fillSelect(sel: HTMLSelectElement, ports: MIDIPort[], prefer: string): void {
-  const prev = sel.value;
-  sel.innerHTML = '';
-  for (const p of ports) sel.add(new Option(p.name ?? p.id, p.id));
-  const ids = ports.map((p) => p.id);
-  const preferred = ports.find((p) => (p.name ?? '').includes(prefer));
-  sel.value = ids.includes(prev) ? prev : (preferred?.id ?? '');
+function setStatus(text: string): void {
+  status = text;
+  render();
 }
 
-let access: MIDIAccess | null = null;
+// ---- Keep ----
+
+async function keep(): Promise<void> {
+  const { phrase, answer } = answers.keepNotes();
+  if (!phrase.some((e) => e.velocity > 0)) return setStatus('Play a phrase first, then Keep it.');
+  try {
+    const saved = await window.jamFrog.saveMidi(buildMidi(phrase, answer, settings.bpm), keepFileName());
+    setStatus(saved ? `Kept ${saved.split('/').pop()}` : '');
+  } catch (err) {
+    setStatus(`Could not save: ${String(err)}`);
+  }
+}
+
+// ---- bridges ----
+
+const portByName = (ports: Iterable<MIDIPort>, name: string) => [...ports].find((p) => (p.name ?? '').includes(name));
 
 function connect(): void {
   source?.close();
   answers.cancel();
   sink?.close();
-  held.clear();
   source = null;
   sink = null;
-  const bridge = bridgeSel.value;
-  document.body.dataset.bridge = bridge;
-  status.textContent = '';
-
-  if (bridge === 'osc') {
+  status = '';
+  if (settings.bridge === 'osc') {
     source = new OscNoteSource();
     sink = new OscNoteSink();
+  } else if (!access) {
+    status = 'MIDI ports unavailable';
   } else {
-    if (!access) {
-      status.textContent = 'MIDI unavailable';
-      return;
-    }
-    const input = access.inputs.get(inputSel.value);
-    const output = access.outputs.get(outputSel.value);
+    // The ports bridge uses the IAC buses named in ableton/SETUP.md.
+    const input = portByName(access.inputs.values(), 'JamFrog In') as MIDIInput | undefined;
+    const output = portByName(access.outputs.values(), 'JamFrog Out') as MIDIOutput | undefined;
     source = input ? new WebMidiNoteSource(input) : null;
     sink = output ? new WebMidiNoteSink(output) : null;
-    if (input && output && input.name === output.name) {
-      status.textContent = 'Input and output are the same port — notes will loop.';
-    } else if (!input || !output) {
-      status.textContent = 'Pick "JamFrog In" and "JamFrog Out" (see ableton/SETUP.md).';
-    }
+    if (!input || !output) status = 'Need IAC ports "JamFrog In" and "JamFrog Out" (ableton/SETUP.md)';
   }
   source?.onNote(onNote);
+  render();
 }
 
 async function initPorts(): Promise<void> {
   try {
     access = await getMidiAccess();
   } catch (err) {
-    if (bridgeSel.value === 'ports') status.textContent = `MIDI unavailable: ${String(err)}`;
+    if (settings.bridge === 'ports') setStatus(`MIDI unavailable: ${String(err)}`);
     return;
   }
   const a = access;
-  const refresh = () => {
-    fillSelect(inputSel, [...a.inputs.values()], 'JamFrog In');
-    fillSelect(outputSel, [...a.outputs.values()], 'JamFrog Out');
-    if (bridgeSel.value === 'ports') connect();
-  };
-  // Re-list only when ports are added or removed, not when one merely opens.
-  const portsKey = () =>
-    [...a.inputs.values(), ...a.outputs.values()].map((p) => `${p.id}:${p.state}`).join('|');
+  // Reconnect only when ports are added or removed, not when one merely opens.
+  const portsKey = () => [...a.inputs.values(), ...a.outputs.values()].map((p) => `${p.id}:${p.state}`).join('|');
   let lastKey = portsKey();
   a.onstatechange = () => {
     const key = portsKey();
     if (key !== lastKey) {
       lastKey = key;
-      refresh();
+      if (settings.bridge === 'ports') connect();
     }
   };
-  inputSel.onchange = connect;
-  outputSel.onchange = connect;
-  refresh();
+  if (settings.bridge === 'ports') connect();
 }
 
 // Transport info from Frog Voice: /tempo <bpm> and /bar at every bar start.
-let bars = 0;
-let tempoFromLive = false;
 onOsc((msg) => {
   if (msg[0] === '/tempo') {
     tempoFromLive = true;
     const bpm = Math.round(Number(msg[1]) * 100) / 100;
-    bpmInput.value = String(bpm);
-    $('liveTempo').textContent = `${bpm} BPM`;
+    settings.bpm = bpm;
+    liveTempo = bpm;
+    render();
   } else if (msg[0] === '/bar') {
     const now = performance.now();
     // Frog Voice only sends /tempo when it loads or the tempo changes. If the app started later and never
-    // got it, take the BPM from the bar length instead (assumes 4/4) so the BPM box isn't left wrong.
+    // got it, take the BPM from the bar length (assumes 4/4) so the BPM isn't left wrong.
     const gap = now - lastBarAt;
     if (!tempoFromLive && gap > 250 && gap < 10000) {
-      const bpm = Math.round(240000 / gap);
-      bpmInput.value = String(bpm);
-      $('liveTempo').textContent = `~${bpm} BPM (from bars)`;
+      settings.bpm = Math.round(240000 / gap);
+      liveTempo = settings.bpm;
     }
     lastBarAt = now;
+    liveBars++;
     answers.bar();
-    $('bar').textContent = String(++bars);
+    render();
   }
 });
-window.jamFrog.osc.onError((text) => (status.textContent = `OSC: ${text}`));
+window.jamFrog.osc.onError((text) => setStatus(`OSC: ${text}`));
 
-bridgeSel.onchange = connect;
-$<HTMLButtonElement>('keep').onclick = async () => {
-  const { phrase, answer } = answers.keepNotes();
-  if (!phrase.some((e) => e.velocity > 0)) {
-    status.textContent = 'Play a phrase first, then Keep it.';
-    return;
-  }
-  const bytes = buildMidi(phrase, answer, Number(bpmInput.value) || 120);
-  try {
-    const saved = await window.jamFrog.saveMidi(bytes, keepFileName());
-    status.textContent = saved ? `Kept: ${saved}` : '';
-  } catch (err) {
-    status.textContent = `Could not save: ${String(err)}`;
-  }
-};
-
-$('close').onclick = () => {
-  answers.cancel();
-  window.close();
-};
 window.addEventListener('beforeunload', () => {
   answers.cancel();
   sink?.close();
@@ -292,3 +289,4 @@ window.addEventListener('beforeunload', () => {
 
 connect();
 initPorts();
+render();

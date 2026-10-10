@@ -20,6 +20,8 @@ export interface UiState {
   status: string;
   /** True while Frog Voice is actively playing an answer phrase. */
   musicPlaying?: boolean;
+  /** which chord model is in use ('ngram' | 'gru') */
+  model?: string;
 }
 
 export interface Handlers {
@@ -30,6 +32,7 @@ export interface Handlers {
   onPhraseBars(bars: 4 | 8): void;
   onBridge(bridge: 'osc' | 'ports'): void;
   onBpm(bpm: number): void;
+  onModel?(model: string): void;
 }
 
 const PITCH_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
@@ -41,23 +44,41 @@ function pitchName(midi: number): string {
   return `${PITCH_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 2}`;
 }
 
+/**
+ * The keys to draw for a voicing: two octaves from the C at or below its lowest note (C3..C5 when empty),
+ * extended to the next C if the voicing reaches higher. Suggestions are voiced in the player's register,
+ * so this can be anywhere on the keyboard.
+ */
+export function keyboardRange(voicing: number[]): [number, number] {
+  if (voicing.length === 0) return [60, 84];
+  const lo = 12 * Math.floor(Math.min(...voicing) / 12);
+  const top = Math.max(...voicing);
+  return [lo, Math.max(lo + 24, 12 * Math.ceil(top / 12))];
+}
+
 function makeKeyboard(voicing: number[]): HTMLElement {
   const keyboard = document.createElement('div');
   keyboard.className = 'jf-keyboard';
   keyboard.setAttribute('aria-label', `Voicing ${voicing.map(pitchName).join(', ') || 'not available'}`);
   keyboard.setAttribute('role', 'img');
   const active = new Set(voicing);
-  const whiteIndex = (midi: number) => Array.from({ length: midi - 60 }, (_, i) => i + 60)
-    .filter((note) => WHITE_PITCHES.includes(note % 12)).length;
-  for (let midi = 60; midi <= 84; midi++) {
+  const [lo, hi] = keyboardRange(voicing);
+  const isWhite = (midi: number) => WHITE_PITCHES.includes(((midi % 12) + 12) % 12);
+  let whites = 0;
+  for (let midi = lo; midi <= hi; midi++) if (isWhite(midi)) whites++;
+  let whitesBefore = 0;
+  for (let midi = lo; midi <= hi; midi++) {
     const key = document.createElement('span');
-    const black = BLACK_PITCHES.has(midi % 12);
+    const black = BLACK_PITCHES.has(((midi % 12) + 12) % 12);
     key.className = `jf-key${black ? ' is-black' : ''}${active.has(midi) ? ' is-active' : ''}`;
     key.title = `${pitchName(midi)}${active.has(midi) ? ' in voicing' : ''}`;
     if (black) {
-      key.style.left = `${(whiteIndex(midi) / 15) * 100 - (0.58 / 15) * 50}%`;
-      key.style.width = `${(0.58 / 15) * 100}%`;
-    } else key.style.width = `${100 / 15}%`;
+      key.style.left = `${(whitesBefore / whites) * 100 - (0.58 / whites) * 50}%`;
+      key.style.width = `${(0.58 / whites) * 100}%`;
+    } else {
+      key.style.width = `${100 / whites}%`;
+      whitesBefore++;
+    }
     keyboard.append(key);
   }
   return keyboard;
@@ -131,6 +152,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
         <label class="jf-bridge">Bridge<select data-control="bridge"><option value="osc">Max for Live</option><option value="ports">Ports / IAC</option></select></label>
         <label class="jf-bpm">BPM<input data-control="bpm" type="number" min="40" max="240" value="120" inputmode="numeric" /></label>
         <label class="jf-phrase">Phrase<select data-control="phrase"><option value="4">4 bars</option><option value="8">8 bars</option></select></label>
+        <label class="jf-model">Model<select data-control="model"><option value="ngram">n-gram</option><option value="gru">GRU</option></select></label>
       </section>
     </main>
     <footer class="jf-footer"><span class="jf-live"><b data-ref="live-tempo">WAITING FOR LIVE</b></span>
@@ -156,6 +178,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   const bridge = query<HTMLSelectElement>('[data-control="bridge"]');
   const bpm = query<HTMLInputElement>('[data-control="bpm"]');
   const phrase = query<HTMLSelectElement>('[data-control="phrase"]');
+  const model = query<HTMLSelectElement>('[data-control="model"]');
   genre.add(new Option('All styles', 'all'));
   for (const item of GENRES) genre.add(new Option(item, item));
 
@@ -171,6 +194,13 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     handlers.onBpm(value);
   }, { signal });
   phrase.addEventListener('change', () => handlers.onPhraseBars(Number(phrase.value) === 8 ? 8 : 4), { signal });
+  model.addEventListener('change', () => handlers.onModel?.(model.value), { signal });
+
+  // Bug fix: update() runs on every note and bar in the app, so never overwrite a control the player is
+  // using (typing a BPM, dragging the knob, an open dropdown).
+  const setValue = (el: HTMLInputElement | HTMLSelectElement, value: string) => {
+    if (document.activeElement !== el && el.value !== value) el.value = value;
+  };
 
   return {
     pet,
@@ -189,7 +219,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       const outputItems = playerIsPlaying
         ? state.suggestions.slice(0, 3).map((item) => item.name)
         : state.answersOn && state.answer
-          ? state.answer.chords.slice(0, 3).map((item) => item.name)
+          ? [state.answer.chords.map((item) => item.name).join(' → ')] // up to 4 chords: one line fits the amp
           : [state.answersOn ? 'Waiting for a phrase' : 'Answers are off'];
       ampOutputList.replaceChildren(...outputItems.map((name) => {
         const item = document.createElement('li');
@@ -205,15 +235,16 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
         item.textContent = chord;
         return item;
       }));
-      weirdness.value = String(Math.max(0, Math.min(1, state.weirdness)));
       const normalizedWeirdness = Math.max(0, Math.min(1, state.weirdness));
+      setValue(weirdness, String(normalizedWeirdness));
       weirdnessValue.value = `${Math.round(normalizedWeirdness * 100)}%`;
       knob.style.setProperty('--knob-angle', `${-135 + normalizedWeirdness * 270}deg`);
-      genre.value = state.genre || 'all';
-      answers.checked = state.answersOn;
-      bridge.value = state.bridge;
-      bpm.value = String(state.bpm);
-      phrase.value = String(state.phraseBars);
+      setValue(genre, state.genre || 'all');
+      if (document.activeElement !== answers) answers.checked = state.answersOn;
+      setValue(bridge, state.bridge);
+      setValue(bpm, String(state.bpm));
+      setValue(phrase, String(state.phraseBars));
+      if (state.model) setValue(model, state.model);
       query<HTMLElement>('[data-ref="tempo"]').textContent = state.liveTempo === null ? '— BPM' : `${state.liveTempo} BPM`;
       query<HTMLElement>('[data-ref="bar"]').textContent = state.bar === null ? '—' : String(state.bar);
       query<HTMLElement>('[data-ref="live-tempo"]').textContent = state.liveTempo === null ? 'WAITING FOR LIVE' : 'LIVE';

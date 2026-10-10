@@ -9,7 +9,7 @@ You play chords in Ableton. A frog overlay floats above Live and:
 
 A weirdness knob and a genre picker reshape both. **Keep** saves your last phrase plus the answer as a `.mid`.
 
-> Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) and Keep (.mid) work over both bridges. Next: Kevin's overlay UI, the listening test page, and the GRU experiment.
+> Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) and Keep (.mid) work over both bridges. The overlay is Kevin's animated frog-on-an-amp UI; a Model picker switches between the n-gram and Katie's GRU. Next: the listening test page.
 
 ## Repo layout (one lane per folder)
 

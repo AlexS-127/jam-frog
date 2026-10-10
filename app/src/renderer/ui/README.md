@@ -5,13 +5,13 @@ From `app/`, run `npm exec vite -- --host 127.0.0.1`, then open:
 - [Interactive demo](http://127.0.0.1:5173/ui/demo.html)
 - [All animation frames](http://127.0.0.1:5173/ui/frog/review.html)
 
-The demo mounts the same `createOverlay(root, handlers)` component intended for later integration. It retains `UiState`, `Handlers`, and `update(state)`; `pet` and `destroy()` are additive. Call `destroy()` when unmounting. The root must have a defined size, normally 360×480. Import `../style.css` for the transparent stage. Demo background and development controls live outside the stage.
+The demo mounts the same `createOverlay(root, handlers)` component intended for later integration. It retains `UiState`, `Handlers`, and `update(state)`; `pet` and `destroy()` are additive. Call `destroy()` when unmounting. The root must have a defined size, normally 360×480. Import `overlay.css` for the transparent stage (the app does this in `src/renderer/index.html`). Demo background and development controls live outside the stage.
 
 Select any action to preview its loop, including **Playing keyboard**. **Ambient / auto** follows the music mood and occasional resting gestures. Changing the mood returns to automatic mode. Click or press Enter/Space on the frog to alternate wave and jump; drag more than four pixels to move, then release to toss. **Center frog** stops motion and resets its position. The **Play a frog answer** toggle shows the dedicated keyboard performance loop; clicks briefly play a greeting before it resumes.
 
 Reduced motion freezes the displayed pose and disables ambient gestures and fling physics. Direct dragging and explicit reactions remain available. Hidden pages pause animation time; returning resumes the previous frame without catching up.
 
-The Electron entry point remains the existing integration spike. This browser prototype does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
+The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from the engine. This browser demo does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
 
 The overlay implements the Lane B “What to build” checklist: four music moods plus a looping playing animation, current chord and answer progress, recent trail, three mini-keyboard suggestions, an amplifier with one weirdness knob and one genre dropdown, answer/phrase/Keep controls, bridge and BPM selectors, and Live tempo/bar/status. The amp display shows next-chord suggestions while the player phrase is being recorded and the frog's answer between phrases. Dragging moves the frog in its idle pose; there are no running animations. Controls call the supplied handlers; mock state stays in the demo.
 

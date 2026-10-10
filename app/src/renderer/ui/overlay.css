@@ -1,3 +1,5 @@
+/* The overlay must fit 360x480 on its own (the demo page set this globally; the app does not). */
+.jf-shell, .jf-shell *, .jf-shell *::before, .jf-shell *::after { box-sizing: border-box; }
 html, body, #overlay-root { width: 100%; height: 100%; margin: 0; }
 html, body { overflow: hidden; background: transparent; font: 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e8f3e6; }
 #overlay-root { width: 360px; height: 480px; margin: 0 auto; }
