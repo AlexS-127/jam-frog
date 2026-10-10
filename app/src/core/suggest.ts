@@ -1,5 +1,5 @@
 import { chordName } from './chords';
-import { estimateKey, isBorrowed } from './key';
+import { estimateKey, isBorrowed, type Key } from './key';
 import type { ChordModel } from './model';
 import { ranked, reshape } from './sampler';
 import type { ChordSymbol, Suggestion } from './types';
@@ -11,6 +11,8 @@ export interface SuggestOptions {
   genre: string;
   /** MIDI notes of the player's last chord, so the mini keyboards show something close by */
   lastVoicing?: number[];
+  /** the session's key (AnswerEngine.key()); estimated from `history` if not given */
+  key?: Key;
 }
 
 /** How many past chords go into the model context (the GRU uses up to 8). */
@@ -33,7 +35,7 @@ export function suggest(history: ChordSymbol[], model: ChordModel, o: SuggestOpt
   if (history.length === 0) return [];
   const recent = history.slice(-CONTEXT_CHORDS);
   const prev = recent[recent.length - 1];
-  const key = estimateKey(history);
+  const key = o.key ?? estimateKey(history);
   const probs = model.predictNext(encode(recent), o.genre);
   const dist = reshape(probs, { weirdness: o.weirdness, prev, key, prior: priorFor(model, o.genre) });
   return ranked(dist)

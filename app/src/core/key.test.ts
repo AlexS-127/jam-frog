@@ -25,6 +25,30 @@ describe('estimateKey', () => {
   });
 });
 
+describe('estimateKey over a whole session', () => {
+  it('follows a modulation: recent phrases outweigh older ones', () => {
+    const inC = prog('C Am F G C Am F G C Am F G');
+    const inG = prog('G Em C D G Em C D');
+    const starts = [0, 4, 8, 12, 16];
+    expect(estimateKey(inC, { phraseStarts: [0, 4, 8] })).toEqual({ tonic: 0, minor: false });
+    expect(estimateKey([...inC, ...inG], { phraseStarts: starts })).toEqual({ tonic: 7, minor: false });
+  });
+
+  it('a long session keeps an ambiguous new phrase in the established key', () => {
+    // F G Am alone could be A minor; after phrases in C, it reads as C
+    const session = [...prog('C F G C C Am F G'), ...prog('F G Am')];
+    expect(estimateKey(session, { phraseStarts: [0, 4, 8] })).toEqual({ tonic: 0, minor: false });
+  });
+
+  it('uses phrase-opening chords as tonic cues', () => {
+    // Am C G F as phrases starting on Am -> A minor; the same chords phrased from C -> C major
+    const chords = prog('Am C G F Am C G F');
+    expect(estimateKey(chords, { phraseStarts: [0, 4] })).toEqual({ tonic: 9, minor: true });
+    const fromC = prog('C G F Am C G F Am');
+    expect(estimateKey(fromC, { phraseStarts: [0, 4] })).toEqual({ tonic: 0, minor: false });
+  });
+});
+
 describe('isBorrowed', () => {
   const C = { tonic: 0, minor: false };
   it('knows bVI, bVII and iv in major', () => {

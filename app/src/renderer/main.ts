@@ -108,12 +108,12 @@ function onGroup(g: NoteGroup): void {
   if (!chord) return; // single notes and non-chords are ignored
   $('chord').textContent = chord.name;
   history.push(chord);
-  if (history.length > 16) history.shift();
+  if (history.length > 256) history.shift(); // the whole session; the model only looks at the last 8
+  answers.chord(chord); // first, so the session key includes this chord
   const t0 = performance.now(); // chord recognised (the 60 ms grouping window has closed)
   showSuggestions();
   $('suggestMs').textContent = `${(performance.now() - t0).toFixed(1)} ms`;
   $('latency').textContent = `${Math.round(performance.now() - g.firstTime)} ms`;
-  answers.chord(chord);
 }
 
 let wasPlaying = false;
@@ -140,6 +140,7 @@ function showSuggestions(): void {
     weirdness: Number(weirdInput.value),
     genre: genreSel.value,
     lastVoicing: last?.pitches,
+    key: answers.key(), // the session key, shared with the frog's answers
   });
   const box = $('suggestions');
   box.innerHTML = '';

@@ -268,6 +268,63 @@ describe('AnswerEngine (phrase call and response)', () => {
   });
 });
 
+describe('AnswerEngine background planning', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  // A model that takes 5 ms per call (like the GRU on a slow machine), measured on the fake clock.
+  let calls = 0;
+  const slowIV: ChordModel = {
+    name: 'slow',
+    predictNext: (ctx, genre) => {
+      calls++;
+      vi.setSystemTime(Date.now() + 5);
+      return alwaysIV.predictNext(ctx, genre);
+    },
+  };
+
+  it('plans in short slices, yielding between them, within the 150 ms budget', () => {
+    vi.setSystemTime(0);
+    calls = 0;
+    const engine = new AnswerEngine({
+      model: slowIV,
+      sink: () => null,
+      settings: () => ({ answersOn: true, weirdness: 0.1, genre: 'all', bpm: 120, phraseBars: 4 }),
+      now: () => Date.now(),
+    });
+    engine.chord(detectChord([60, 64, 67])!);
+    engine.chord(detectChord([57, 60, 64])!);
+    const workPerTimer: number[] = [];
+    for (let i = 0; i < 200 && Date.now() < 1000; i++) {
+      const before = calls;
+      vi.advanceTimersToNextTimer();
+      if (calls > before) workPerTimer.push((calls - before) * 5); // ms of model time in that one timer
+    }
+    const total = workPerTimer.reduce((a, b) => a + b, 0);
+    expect(workPerTimer.length).toBeGreaterThan(3); // several slices, not one long block
+    expect(Math.max(...workPerTimer)).toBeLessThanOrEqual(12 + 10); // a slice, plus at most one candidate (2 calls)
+    expect(total).toBeLessThanOrEqual(150 + 10);
+    expect(total).toBeGreaterThanOrEqual(140); // it does use the budget to find better answers
+    engine.cancel();
+  });
+
+  it('when the phrase ends mid-planning, answers with the best candidate so far', () => {
+    vi.setSystemTime(0);
+    const sink = new RecordingSink();
+    const engine = new AnswerEngine({
+      model: slowIV,
+      sink: () => sink,
+      settings: () => ({ answersOn: true, weirdness: 0.1, genre: 'all', bpm: 480, phraseBars: 1 }),
+      now: () => Date.now(),
+    });
+    engine.chord(detectChord([60, 64, 67])!);
+    engine.chord(detectChord([57, 60, 64])!);
+    vi.advanceTimersByTime(600); // 1 bar at 480 BPM = 500 ms; planning would need longer than that here
+    expect(sink.held.size).toBe(3);
+    engine.cancel();
+  });
+});
+
 describe('scoreAnswer', () => {
   const C = { tonic: 0, minor: false };
   const ch = (root: number, quality: ChordSymbol['quality'] = 'maj') => ({ root, quality });

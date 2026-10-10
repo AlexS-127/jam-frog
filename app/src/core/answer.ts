@@ -41,8 +41,28 @@ export interface AnswerEngineDeps {
 }
 
 const BEATS_PER_BAR = 4;
-/** Time allowed for generating answer candidates. */
-const PLAN_BUDGET_MS = 60;
+/** Total time for generating answer candidates in the background (the n-gram finishes well inside it). */
+const PLAN_BUDGET_MS = 150;
+/** Background planning works in slices this long, yielding in between. */
+const PLAN_SLICE_MS = 12;
+/** Budget when an answer is due and no background plan exists (blocks, so kept short). */
+const QUICK_PLAN_MS = 30;
+/** How many chords of the session are remembered (for the key and the model context). */
+const SESSION_CHORDS = 256;
+
+interface PlanJob {
+  forKey: string;
+  s: AnswerSettings;
+  length: number;
+  key: Key;
+  prior: Float32Array;
+  history: ChordSymbol[];
+  phrase: Chord[];
+  cands: { chords: ChordSymbol[]; score: number }[];
+  seen: Set<string>;
+  tries: number;
+  spent: number;
+}
 /** While Live sends bars, the backup clock only steps in if a bar is this late (Live stopped). */
 const BACKUP_SLACK = 1.25;
 
@@ -56,7 +76,10 @@ const BACKUP_SLACK = 1.25;
  * Playing again during an answer (after its first beat) cuts the answer off and starts a new phrase.
  */
 export class AnswerEngine {
+  /** every chord of the jam session (capped), for the model context and the key */
   private history: ChordSymbol[] = [];
+  /** indices into `history` where the player started a phrase */
+  private phraseStarts: number[] = [];
   private phrase: Chord[] = [];
   private status: AnswerStatus = 'idle';
   /** bars counted since the clock started; the phrase and the answer are positioned on this count */
@@ -75,6 +98,7 @@ export class AnswerEngine {
   private sounding: number[] = [];
   private clock: ReturnType<typeof setTimeout> | null = null;
   private planTimer: ReturnType<typeof setTimeout> | null = null;
+  private job: PlanJob | null = null;
 
   /** the last phrase the player played and the frog's answer to it, as timed notes (for Keep) */
   lastPhraseNotes: NoteEvent[] = [];
@@ -105,7 +129,10 @@ export class AnswerEngine {
   /** every chord the player plays (from the chord detector) */
   chord(c: Chord): void {
     this.history.push({ root: c.root, quality: c.quality });
-    if (this.history.length > 32) this.history.shift();
+    if (this.history.length > SESSION_CHORDS) {
+      this.history.shift();
+      this.phraseStarts = this.phraseStarts.map((i) => i - 1).filter((i) => i >= 0);
+    }
 
     if (this.status === 'playing') {
       // A chord in the answer's first beat is the tail of the player's phrase; later, the player takes over.
@@ -116,6 +143,11 @@ export class AnswerEngine {
     this.phrase.push(c);
     this.schedulePlan();
     this.emit();
+  }
+
+  /** The session's key: every chord so far, recent phrases weighted most, phrase openings as tonic cues. */
+  key(): Key {
+    return estimateKey(this.history, { phraseStarts: this.phraseStarts });
   }
 
   /** What Keep saves: the last answered phrase and the frog's answer, or the phrase in progress if none yet. */
@@ -187,6 +219,7 @@ export class AnswerEngine {
 
   private startPhrase(): void {
     this.phrase = [];
+    this.phraseStarts.push(this.history.length - 1);
     // Notes from just before this chord belong to it (the chord detector waits ~60 ms); older ones don't.
     const t = this.now();
     this.phraseNotes = this.phraseNotes.filter((n) => n.time >= t - 150);
@@ -237,8 +270,14 @@ export class AnswerEngine {
   // ---- answering ----
 
   private startAnswer(s: AnswerSettings): void {
+    // The plan made in the background, or the best candidate so far if planning is still running,
+    // or (if neither exists) a quick plan now.
     const key = this.phraseKey();
-    const plan = this.planFor === key && this.plan ? this.plan : this.makePlan(s);
+    let plan: AnswerPlan;
+    if (this.planFor === key && this.plan) plan = this.plan;
+    else if (this.job && this.job.forKey === key && this.job.cands.length) plan = this.finishJob(this.job);
+    else plan = this.makePlan(s, QUICK_PLAN_MS);
+    this.cancelPlanning();
     this.lastPhraseNotes = this.phraseNotes;
     this.phraseNotes = [];
     this.lastAnswerNotes = [];
@@ -251,9 +290,14 @@ export class AnswerEngine {
     this.emit();
   }
 
-  private stopAnswer(): void {
+  private cancelPlanning(): void {
     if (this.planTimer) clearTimeout(this.planTimer);
     this.planTimer = null;
+    this.job = null;
+  }
+
+  private stopAnswer(): void {
+    this.cancelPlanning();
     for (const p of this.sounding) this.send(p, 0);
     this.sounding = [];
     if (this.status === 'playing') this.status = 'idle';
@@ -277,39 +321,73 @@ export class AnswerEngine {
     return `${this.d.model.name}|${this.phrase.map((c) => c.name).join(' ')}|${s.weirdness}|${s.genre}|${s.phraseBars}`;
   }
 
-  /** Plan in the background after each chord, so the answer is ready the moment the phrase ends. */
+  /**
+   * Plan in the background after each chord, so the answer is ready the moment the phrase ends. The work is
+   * cut into ~12 ms slices with a yield between them, so incoming notes and Live's /bar are never held up,
+   * for up to PLAN_BUDGET_MS in total.
+   */
   private schedulePlan(): void {
-    if (this.planTimer) clearTimeout(this.planTimer);
-    this.planTimer = setTimeout(() => {
+    this.cancelPlanning();
+    if (this.status !== 'listening' || this.phrase.length < this.minChords) return;
+    const job = this.newJob(this.d.settings());
+    this.job = job;
+    const slice = () => {
       this.planTimer = null;
-      if (this.status !== 'listening' || this.phrase.length < this.minChords) return;
-      this.plan = this.makePlan(this.d.settings());
-      this.planFor = this.phraseKey();
+      if (this.job !== job) return;
+      this.workOn(job, PLAN_SLICE_MS);
+      if (job.tries < this.candidates && job.spent < PLAN_BUDGET_MS) {
+        this.planTimer = setTimeout(slice, 0);
+        return;
+      }
+      this.plan = this.finishJob(job);
+      this.planFor = job.forKey;
+      this.job = null;
       this.emit();
-    }, 0);
+    };
+    this.planTimer = setTimeout(slice, 0);
+  }
+
+  /** Plan right now (used when no background plan is ready, and by tests), within `budgetMs`. */
+  makePlan(s: AnswerSettings, budgetMs = PLAN_BUDGET_MS): AnswerPlan {
+    const job = this.newJob(s);
+    this.workOn(job, budgetMs, 8);
+    return this.finishJob(job);
+  }
+
+  private newJob(s: AnswerSettings): PlanJob {
+    return {
+      forKey: this.phraseKey(),
+      s,
+      length: Math.min(4, Math.max(2, this.phrase.length)),
+      key: this.key(),
+      prior: priorFor(this.d.model, s.genre),
+      history: [...this.history],
+      phrase: [...this.phrase],
+      cands: [],
+      seen: new Set(),
+      tries: 0,
+      spent: 0,
+    };
   }
 
   /**
-   * Generate candidate continuations with the weirdness sampler and keep the best by `scoreAnswer`.
-   * Low weirdness takes the top score; higher weirdness picks among good candidates in proportion to score.
+   * Generate candidate continuations with the weirdness sampler for up to `ms` (always at least one, and at
+   * least `minTries` in total), scoring each with `scoreAnswer`.
    */
-  makePlan(s: AnswerSettings): AnswerPlan {
-    const length = Math.min(4, Math.max(2, this.phrase.length));
-    const key = estimateKey(this.history);
-    const prior = priorFor(this.d.model, s.genre);
-    const cands: { chords: ChordSymbol[]; score: number }[] = [];
-    const seen = new Set<string>();
-    // Stop early if the model is slow (the GRU), so planning never stalls the overlay: at least 8 candidates.
-    const deadline = this.now() + PLAN_BUDGET_MS;
-    for (let k = 0; k < this.candidates && (k < 8 || this.now() < deadline); k++) {
-      const ctx = [...this.history];
+  private workOn(job: PlanJob, ms: number, minTries = 1): void {
+    const t0 = this.now();
+    let made = 0;
+    while (job.tries < this.candidates && (made === 0 || job.tries < minTries || this.now() - t0 < ms)) {
+      made++;
+      job.tries++;
+      const ctx = [...job.history];
       const chords: ChordSymbol[] = [];
       let logp = 0;
-      for (let i = 0; i < length; i++) {
+      for (let i = 0; i < job.length; i++) {
         const recent = ctx.slice(-CONTEXT_CHORDS);
         const prev = recent[recent.length - 1];
-        const probs = this.d.model.predictNext(encode(recent), s.genre);
-        const dist = reshape(probs, { weirdness: s.weirdness, prev, key, prior });
+        const probs = this.d.model.predictNext(encode(recent), job.s.genre);
+        const dist = reshape(probs, { weirdness: job.s.weirdness, prev, key: job.key, prior: job.prior });
         const t = sampleToken(dist, this.rng);
         logp += Math.log(probs[t] || 1e-9);
         const chord = decode(prev.root, t)!;
@@ -317,11 +395,17 @@ export class AnswerEngine {
         ctx.push(chord);
       }
       const id = chords.map((c) => `${c.root}${c.quality}`).join(' ');
-      if (seen.has(id)) continue;
-      seen.add(id);
-      cands.push({ chords, score: scoreAnswer(chords, logp / length, this.phrase, key) });
+      if (job.seen.has(id)) continue;
+      job.seen.add(id);
+      job.cands.push({ chords, score: scoreAnswer(chords, logp / job.length, job.phrase, job.key) });
     }
-    cands.sort((a, b) => b.score - a.score);
+    job.spent += this.now() - t0;
+  }
+
+  /** Low weirdness takes the top score; higher weirdness picks among good candidates in proportion to score. */
+  private finishJob(job: PlanJob): AnswerPlan {
+    const s = job.s;
+    const cands = [...job.cands].sort((a, b) => b.score - a.score);
     let pick = cands[0];
     if (s.weirdness > 0.3 && cands.length > 1) {
       const temp = 0.2 + 1.5 * s.weirdness;
@@ -331,8 +415,8 @@ export class AnswerEngine {
       pick = top.find((_, i) => (r -= weights[i]) <= 0) ?? top[0];
     }
     // Play where the player played: their phrase's register (and bass line, if they had one).
-    const reg = registerOf(this.phrase.map((c) => c.pitches)) ?? { lo: 60, hi: 84, bass: null };
-    let prevVoicing: number[] | null = this.phrase.at(-1)?.pitches ?? null;
+    const reg = registerOf(job.phrase.map((c) => c.pitches)) ?? { lo: 60, hi: 84, bass: null };
+    let prevVoicing: number[] | null = job.phrase.at(-1)?.pitches ?? null;
     const chords = pick.chords.map((chord) => {
       const voicing = voiceInRegister(chord, prevVoicing, reg);
       prevVoicing = voicing;

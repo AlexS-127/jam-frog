@@ -37,14 +37,32 @@ export function isBorrowed(c: ChordSymbol, key: Key): boolean {
   return !isDiatonic(c, key) && has(BORROWED[key.minor ? 'minor' : 'major'], c, key);
 }
 
+export interface KeyOptions {
+  /** chords back at which a chord's evidence counts half (default 8, about two 4-chord phrases) */
+  halfLife?: number;
+  /** indices into `history` where the player started a phrase; those chords are strong tonic cues */
+  phraseStarts?: number[];
+}
+
+/** Older evidence than this many half-lives is ignored. */
+const MAX_HALF_LIVES = 8;
+
 /**
- * Best-guess key of a phrase: each of the 24 keys scores the recency-weighted share of chords that are
- * diatonic to it, plus a bonus when the tonic chord appears, most of all as the first or last chord.
+ * Best-guess key of the jam session so far. Every chord votes for the keys it is diatonic to, with a bonus
+ * for the key's tonic chord; votes fade by half every `halfLife` chords, so recent phrases dominate but a
+ * long session still steadies the guess. Phrase-opening chords and the latest chord add tonic evidence.
+ * Without `phraseStarts`, the first chord given counts as a phrase start.
  */
-export function estimateKey(history: ChordSymbol[], window = 8): Key {
-  const recent = history.slice(-window);
+export function estimateKey(history: ChordSymbol[], opts: KeyOptions = {}): Key {
+  const halfLife = opts.halfLife ?? 8;
+  const from = Math.max(0, history.length - halfLife * MAX_HALF_LIVES);
+  const recent = history.slice(from);
   if (recent.length === 0) return { tonic: 0, minor: false };
-  let best: Key = { tonic: recent[0].root, minor: FAMILY[recent[0].quality] === 'minor' };
+  const n = recent.length;
+  const weight = (i: number) => Math.pow(0.5, (n - 1 - i) / halfLife);
+  const starts = (opts.phraseStarts ?? [0]).map((i) => i - from).filter((i) => i >= 0 && i < n);
+
+  let best: Key = { tonic: recent[n - 1].root, minor: FAMILY[recent[n - 1].quality] === 'minor' };
   let bestScore = -Infinity;
   for (let tonic = 0; tonic < 12; tonic++) {
     for (const minor of [false, true]) {
@@ -52,12 +70,12 @@ export function estimateKey(history: ChordSymbol[], window = 8): Key {
       const tonicChord = (c: ChordSymbol) => c.root === tonic && FAMILY[c.quality] === (minor ? 'minor' : 'major');
       let score = 0;
       recent.forEach((c, i) => {
-        const w = 0.6 + (0.4 * (i + 1)) / recent.length; // newer chords count a bit more
+        const w = weight(i);
         if (isDiatonic(c, key)) score += w;
         if (tonicChord(c)) score += 0.5 * w;
       });
-      if (tonicChord(recent[0])) score += 1.0;
-      if (tonicChord(recent[recent.length - 1])) score += 0.5;
+      for (const i of starts) if (tonicChord(recent[i])) score += 1.5 * weight(i);
+      if (tonicChord(recent[n - 1])) score += 0.5;
       if (score > bestScore) {
         bestScore = score;
         best = key;
