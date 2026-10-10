@@ -34,11 +34,38 @@ Output Ports                  Track  Sync  Remote
   IAC Driver (JamFrog Out)     [ ]    [ ]   [ ]
 ```
 
-### 3. Tap track (player → app)
+If you use a USB keyboard, also tick **Track** on its *notes* input port in the same Input Ports table.
+For an **Akai MPK mini IV** that is **MPK mini IV (MIDI Port)** (off by default when Live sets the MPK up as a
+Control Surface; leave the Control Surface as it is).
 
-- A MIDI track whose input is your keyboard or "Computer Keyboard". **Never "All Ins"**: that would also pick up the frog's notes.
-- Monitor: **In**. MIDI To: **JamFrog In**.
+### 3. Show the track I/O boxes
 
-### 4. Frog track (app → instrument)
+**View → In/Out** (Cmd+Option+I). Works in Session or Arrangement View.
 
-- An instrument track with input **JamFrog Out**, Monitor **In**.
+### 4. Tap track (player → app)
+
+A MIDI track with **no instrument**, named `Tap`:
+
+- **MIDI From:** your keyboard's notes port (e.g. `MPK mini IV (MIDI Port)`) or `Computer Keyboard`; All Channels.
+  **Never "All Ins"**: that would also pick up the frog's notes and loop them.
+- **Monitor:** In.
+- **MIDI To:** `IAC Driver (JamFrog In)`, Ch. 1.
+
+### 5. Your instrument track (so you hear yourself)
+
+Drag any piano preset from the browser into the empty area below the tracks; rename it `Me` (Cmd+R).
+
+- **MIDI From:** the same keyboard port as the Tap track. **Monitor:** In. Output: Main.
+
+### 6. Frog track (app → instrument)
+
+Drag a contrasting instrument (electric piano, mallet…) below the tracks; rename it `Frog`.
+
+- **MIDI From:** `IAC Driver (JamFrog Out)`, All Channels. **Monitor:** In. Output: Main.
+
+**Check:** play a chord. Only your piano sounds, and the Tap track's MIDI meter flickers. The Frog track stays
+silent until the app answers.
+
+### Switching from the computer keyboard to a USB keyboard later
+
+Change **MIDI From** on both `Tap` and `Me` to the keyboard's notes port (and tick its Track box in Settings).
