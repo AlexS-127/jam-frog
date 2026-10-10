@@ -7,3 +7,4 @@ __pycache__/
 .venv/
 model/data/
 model/checkpoints/
+.agents/skills/jam-frog-ui-design/
