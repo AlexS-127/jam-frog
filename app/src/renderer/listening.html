@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <meta name="color-scheme" content="dark" />
+    <title>Jam Frog listening test</title>
+    <link rel="stylesheet" href="./listening.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Listening test</h1>
+      <p>
+        Each row plays a progression (the call), then a frog answer. Answers <b>A</b> and <b>B</b> come from the
+        n-gram and the GRU in a hidden, shuffled order. Vote for the better answer; <b>Reveal</b> shows which was which.
+      </p>
+      <div class="bar">
+        <label>Bridge
+          <select id="bridge"><option value="osc">Max for Live (Frog Voice)</option><option value="ports">Ports (JamFrog Out)</option></select>
+        </label>
+        <label>BPM <input id="bpm" type="number" min="60" max="200" value="110" /></label>
+        <button id="stop" type="button">Stop</button>
+        <span id="status" role="status"></span>
+      </div>
+    </header>
+    <table>
+      <thead><tr><th>Progression</th><th>Weird</th><th>Listen</th><th>Vote</th><th class="reveal-col">Answers</th></tr></thead>
+      <tbody id="cases"></tbody>
+    </table>
+    <footer>
+      <button id="reveal" type="button">Reveal</button>
+      <button id="copy" type="button">Copy results</button>
+      <div id="tally"></div>
+    </footer>
+    <script type="module" src="./listening.ts"></script>
+  </body>
+</html>

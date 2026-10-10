@@ -35,6 +35,9 @@ npm start       # production build, then run it
 
 Then connect Ableton by following [`ableton/SETUP.md`](ableton/SETUP.md).
 
+**Listening test** (n-gram vs GRU): in the running app, **Jam Frog → Listening test…** (Cmd+Shift+L). Each row plays a
+progression and then answer A or B on the frog track; the models are hidden and shuffled. Vote, then **Reveal**.
+
 ## What leaves your machine
 
 Nothing.

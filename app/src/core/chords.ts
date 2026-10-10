@@ -88,3 +88,18 @@ const QUALITY_SUFFIX: Record<Quality, string> = {
 export function chordName(root: number, quality: Quality): string {
   return PITCH_NAMES[((root % 12) + 12) % 12] + QUALITY_SUFFIX[quality];
 }
+
+const NAME_SUFFIX: Record<string, Quality> = {
+  '': 'maj', m: 'min', min: 'min', dim: 'dim', aug: 'aug', sus4: 'sus', sus2: 'sus', sus: 'sus',
+  '7': 'dom7', maj7: 'maj7', m7: 'min7', min7: 'min7', '5': 'pow',
+};
+
+/** "Am" -> {root 9, min}; "Bb7" -> {root 10, dom7}; "F#m7" -> {root 6, min7}. Throws on anything else. */
+export function parseChordName(name: string): { root: number; quality: Quality } {
+  const m = /^([A-G])([#b]?)(.*)$/.exec(name.trim());
+  const quality = m ? NAME_SUFFIX[m[3]] : undefined;
+  if (!m || !quality) throw new Error(`can't read chord name "${name}"`);
+  const letter = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1] as 'C'];
+  const root = (letter + (m[2] === '#' ? 1 : m[2] === 'b' ? 11 : 0)) % 12;
+  return { root, quality };
+}

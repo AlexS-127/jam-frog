@@ -1,0 +1,23 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #142019; color: #e8f3e6; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+body { padding: 16px 20px 24px; }
+h1 { margin: 0 0 4px; font-size: 18px; }
+header p { margin: 0 0 10px; color: #b7c9b4; max-width: 640px; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+select, input, button { background: #0f1912; color: inherit; border: 1px solid #3c5a40; border-radius: 6px; padding: 4px 8px; font: inherit; }
+button { cursor: pointer; background: #24412a; }
+button:hover { background: #2f5636; }
+button.playing { background: #5fbf5a; color: #0b140d; }
+input[type="number"] { width: 64px; }
+#status { color: #f3c46b; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #263a2a; vertical-align: middle; }
+th { color: #91a894; font-weight: 500; font-size: 12px; }
+td.prog { font-weight: 600; white-space: nowrap; }
+.listen button { margin-right: 4px; }
+.vote label { margin-right: 10px; white-space: nowrap; }
+.reveal-col, .answers { color: #b7c9b4; font-size: 12px; }
+body:not(.revealed) .reveal-col, body:not(.revealed) .answers { visibility: hidden; }
+.answers b { color: #9be38f; font-weight: 600; }
+footer { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+#tally { flex-basis: 100%; color: #cfe3cb; white-space: pre-line; }

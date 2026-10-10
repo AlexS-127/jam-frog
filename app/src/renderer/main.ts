@@ -1,18 +1,14 @@
-import gruText from '../../../model/export/gru_weights.json?raw';
-import ngramText from '../../../model/export/ngram.json?raw';
 import { AnswerEngine, type AnswerProgress } from '../core/answer';
-import { cached } from '../core/cached';
 import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
-import { GruModel, type GruWeights } from '../core/gru';
 import { buildMidi, keepFileName } from '../core/keep';
 import type { ChordModel } from '../core/model';
-import { NgramModel, type NgramJson } from '../core/ngram';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord, FrogMood, NoteEvent, NoteSink, NoteSource, Suggestion } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { getMidiAccess, WebMidiNoteSink, WebMidiNoteSource } from './bridges/webmidi';
+import { loadModels } from './models';
 import { createOverlay, type UiState } from './ui/overlay';
 
 // The app: notes in from Live (Max for Live over OSC, or the IAC ports) -> chord detection -> live
@@ -32,10 +28,7 @@ const settings = {
 
 // ---- models: both behind ChordModel; the GRU replaces the n-gram only if it also wins the listening test ----
 
-const models: Record<string, ChordModel> = {
-  ngram: cached(new NgramModel(JSON.parse(ngramText) as NgramJson)),
-  gru: cached(new GruModel(JSON.parse(gruText) as GruWeights)),
-};
+const models: Record<string, ChordModel> = loadModels();
 const model: ChordModel = {
   get name() {
     return models[settings.model].name;

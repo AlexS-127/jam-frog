@@ -180,7 +180,7 @@ Feature 6. **Can start now.**
 **The GRU replaces the n-gram only if it's at least as accurate and passes the listening test (lane E).**
 If the box runs out, we ship the n-gram.
 
-### Lane E (Kevin): listening test page (`app/src/renderer/listening.html`, `listening.ts`)
+### Lane E (built by Claude while Kevin did the UI): listening test page (`app/src/renderer/listening.html`, `listening.ts`, `app/src/core/listening.ts`). **Done**
 
 Feature 8. **Can start now with a fake model**; it uses A1/A2 when they land.
 
