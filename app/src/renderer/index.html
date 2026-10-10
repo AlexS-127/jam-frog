@@ -32,6 +32,12 @@
         <label>BPM <input id="bpm" type="number" min="40" max="240" value="120" /></label>
         <label>Genre <select id="genre"></select></label>
         <label>Frog answers <input id="answersOn" type="checkbox" checked /></label>
+        <label>Phrase
+          <select id="phrase">
+            <option value="4">4 bars</option>
+            <option value="8">8 bars</option>
+          </select>
+        </label>
         <label>Weirdness <input id="weird" type="range" min="0" max="1" step="0.05" value="0.2" /><b id="weirdVal">0.2</b></label>
         <div class="osc-only live">Live: <b id="liveTempo">no tempo yet</b> · bar <b id="bar">—</b></div>
       </section>

@@ -1,4 +1,4 @@
-import { AnswerEngine, type AnswerStatus } from '../core/answer';
+import { AnswerEngine, type AnswerProgress } from '../core/answer';
 import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
 import { NgramModel } from '../core/ngram';
@@ -24,6 +24,7 @@ const bridgeSel = $<HTMLSelectElement>('bridge');
 const genreSel = $<HTMLSelectElement>('genre');
 const weirdInput = $<HTMLInputElement>('weird');
 const answersOn = $<HTMLInputElement>('answersOn');
+const phraseSel = $<HTMLSelectElement>('phrase');
 
 const model = new NgramModel(JSON.parse(ngramText) as NgramJson);
 const history: Chord[] = [];
@@ -57,12 +58,14 @@ const answers = new AnswerEngine({
     weirdness: Number(weirdInput.value),
     genre: genreSel.value,
     bpm: Number(bpmInput.value) || 120,
+    phraseBars: Number(phraseSel.value) || 4,
   }),
   onPlan: showAnswer,
 });
 answersOn.onchange = () => {
   if (!answersOn.checked) answers.cancel();
 };
+phraseSel.onchange = () => answers.cancel();
 
 const grouper = new OnsetGrouper(onGroup, 60);
 
@@ -95,20 +98,18 @@ function onGroup(g: NoteGroup): void {
   answers.chord(chord);
 }
 
-const STATUS_TEXT: Record<AnswerStatus, string> = {
-  idle: '',
-  'waiting-for-bar': ' · waiting for the bar…',
-  playing: ' · playing',
-};
+let wasPlaying = false;
 
-function showAnswer(plan: AnswerPlan | null, st: AnswerStatus): void {
+function showAnswer(plan: AnswerPlan | null, p: AnswerProgress): void {
   $('answer').textContent = plan ? plan.chords.map((c) => c.name).join(' → ') : '—';
-  $('answerStatus').textContent = STATUS_TEXT[st];
+  $('answerStatus').textContent =
+    p.status === 'listening' ? ` · your phrase, bar ${p.bar}/${p.bars}` : p.status === 'playing' ? ` · playing, bar ${p.bar}/${p.bars}` : '';
   // How far after Live's bar line the answer started (only meaningful while the transport runs).
-  if (st === 'playing') {
+  if (p.status === 'playing' && !wasPlaying) {
     const sinceBar = performance.now() - lastBarAt;
-    $('barLag').textContent = sinceBar < 50 ? `${sinceBar.toFixed(0)} ms after the bar` : 'not on a bar';
+    $('barLag').textContent = sinceBar < 50 ? `${sinceBar.toFixed(0)} ms after Live's bar` : 'on the frog\'s own bar clock';
   }
+  wasPlaying = p.status === 'playing';
 }
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];

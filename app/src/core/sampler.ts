@@ -1,4 +1,4 @@
-import { isBorrowed, type Key } from './key';
+import { isBorrowed, isDiatonic, type Key } from './key';
 import type { ChordSymbol } from './types';
 import { decode, INTERVAL0, VOCAB_SIZE, type Token } from './vocab';
 
@@ -17,7 +17,7 @@ const weirdAmount = (w: number) => Math.max(0, (w - 0.3) / 0.7);
 
 /**
  * Reshape model probabilities by weirdness. Never uniform:
- * - low weirdness: plain probability ranking, sharpened, top 4
+ * - low weirdness: plain probability ranking, sharpened, top 4, out-of-key chords made less likely
  * - high weirdness: higher temperature, wider top-k, rare moves and borrowed chords (bVI, bVII, iv in major) boosted
  * Repeating the previous chord is excluded. Returns a distribution over the vocabulary (zeros elsewhere).
  */
@@ -28,6 +28,8 @@ export function reshape(probs: Float32Array, o: ReshapeOptions): Float32Array {
   const k = Math.round(4 + 24 * w * w);
   const novelty = 0.8 * m;
   const borrowedBoost = Math.log(1 + 5 * m);
+  // At low weirdness, chords outside the key (other than secondary dominants) are made 2.5x less likely.
+  const outOfKey = Math.log(2.5) * Math.max(0, 1 - w / 0.5);
 
   const scored: { t: Token; s: number }[] = [];
   for (let t = INTERVAL0; t < VOCAB_SIZE; t++) {
@@ -38,7 +40,9 @@ export function reshape(probs: Float32Array, o: ReshapeOptions): Float32Array {
     let s = Math.log(p);
     if (o.prior && o.prior[t] > 0) s -= novelty * Math.log(o.prior[t]);
     s /= temperature;
-    if (isBorrowed(chord, o.key)) s += borrowedBoost;
+    const borrowed = isBorrowed(chord, o.key);
+    if (borrowed) s += borrowedBoost;
+    else if (!isDiatonic(chord, o.key) && !isSecondaryDominant(chord, o.key)) s -= outOfKey;
     scored.push({ t, s });
   }
   scored.sort((a, b) => b.s - a.s);
@@ -50,6 +54,13 @@ export function reshape(probs: Float32Array, o: ReshapeOptions): Float32Array {
   for (const { t, s } of kept) sum += out[t] = Math.exp(s - max);
   for (const { t } of kept) out[t] /= sum;
   return out;
+}
+
+/** A dominant 7th resolving a fifth down onto a diatonic chord (V/x), e.g. E7 -> Am in C. */
+export function isSecondaryDominant(c: ChordSymbol, key: Key): boolean {
+  if (c.quality !== 'dom7' && c.quality !== 'maj') return false;
+  const target = (c.root + 5) % 12;
+  return isDiatonic({ root: target, quality: 'maj' }, key) || isDiatonic({ root: target, quality: 'min' }, key);
 }
 
 /** Tokens with non-zero mass, most likely first. */

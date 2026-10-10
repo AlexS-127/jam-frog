@@ -24,5 +24,11 @@ A section starts with `BOS, START_<quality>`. Train/val/test is 90/5/5 by song, 
 | Model | Top-1 | Top-3 |
 | --- | --- | --- |
 | Unigram baseline | 16.7% | — |
-| N-gram, "all" | 37.6% | 69.8% |
-| N-gram, per genre | 38.2% | 69.8% |
+| Bigram (1-token context), "all" | 27.2% | 59.3% |
+| Trigram (2-token context), first version | 37.6% | 69.8% |
+| 4-gram, "all" | 51.0% | 77.0% |
+| **5-gram "all" + trigram per genre (shipped)** | **56.2%** | **79.6%** |
+
+The shipped `ngram.json` has one shared "all" model with contexts of up to 4 tokens, plus a short-context model
+per genre that the shared long contexts sit on top of (16.7 MB). Longer contexts let it see loops like
+C G Am F, which is where most of the gain comes from.
