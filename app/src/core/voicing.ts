@@ -3,7 +3,10 @@ import type { ChordSymbol } from './types';
 
 /** Close-position voicings of a chord (every inversion) with all notes inside [lo, hi]. */
 export function candidateVoicings(chord: ChordSymbol, lo: number, hi: number): number[][] {
-  const iv = QUALITY_INTERVALS[chord.quality];
+  // Rotate over distinct pitch classes only; a power chord (root, fifth, octave) gets its octave
+  // doubling added back on top, so no voicing ever holds the same note twice.
+  const iv = [...new Set(QUALITY_INTERVALS[chord.quality].map((x) => x % 12))];
+  const doubleBass = chord.quality === 'pow';
   const out: number[][] = [];
   for (let inv = 0; inv < iv.length; inv++) {
     // rotate: the inverted chord's tones, each stacked above the previous
@@ -11,6 +14,7 @@ export function candidateVoicings(chord: ChordSymbol, lo: number, hi: number): n
     for (let bass = lo; bass <= hi; bass++) {
       if ((((bass - chord.root - rotated[0]) % 12) + 12) % 12 !== 0) continue;
       const notes = rotated.map((x) => bass + x - rotated[0]);
+      if (doubleBass) notes.push(bass + 12);
       if (notes[notes.length - 1] <= hi) out.push(notes);
     }
   }

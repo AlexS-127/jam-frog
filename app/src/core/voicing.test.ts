@@ -28,6 +28,17 @@ describe('voicing', () => {
     expect(Math.max(...v)).toBeLessThan(60);
   });
 
+  it('voices power chords without repeating a note (C#5: C# G# C#, or G# C# G#)', () => {
+    const cs5 = { root: 1, quality: 'pow' as const };
+    const all = candidateVoicings(cs5, 40, 84);
+    expect(all.length).toBeGreaterThan(0);
+    for (const v of all) expect(new Set(v).size).toBe(v.length);
+    expect(all).toContainEqual([61, 68, 73]);
+    expect(all).toContainEqual([56, 61, 68]);
+    const near = voiceNearPlayer(cs5, [50, 57, 62]); // after D5
+    expect(new Set(near).size).toBe(near.length);
+  });
+
   it('measures movement across different note counts', () => {
     expect(movement([60, 64, 67], [60, 64, 67])).toBe(0);
     expect(movement([60, 64, 67, 70], [60, 64, 67])).toBe(1.5);

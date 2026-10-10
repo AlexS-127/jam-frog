@@ -43,7 +43,9 @@ let releaseTimer: ReturnType<typeof setTimeout> | null = null;
 const grouper = new OnsetGrouper(onGroup, 60);
 
 function onNote(e: NoteEvent): void {
-  if (echo.isEcho(e)) return render();
+  // Only the ports bridge can loop the frog's notes back in (a track on "All Ins"); over OSC,
+  // filtering would only throw away the player's own notes when they match a frog note.
+  if (bridgeSel.value === 'ports' && echo.isEcho(e)) return render();
   if (e.velocity > 0) {
     counts.in++;
     if (held.has(e.pitch)) counts.doubled++; // a second note-on without a note-off: doubled routing
@@ -109,7 +111,7 @@ function releaseAll(): void {
 }
 
 function send(pitch: number, velocity: number): void {
-  echo.sent(pitch, velocity, performance.now());
+  if (bridgeSel.value === 'ports') echo.sent(pitch, velocity, performance.now());
   sink?.send(pitch, velocity);
   if (velocity > 0) counts.out++;
   render();
