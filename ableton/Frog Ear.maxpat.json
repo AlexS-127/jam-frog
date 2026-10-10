@@ -1,0 +1,170 @@
+{
+    "boxes": [
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "midiin",
+                "patching_rect": [ 30.0, 200.0, 50.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-101",
+                "numoutlets": 1,
+                "outlettype": [ "int" ]
+            }
+        },
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "midiparse",
+                "patching_rect": [ 30.0, 240.0, 100.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-102",
+                "numoutlets": 8,
+                "outlettype": [ "", "", "", "int", "int", "", "int", "" ]
+            }
+        },
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "prepend /note",
+                "patching_rect": [ 30.0, 280.0, 90.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-103",
+                "numoutlets": 1,
+                "outlettype": [ "" ]
+            }
+        },
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "udpsend 127.0.0.1 9001",
+                "patching_rect": [ 30.0, 320.0, 150.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-104",
+                "numoutlets": 0
+            }
+        },
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "print FrogEar",
+                "patching_rect": [ 200.0, 320.0, 90.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-105",
+                "numoutlets": 0
+            }
+        },
+        {
+            "box": {
+                "maxclass": "live.comment",
+                "text": "MIDI to Live",
+                "patching_rect": [ 42.0, 136.0, 58.0, 18.0 ],
+                "numinlets": 1,
+                "id": "obj-5",
+                "numoutlets": 0,
+                "textjustification": 0
+            }
+        },
+        {
+            "box": {
+                "maxclass": "live.comment",
+                "text": "MIDI from Live",
+                "patching_rect": [ 33.0, 16.0, 69.0, 18.0 ],
+                "numinlets": 1,
+                "id": "obj-4",
+                "numoutlets": 0,
+                "textjustification": 0
+            }
+        },
+        {
+            "box": {
+                "maxclass": "live.comment",
+                "text": "Build your MIDI effect here",
+                "patching_rect": [ 63.0, 75.0, 122.0, 18.0 ],
+                "numinlets": 1,
+                "id": "obj-3",
+                "numoutlets": 0,
+                "textjustification": 0
+            }
+        },
+        {
+            "box": {
+                "maxclass": "comment",
+                "text": "Device vertical limit",
+                "patching_rect": [ 0.0, 170.0, 133.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-9",
+                "numoutlets": 0,
+                "fontsize": 11.0,
+                "hidden": 1,
+                "fontname": "Ableton Sans Medium Regular"
+            }
+        },
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "midiout",
+                "patching_rect": [ 48.0, 114.0, 47.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-2",
+                "numoutlets": 0,
+                "fontsize": 10.0,
+                "fontname": "Arial Bold"
+            }
+        },
+        {
+            "box": {
+                "maxclass": "newobj",
+                "text": "midiin",
+                "patching_rect": [ 48.0, 34.0, 40.0, 20.0 ],
+                "numinlets": 1,
+                "id": "obj-1",
+                "numoutlets": 1,
+                "fontsize": 10.0,
+                "outlettype": [ "int" ],
+                "fontname": "Arial Bold"
+            }
+        }
+    ],
+    "lines": [
+        {
+            "patchline": {
+                "source": [ "obj-103", 0 ],
+                "destination": [ "obj-105", 0 ],
+                "order": 0
+            }
+        },
+        {
+            "patchline": {
+                "source": [ "obj-103", 0 ],
+                "destination": [ "obj-104", 0 ],
+                "order": 1
+            }
+        },
+        {
+            "patchline": {
+                "source": [ "obj-102", 0 ],
+                "destination": [ "obj-103", 0 ]
+            }
+        },
+        {
+            "patchline": {
+                "source": [ "obj-101", 0 ],
+                "destination": [ "obj-102", 0 ]
+            }
+        },
+        {
+            "patchline": {
+                "source": [ "obj-1", 0 ],
+                "destination": [ "obj-2", 0 ]
+            }
+        }
+    ],
+    "appversion": {
+        "major": 9,
+        "minor": 1,
+        "revision": 5,
+        "architecture": "x64",
+        "modernui": 1
+    },
+    "classnamespace": "box"
+}
