@@ -1,5 +1,6 @@
 import { app, BrowserWindow, session } from 'electron';
 import path from 'node:path';
+import { startOsc } from './osc';
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -19,6 +20,8 @@ function createWindow(): void {
   // Stay above Ableton, including when Live is full-screen.
   win.setAlwaysOnTop(true, 'floating');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  startOsc(win.webContents);
 
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) win.loadURL(devUrl);

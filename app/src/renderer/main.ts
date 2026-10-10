@@ -2,14 +2,17 @@ import { chordName, detectChord, QUALITY_INTERVALS } from '../core/chords';
 import { EchoFilter } from '../core/echo';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
 import type { NoteEvent, NoteSink, NoteSource } from '../core/types';
+import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { getMidiAccess, WebMidiNoteSink, WebMidiNoteSource } from './bridges/webmidi';
 
-// Spike: chord in from "JamFrog In" -> name it -> play its IV chord out to "JamFrog Out".
+// Spike: chord in from Live -> name it -> play its IV chord on the frog track.
+// Bridge is either the Max for Live devices (OSC) or the IAC ports (Web MIDI).
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const inputSel = $<HTMLSelectElement>('input');
 const outputSel = $<HTMLSelectElement>('output');
 const bpmInput = $<HTMLInputElement>('bpm');
+const bridgeSel = $<HTMLSelectElement>('bridge');
 const status = $('status');
 
 let source: NoteSource | null = null;
@@ -84,45 +87,58 @@ function fillSelect(sel: HTMLSelectElement, ports: MIDIPort[], prefer: string): 
   sel.value = ids.includes(prev) ? prev : (preferred?.id ?? '');
 }
 
-async function init(): Promise<void> {
-  let access: MIDIAccess;
-  try {
-    access = await getMidiAccess();
-  } catch (err) {
-    status.textContent = `MIDI unavailable: ${String(err)}`;
-    return;
-  }
+let access: MIDIAccess | null = null;
 
-  const connect = () => {
-    source?.close();
-    releaseAll();
-    sink?.close();
-    held.clear();
+function connect(): void {
+  source?.close();
+  releaseAll();
+  sink?.close();
+  held.clear();
+  source = null;
+  sink = null;
+  const bridge = bridgeSel.value;
+  document.body.dataset.bridge = bridge;
+  status.textContent = '';
+
+  if (bridge === 'osc') {
+    source = new OscNoteSource();
+    sink = new OscNoteSink();
+  } else {
+    if (!access) {
+      status.textContent = 'MIDI unavailable';
+      return;
+    }
     const input = access.inputs.get(inputSel.value);
     const output = access.outputs.get(outputSel.value);
     source = input ? new WebMidiNoteSource(input) : null;
     sink = output ? new WebMidiNoteSink(output) : null;
-    source?.onNote(onNote);
     if (input && output && input.name === output.name) {
       status.textContent = 'Input and output are the same port — notes will loop.';
     } else if (!input || !output) {
       status.textContent = 'Pick "JamFrog In" and "JamFrog Out" (see ableton/SETUP.md).';
-    } else {
-      status.textContent = '';
     }
-  };
+  }
+  source?.onNote(onNote);
+}
 
+async function initPorts(): Promise<void> {
+  try {
+    access = await getMidiAccess();
+  } catch (err) {
+    if (bridgeSel.value === 'ports') status.textContent = `MIDI unavailable: ${String(err)}`;
+    return;
+  }
+  const a = access;
   const refresh = () => {
-    fillSelect(inputSel, [...access.inputs.values()], 'JamFrog In');
-    fillSelect(outputSel, [...access.outputs.values()], 'JamFrog Out');
-    connect();
+    fillSelect(inputSel, [...a.inputs.values()], 'JamFrog In');
+    fillSelect(outputSel, [...a.outputs.values()], 'JamFrog Out');
+    if (bridgeSel.value === 'ports') connect();
   };
-
   // Re-list only when ports are added or removed, not when one merely opens.
   const portsKey = () =>
-    [...access.inputs.values(), ...access.outputs.values()].map((p) => `${p.id}:${p.state}`).join('|');
+    [...a.inputs.values(), ...a.outputs.values()].map((p) => `${p.id}:${p.state}`).join('|');
   let lastKey = portsKey();
-  access.onstatechange = () => {
+  a.onstatechange = () => {
     const key = portsKey();
     if (key !== lastKey) {
       lastKey = key;
@@ -134,6 +150,20 @@ async function init(): Promise<void> {
   refresh();
 }
 
+// Transport info from Frog Voice: /tempo <bpm> and /bar at every bar start.
+let bars = 0;
+onOsc((msg) => {
+  if (msg[0] === '/tempo') {
+    const bpm = Math.round(Number(msg[1]) * 100) / 100;
+    bpmInput.value = String(bpm);
+    $('liveTempo').textContent = `${bpm} BPM`;
+  } else if (msg[0] === '/bar') {
+    $('bar').textContent = String(++bars);
+  }
+});
+window.jamFrog.osc.onError((text) => (status.textContent = `OSC: ${text}`));
+
+bridgeSel.onchange = connect;
 $('close').onclick = () => {
   releaseAll();
   window.close();
@@ -143,4 +173,5 @@ window.addEventListener('beforeunload', () => {
   sink?.close();
 });
 
-init();
+connect();
+initPorts();

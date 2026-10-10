@@ -21,9 +21,16 @@
       </header>
 
       <section class="ports">
-        <label>From Ableton <select id="input"></select></label>
-        <label>To frog track <select id="output"></select></label>
+        <label>Bridge
+          <select id="bridge">
+            <option value="osc">Max for Live</option>
+            <option value="ports">Ports (IAC)</option>
+          </select>
+        </label>
+        <label class="ports-only">From Ableton <select id="input"></select></label>
+        <label class="ports-only">To frog track <select id="output"></select></label>
         <label>BPM <input id="bpm" type="number" min="40" max="240" value="120" /></label>
+        <div class="osc-only live">Live: <b id="liveTempo">no tempo yet</b> · bar <b id="bar">—</b></div>
       </section>
 
       <section class="now">

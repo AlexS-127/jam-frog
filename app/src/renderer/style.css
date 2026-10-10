@@ -18,3 +18,5 @@ input[type="number"] { width: 64px; }
 .answer { font-size: 26px; font-weight: 600; color: #9be38f; }
 .stats { display: grid; gap: 2px; font-variant-numeric: tabular-nums; opacity: 0.85; }
 .status { font-size: 12px; color: #f3c46b; min-height: 1.3em; }
+.live { font-size: 12px; opacity: 0.8; }
+body[data-bridge="osc"] .ports-only, body[data-bridge="ports"] .osc-only { display: none; }

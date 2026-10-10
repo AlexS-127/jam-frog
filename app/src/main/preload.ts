@@ -1,6 +1,15 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
-// The OSC bridge (Max for Live) will be exposed here in feature 5.
+// Exposed to the renderer as window.jamFrog (typed in src/renderer/env.d.ts).
 contextBridge.exposeInMainWorld('jamFrog', {
   platform: process.platform,
+  osc: {
+    send: (address: string, ...args: number[]) => ipcRenderer.send('osc:send', address, args),
+    onMessage: (cb: (msg: unknown[]) => void) => {
+      ipcRenderer.on('osc:message', (_e, msg: unknown[]) => cb(msg));
+    },
+    onError: (cb: (text: string) => void) => {
+      ipcRenderer.on('osc:error', (_e, text: string) => cb(text));
+    },
+  },
 });
