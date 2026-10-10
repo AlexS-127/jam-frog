@@ -100,7 +100,7 @@ Feature 3, live suggestions. **Can start now.**
 **Done when:** the Python and TS n-gram give the same probabilities on 3 contexts (±1e-4), `predictNext` takes under
 5 ms, and suggestions come back under 50 ms after a chord.
 
-### Lane A2 (Claude): answers and voicing (`app/src/core`)
+### Lane A2 (Claude): answers and voicing (`app/src/core`). **Done** (`answer.ts`, `voicing.ts`); hand test in Live pending
 
 Feature 4, frog answers. **Can start now** with a fake `ChordModel`.
 

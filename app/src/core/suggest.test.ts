@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { detectChord } from './chords';
 import { NgramModel } from './ngram';
-import { ngramJson } from './ngram.test';
+import { ngramJson } from './testdata';
 import { suggest } from './suggest';
 
 const model = new NgramModel(ngramJson);

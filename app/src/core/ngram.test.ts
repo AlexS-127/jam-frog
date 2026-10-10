@@ -1,11 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { NgramModel, type NgramJson } from './ngram';
+import { NgramModel } from './ngram';
+import { ngramJson } from './testdata';
 import { VOCAB_SIZE } from './vocab';
-
-export const ngramJson: NgramJson = JSON.parse(
-  readFileSync(new URL('../../../model/export/ngram.json', import.meta.url), 'utf8'),
-);
 
 // Expected top-3 (token, probability) computed with Predictor in model/build_ngram.py.
 const cases: [string, number[], [number, number][]][] = [

@@ -1,8 +1,9 @@
-import { chordName, detectChord, QUALITY_INTERVALS } from '../core/chords';
+import { AnswerEngine, type AnswerStatus } from '../core/answer';
+import { detectChord } from '../core/chords';
 import { EchoFilter } from '../core/echo';
 import { NgramModel } from '../core/ngram';
 import { suggest } from '../core/suggest';
-import type { Chord } from '../core/types';
+import type { AnswerPlan, Chord } from '../core/types';
 import { GENRES } from '../core/vocab';
 import ngramText from '../../../model/export/ngram.json?raw';
 import type { NgramJson } from '../core/ngram';
@@ -11,8 +12,9 @@ import type { NoteEvent, NoteSink, NoteSource } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { getMidiAccess, WebMidiNoteSink, WebMidiNoteSource } from './bridges/webmidi';
 
-// Spike: chord in from Live -> name it -> play its IV chord on the frog track.
+// Dev overlay: chord in from Live -> name it -> live suggestions; after a pause the frog answers.
 // Bridge is either the Max for Live devices (OSC) or the IAC ports (Web MIDI).
+// Kevin's overlay UI (lane B) replaces the DOM code here.
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const inputSel = $<HTMLSelectElement>('input');
@@ -21,6 +23,7 @@ const bpmInput = $<HTMLInputElement>('bpm');
 const bridgeSel = $<HTMLSelectElement>('bridge');
 const genreSel = $<HTMLSelectElement>('genre');
 const weirdInput = $<HTMLInputElement>('weird');
+const answersOn = $<HTMLInputElement>('answersOn');
 
 const model = new NgramModel(JSON.parse(ngramText) as NgramJson);
 const history: Chord[] = [];
@@ -37,8 +40,29 @@ let sink: NoteSink | null = null;
 const echo = new EchoFilter();
 const held = new Set<number>();
 const counts = { in: 0, out: 0, doubled: 0 };
-let sounding: number[] = [];
-let releaseTimer: ReturnType<typeof setTimeout> | null = null;
+let lastBarAt = -Infinity;
+
+// Everything the frog plays goes through here: echo bookkeeping, counters, then the current bridge.
+const frogSink: NoteSink = {
+  name: 'frog',
+  send: (pitch, velocity) => send(pitch, velocity),
+  close: () => {},
+};
+
+const answers = new AnswerEngine({
+  model,
+  sink: () => (sink ? frogSink : null),
+  settings: () => ({
+    answersOn: answersOn.checked,
+    weirdness: Number(weirdInput.value),
+    genre: genreSel.value,
+    bpm: Number(bpmInput.value) || 120,
+  }),
+  onPlan: showAnswer,
+});
+answersOn.onchange = () => {
+  if (!answersOn.checked) answers.cancel();
+};
 
 const grouper = new OnsetGrouper(onGroup, 60);
 
@@ -54,6 +78,7 @@ function onNote(e: NoteEvent): void {
     held.delete(e.pitch);
   }
   grouper.push(e);
+  answers.note(e);
   render();
 }
 
@@ -66,10 +91,24 @@ function onGroup(g: NoteGroup): void {
   const t0 = performance.now(); // chord recognised (the 60 ms grouping window has closed)
   showSuggestions();
   $('suggestMs').textContent = `${(performance.now() - t0).toFixed(1)} ms`;
-  const ivRoot = (chord.root + 5) % 12;
-  $('answer').textContent = chordName(ivRoot, 'maj');
-  playChord(QUALITY_INTERVALS.maj.map((i) => 60 + ivRoot + i));
   $('latency').textContent = `${Math.round(performance.now() - g.firstTime)} ms`;
+  answers.chord(chord);
+}
+
+const STATUS_TEXT: Record<AnswerStatus, string> = {
+  idle: '',
+  'waiting-for-bar': ' · waiting for the bar…',
+  playing: ' · playing',
+};
+
+function showAnswer(plan: AnswerPlan | null, st: AnswerStatus): void {
+  $('answer').textContent = plan ? plan.chords.map((c) => c.name).join(' → ') : '—';
+  $('answerStatus').textContent = STATUS_TEXT[st];
+  // How far after Live's bar line the answer started (only meaningful while the transport runs).
+  if (st === 'playing') {
+    const sinceBar = performance.now() - lastBarAt;
+    $('barLag').textContent = sinceBar < 50 ? `${sinceBar.toFixed(0)} ms after the bar` : 'not on a bar';
+  }
 }
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -92,22 +131,6 @@ function showSuggestions(): void {
     el.innerHTML = `<b>${s.name}</b><small>${s.voicing.map(noteName).join(' ')}</small>`;
     box.append(el);
   }
-}
-
-function playChord(pitches: number[]): void {
-  if (!sink) return;
-  releaseAll();
-  for (const p of pitches) send(p, 90);
-  sounding = pitches;
-  const beatMs = 60000 / (Number(bpmInput.value) || 120);
-  releaseTimer = setTimeout(releaseAll, 2 * beatMs);
-}
-
-function releaseAll(): void {
-  if (releaseTimer) clearTimeout(releaseTimer);
-  releaseTimer = null;
-  for (const p of sounding) send(p, 0);
-  sounding = [];
 }
 
 function send(pitch: number, velocity: number): void {
@@ -137,7 +160,7 @@ let access: MIDIAccess | null = null;
 
 function connect(): void {
   source?.close();
-  releaseAll();
+  answers.cancel();
   sink?.close();
   held.clear();
   source = null;
@@ -204,6 +227,8 @@ onOsc((msg) => {
     bpmInput.value = String(bpm);
     $('liveTempo').textContent = `${bpm} BPM`;
   } else if (msg[0] === '/bar') {
+    lastBarAt = performance.now();
+    answers.bar();
     $('bar').textContent = String(++bars);
   }
 });
@@ -211,11 +236,11 @@ window.jamFrog.osc.onError((text) => (status.textContent = `OSC: ${text}`));
 
 bridgeSel.onchange = connect;
 $('close').onclick = () => {
-  releaseAll();
+  answers.cancel();
   window.close();
 };
 window.addEventListener('beforeunload', () => {
-  releaseAll();
+  answers.cancel();
   sink?.close();
 });
 

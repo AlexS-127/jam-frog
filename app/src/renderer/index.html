@@ -31,6 +31,7 @@
         <label class="ports-only">To frog track <select id="output"></select></label>
         <label>BPM <input id="bpm" type="number" min="40" max="240" value="120" /></label>
         <label>Genre <select id="genre"></select></label>
+        <label>Frog answers <input id="answersOn" type="checkbox" checked /></label>
         <label>Weirdness <input id="weird" type="range" min="0" max="1" step="0.05" value="0.2" /><b id="weirdVal">0.2</b></label>
         <div class="osc-only live">Live: <b id="liveTempo">no tempo yet</b> · bar <b id="bar">—</b></div>
       </section>
@@ -40,12 +41,13 @@
         <div id="chord" class="chord">—</div>
         <div class="label">Try next</div>
         <div id="suggestions" class="suggestions"></div>
-        <div class="label">Frog answers (IV)</div>
+        <div class="label">Frog answers<span id="answerStatus"></span></div>
         <div id="answer" class="answer">—</div>
       </section>
 
       <section class="stats">
-        <div>Round trip <b id="latency">—</b> · suggestions <b id="suggestMs">—</b></div>
+        <div>Chord <b id="latency">—</b> · suggestions <b id="suggestMs">—</b></div>
+        <div>Answer start <b id="barLag">—</b></div>
         <div>Notes in <b id="in">0</b> · out <b id="out">0</b></div>
         <div>Doubled <b id="doubled">0</b> · echoes dropped <b id="echo">0</b></div>
       </section>
