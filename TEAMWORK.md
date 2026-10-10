@@ -195,9 +195,8 @@ const fake: ChordModel = { name: 'fake', predictNext: () => { const p = new Floa
 
 ## Git rules
 
-- **Integration branch:** `claude/beautiful-wozniak-0p6ot6` (there is no `main` yet). Branch off it as `lane/<letter>-<name>`,
-  for example `lane/b-ui`, and open a PR back into it.
-- **Pull often** (`git pull origin claude/beautiful-wozniak-0p6ot6`); keep PRs small and merge at least every 2 hours.
+- **Integration branch:** `main`. Branch off it as `lane/<letter>-<name>`, for example `lane/b-ui`, and open a PR back into `main`.
+- **Pull often** (`git pull origin main`); keep PRs small and merge at least every 2 hours.
 - **Before pushing:** `cd app && npm test && npm run typecheck`.
 - **New dependencies:** ask Alex. The approved list is electron, vite, typescript, node-osc, @tonejs/midi,
   onnxruntime-web and vitest; for Python, datasets, pandas, torch and onnx.
