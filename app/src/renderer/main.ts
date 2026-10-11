@@ -1,32 +1,29 @@
 import { AnswerEngine, type AnswerProgress } from '../core/answer';
 import { detectChord } from '../core/chords';
-import { EchoFilter } from '../core/echo';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
 import type { ChordModel } from '../core/model';
 import { suggest } from '../core/suggest';
-import type { AnswerPlan, Chord, FrogMood, NoteEvent, NoteSink, NoteSource, Suggestion } from '../core/types';
+import type { AnswerPlan, Chord, FrogMood, NoteEvent, Suggestion } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
-import { getMidiAccess, WebMidiNoteSink, WebMidiNoteSource } from './bridges/webmidi';
 import { loadModels } from './models';
 import { createOverlay, type UiState } from './ui/overlay';
 
-// The app: notes in from Live (Max for Live over OSC, or the IAC ports) -> chord detection -> live
-// suggestions; the AnswerEngine answers each 4/8-bar phrase on the frog track. Kevin's overlay draws it all.
+// The app: notes in from Live (Frog Ear, Max for Live, over OSC) -> chord detection -> suggestions in the
+// frog's speech bubble; the AnswerEngine answers each 2/4/8-bar phrase on the frog track (Frog Voice).
 
 // ---- settings (owned here, shown and changed through the overlay) ----
 
 const settings = {
-  bridge: 'osc' as 'osc' | 'ports',
-  model: 'ngram',
+  model: 'gru',
   genre: 'all',
   weirdness: 0.2,
   answersOn: true,
-  phraseBars: 4 as 4 | 8,
+  phraseBars: 4 as 2 | 4 | 8,
   bpm: 120,
   rhythm: false,
 };
 
-// ---- models: both behind ChordModel; the GRU replaces the n-gram only if it also wins the listening test ----
+// ---- models: both behind ChordModel ----
 
 const models: Record<string, ChordModel> = loadModels();
 const model: ChordModel = {
@@ -38,33 +35,21 @@ const model: ChordModel = {
 
 // ---- live state ----
 
-let source: NoteSource | null = null;
-let sink: NoteSink | null = null;
-let access: MIDIAccess | null = null;
-const echo = new EchoFilter();
+const source = new OscNoteSource();
+const sink = new OscNoteSink();
 const history: Chord[] = [];
 let suggestions: Suggestion[] = [];
 let plan: AnswerPlan | null = null;
-let progress: AnswerProgress = { status: 'idle', bar: 0, bars: 4 };
+let progress: AnswerProgress = { status: 'idle', bar: 0, bars: 4, chord: -1 };
 let liveTempo: number | null = null;
 let tempoFromLive = false;
 let liveBars = 0;
 let lastBarAt = -Infinity;
 let status = '';
 
-// Everything the frog plays goes through here: echo bookkeeping (ports bridge only), then the bridge.
-const frogSink: NoteSink = {
-  name: 'frog',
-  send(pitch, velocity) {
-    if (settings.bridge === 'ports') echo.sent(pitch, velocity, performance.now());
-    sink?.send(pitch, velocity);
-  },
-  close() {},
-};
-
 const answers = new AnswerEngine({
   model,
-  sink: () => (sink ? frogSink : null),
+  sink: () => sink,
   settings: () => ({ ...settings }),
   onPlan: (p, pr) => {
     if (pr.status === 'playing' && progress.status !== 'playing') {
@@ -80,9 +65,6 @@ const answers = new AnswerEngine({
 const grouper = new OnsetGrouper(onGroup, 60);
 
 function onNote(e: NoteEvent): void {
-  // Only the ports bridge can loop the frog's notes back in (a track on "All Ins"); over OSC,
-  // filtering would only throw away the player's own notes when they match a frog note.
-  if (settings.bridge === 'ports' && echo.isEcho(e)) return;
   grouper.push(e);
   answers.note(e);
 }
@@ -109,10 +91,11 @@ function refreshSuggestions(): void {
   render();
 }
 
+source.onNote(onNote);
+
 // ---- the overlay ----
 
-const root = document.getElementById('overlay-root')!;
-const overlay = createOverlay(root, {
+const overlay = createOverlay(document.getElementById('overlay-root')!, {
   onWeirdness(v) {
     settings.weirdness = v;
     refreshSuggestions();
@@ -131,14 +114,6 @@ const overlay = createOverlay(root, {
     answers.cancel();
     render();
   },
-  onBridge(b) {
-    settings.bridge = b;
-    connect();
-  },
-  onBpm(bpm) {
-    settings.bpm = bpm;
-    render();
-  },
   onRhythm(on) {
     settings.rhythm = on;
     render();
@@ -146,6 +121,10 @@ const overlay = createOverlay(root, {
   onModel(m) {
     if (m in models) settings.model = m;
     refreshSuggestions();
+  },
+  onBpm(bpm) {
+    settings.bpm = bpm;
+    render();
   },
 });
 
@@ -157,23 +136,24 @@ function mood(): FrogMood {
 function uiState(): UiState {
   return {
     mood: mood(),
-    current: history.at(-1)?.name ?? null,
-    trail: history.slice(-6).map((c) => c.name),
-    suggestions,
-    answer: plan,
-    progress,
+    phase: progress.status,
+    bar: progress.bar,
+    bars: progress.bars,
+    yourChords: answers.phraseChords(),
+    frogChords: plan && progress.status !== 'listening' ? plan.chords.map((c) => c.name) : [],
+    frogIndex: progress.chord,
+    suggestions: suggestions.map((s) => s.name),
+    borrowed: suggestions.some((s) => s.borrowed),
     weirdness: settings.weirdness,
     genre: settings.genre,
     phraseBars: settings.phraseBars,
     answersOn: settings.answersOn,
-    bridge: settings.bridge,
+    rhythm: settings.rhythm,
+    model: settings.model,
     bpm: settings.bpm,
     liveTempo,
-    bar: liveBars > 0 ? liveBars : null,
+    liveBar: liveBars > 0 ? liveBars : null,
     status,
-    musicPlaying: progress.status === 'playing',
-    model: settings.model,
-    rhythm: settings.rhythm,
   };
 }
 
@@ -187,61 +167,8 @@ function render(): void {
   });
 }
 
-function setStatus(text: string): void {
-  status = text;
-  render();
-}
+// ---- transport info from Frog Voice: /tempo <bpm> and /bar at every bar start ----
 
-// ---- bridges ----
-
-const portByName = (ports: Iterable<MIDIPort>, name: string) => [...ports].find((p) => (p.name ?? '').includes(name));
-
-function connect(): void {
-  source?.close();
-  answers.cancel();
-  sink?.close();
-  source = null;
-  sink = null;
-  status = '';
-  if (settings.bridge === 'osc') {
-    source = new OscNoteSource();
-    sink = new OscNoteSink();
-  } else if (!access) {
-    status = 'MIDI ports unavailable';
-  } else {
-    // The ports bridge uses the IAC buses named in ableton/SETUP.md.
-    const input = portByName(access.inputs.values(), 'JamFrog In') as MIDIInput | undefined;
-    const output = portByName(access.outputs.values(), 'JamFrog Out') as MIDIOutput | undefined;
-    source = input ? new WebMidiNoteSource(input) : null;
-    sink = output ? new WebMidiNoteSink(output) : null;
-    if (!input || !output) status = 'Need IAC ports "JamFrog In" and "JamFrog Out" (ableton/SETUP.md)';
-  }
-  source?.onNote(onNote);
-  render();
-}
-
-async function initPorts(): Promise<void> {
-  try {
-    access = await getMidiAccess();
-  } catch (err) {
-    if (settings.bridge === 'ports') setStatus(`MIDI unavailable: ${String(err)}`);
-    return;
-  }
-  const a = access;
-  // Reconnect only when ports are added or removed, not when one merely opens.
-  const portsKey = () => [...a.inputs.values(), ...a.outputs.values()].map((p) => `${p.id}:${p.state}`).join('|');
-  let lastKey = portsKey();
-  a.onstatechange = () => {
-    const key = portsKey();
-    if (key !== lastKey) {
-      lastKey = key;
-      if (settings.bridge === 'ports') connect();
-    }
-  };
-  if (settings.bridge === 'ports') connect();
-}
-
-// Transport info from Frog Voice: /tempo <bpm> and /bar at every bar start.
 onOsc((msg) => {
   if (msg[0] === '/tempo') {
     tempoFromLive = true;
@@ -264,13 +191,14 @@ onOsc((msg) => {
     render();
   }
 });
-window.jamFrog.osc.onError((text) => setStatus(`OSC: ${text}`));
+window.jamFrog.osc.onError((text) => {
+  status = `OSC: ${text}`;
+  render();
+});
 
 window.addEventListener('beforeunload', () => {
   answers.cancel();
-  sink?.close();
+  sink.close();
 });
 
-connect();
-initPorts();
 render();

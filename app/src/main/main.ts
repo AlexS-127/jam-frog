@@ -4,8 +4,8 @@ import { startOsc } from './osc';
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 360,
-    height: 480,
+    width: 440,
+    height: 640,
     frame: false,
     transparent: true,
     resizable: false,
@@ -64,16 +64,10 @@ function buildMenu(): void {
 }
 
 app.whenReady().then(() => {
-  // Web MIDI (the IAC "ports" bridge) is the only permission granted. Recent Chromium asks for
-  // Web MIDI as "midiSysex" even when sysex is off, so both names are allowed.
-  const allowed = new Set(['midi', 'midiSysex']);
-  const check = (permission: string): boolean => {
-    const ok = allowed.has(permission);
-    if (!ok) console.log(`[permission] denied ${permission}`);
-    return ok;
-  };
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(check(permission)));
-  session.defaultSession.setPermissionCheckHandler((_wc, permission) => check(permission));
+  // Jam Frog needs no browser permissions (the bridge is OSC in the main process). Refuse them all,
+  // quietly: Chromium asks about things like background-sync on every page load, which is not an error.
+  session.defaultSession.setPermissionRequestHandler((_wc, _permission, cb) => cb(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
   buildMenu();
   createWindow();
 });

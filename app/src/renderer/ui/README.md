@@ -13,7 +13,11 @@ Reduced motion freezes the displayed pose and disables ambient gestures and flin
 
 The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from the engine. This browser demo does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
 
-The overlay implements the Lane B “What to build” checklist: four music moods plus a looping playing animation, current chord and answer progress, recent trail, three mini-keyboard suggestions, an amplifier with one weirdness knob and one genre dropdown, answer/phrase/model controls, bridge and BPM selectors, and Live tempo/bar/status. The amp display shows next-chord suggestions while the player phrase is being recorded and the frog's answer between phrases. Dragging moves the frog in its idle pose; there are no running animations. Controls call the supplied handlers; mock state stays in the demo.
+The overlay (440×640) is laid out as Alex asked on Saturday night: a big display that shows **your chords** while you play
+and **the frog's** while it plays (the sounding chord lit), bar dots for the phrase, the frog sitting fixed on the amp
+(no dragging; it still animates and changes mood), a speech bubble suggesting the next chords, and the amp's controls:
+weirdness knob, genre, phrase length (2/4/8 bars), frog answers on/off and Copy my rhythm. The model and the
+fallback BPM are in the ⚙ settings panel. No mini keyboards.
 
 ## Files
 

@@ -1,11 +1,7 @@
 # Connecting Jam Frog to Ableton Live 12
 
-There are two bridges. Pick one in the overlay.
-
-- **Max for Live (Frog Ear + Frog Voice):** the default. Reports Live's tempo and bar starts, so answers land on the bar.
-- **Ports (IAC Driver):** fallback, nothing to install inside Live.
-
-Both can be set up at the same time; the overlay's **Bridge** dropdown picks which one the app uses.
+Jam Frog talks to Live through two Max for Live devices, Frog Ear and Frog Voice, over OSC on localhost.
+(An earlier IAC-ports bridge was removed.)
 
 ## Max for Live bridge (Frog Ear + Frog Voice)
 
@@ -22,7 +18,7 @@ Built with Live 12 Suite and Max 9.1.5. The devices are `Frog Ear.amxd` and `Fro
 1. In Finder, Cmd+Shift+G → `~/jam-frog/ableton`.
 2. Drag **Frog Ear.amxd** onto the `Me` track, left of the piano. Drag **Frog Voice.amxd** onto the `Frog` track, left of its instrument.
 3. If macOS asks whether Live (or Electron) may find devices on your local network, click **Allow**. Everything stays on `127.0.0.1`.
-4. Start the app; Bridge = **Max for Live**. Press Space in Live: the overlay shows `Live: <bpm> BPM · bar <n>`.
+4. Start the app. Press Space in Live: the overlay's footer shows `LIVE <bpm> BPM · BAR <n>`.
 
 ### How they were built (Max 9.1.5)
 
@@ -50,70 +46,12 @@ Built with Live 12 Suite and Max 9.1.5. The devices are `Frog Ear.amxd` and `Fro
 - `udpreceiver • binding to port 9002` in the Console is normal, once per load.
 - Only one Frog Voice can listen on port 9002 at a time; don't put it on two tracks.
 
-## Ports bridge (IAC Driver)
+## Tracks
 
-## Ports bridge (IAC Driver)
-
-### 1. Create the virtual ports (Audio MIDI Setup)
-
-1. Cmd+Space, type `Audio MIDI Setup`, Enter. Then **Window → Show MIDI Studio** (Cmd+2).
-2. Double-click the **IAC Driver** icon (it is dim when offline). The **IAC Driver Properties** window opens.
-3. Tick **Device is online**.
-4. In the Ports list, double-click **Bus 1** and rename it `JamFrog In` (Enter to confirm).
-5. Click **+** under the list, and rename the new port `JamFrog Out`.
-6. Close the window (click **Apply** first if your macOS shows one), then quit and reopen Live so it sees the ports.
-
-### 2. Tell Live about the ports (Settings → Tempo & MIDI)
-
-Live 12: **Live → Settings…** (Cmd+,) → **Tempo & MIDI** tab. At the bottom, Live lists the ports as
-"IAC Driver (JamFrog In)" and "IAC Driver (JamFrog Out)" in two tables. Live ticks **Track** on every new
-input port by default, so one of them has to be switched off:
-
-```
-Input Ports                   Track  Sync  Remote  MPE
-  IAC Driver (JamFrog In)      [ ]    [ ]   [ ]    [ ]   <- must be OFF, or your notes come back doubled
-  IAC Driver (JamFrog Out)     [✓]    [ ]   [ ]    [ ]
-
-Output Ports                  Track  Sync  Remote
-  IAC Driver (JamFrog In)      [✓]    [ ]   [ ]
-  IAC Driver (JamFrog Out)     [ ]    [ ]   [ ]
-```
-
-If you use a USB keyboard, also tick **Track** on its *notes* input port in the same Input Ports table.
-For an **Akai MPK mini IV** that is **MPK mini IV (MIDI Port)** (off by default when Live sets the MPK up as a
-Control Surface; leave the Control Surface as it is).
-
-### 3. Show the track I/O boxes
-
-**View → In/Out** (Cmd+Option+I). Works in Session or Arrangement View.
-
-### 4. Tap track (player → app)
-
-A MIDI track with **no instrument**, named `Tap`:
-
-- **MIDI From:** your keyboard's notes port (e.g. `MPK mini IV (MIDI Port)`) or `Computer Keyboard`; All Channels.
-  **Never "All Ins"**: that would also pick up the frog's notes and loop them.
-- **Monitor:** In.
-- **MIDI To:** `IAC Driver (JamFrog In)`, Ch. 1.
-
-### 5. Your instrument track (so you hear yourself)
-
-Drag any piano preset from the browser into the empty area below the tracks; rename it `Me` (Cmd+R).
-
-- **MIDI From:** the same keyboard port as the Tap track. **Monitor:** In. Output: Main.
-
-### 6. Frog track (app → instrument)
-
-Drag a contrasting instrument (electric piano, mallet…) below the tracks; rename it `Frog`.
-
-- **MIDI From:** `IAC Driver (JamFrog Out)`, All Channels. **Monitor:** In. Output: Main.
-
-**Check:** play a chord. Only your piano sounds, and the Tap track's MIDI meter flickers. The Frog track stays
-silent until the app answers.
-
-### Switching from the computer keyboard to a USB keyboard later
-
-Change **MIDI From** on both `Tap` and `Me` to the keyboard's notes port (and tick its Track box in Settings).
+- `Me`: your instrument (e.g. a piano preset), MIDI From your keyboard's notes port (for an Akai MPK mini IV:
+  `MPK mini IV (MIDI Port)`, with **Track** ticked for it in Settings → Tempo & MIDI), Monitor **In**, **Frog Ear** before
+  the instrument.
+- `Frog`: a contrasting instrument with **Frog Voice** before it, Monitor **In**.
 
 ## Recording a jam
 
@@ -134,6 +72,4 @@ Each jam:
 1. **Arm `Me` and `Frog Rec`** (not `Frog`).
 2. Tab to **Arrangement View**, press **Record** (F9), play. Space to stop.
 
-**Ports bridge:** the frog's notes arrive at the Frog track's input from "JamFrog Out", so arm and record the
-**Frog** track itself; `Frog Rec` isn't needed. Live 12's **Capture MIDI** also works on armed tracks if you forgot to
-press Record.
+Live 12's **Capture MIDI** also works on the armed tracks if you forgot to press Record.

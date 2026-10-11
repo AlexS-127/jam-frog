@@ -28,12 +28,12 @@ A section starts with `BOS, START_<quality>`. Train/val/test is 90/5/5 by song, 
 | Trigram (2-token context), first version | 37.6% | 69.8% |
 | 4-gram, "all" | 51.0% | 77.0% |
 | 5-gram "all" + trigram per genre (shipped n-gram) | 56.2% | 79.6% |
-| GRU, "all" | 60.5% | 82.5% |
-| **GRU, per genre** | **60.5%** | **82.6%** |
+| GRU, first run (600k sections, 14 min) | 60.5% | 82.6% |
+| **GRU, retrained on all 2.6M sections (1 h, shipped)** | **61.5%** | **83.3%** |
 
 The shipped `ngram.json` has one shared "all" model with contexts of up to 4 tokens, plus a short-context model
 per genre that the shared long contexts sit on top of (16.7 MB). Longer contexts let it see loops like
 C G Am F, which is where most of the gain comes from.
 
-GRU: token + genre embeddings (64), 1 GRU layer (256), last 8 tokens, 4 epochs on 600k sections
-(~14 min on Apple Silicon). Same 20k-section test sample (seed 0). Train with `python model/train_gru.py`.
+GRU: token + genre embeddings (64), 1 GRU layer (256), last 8 tokens; retrained on all 2.6M training sections
+(`--max-train-seqs 3000000 --minutes 70`, ~1 h on Apple Silicon). Size experiments: `--trial NAME --hidden 512`. Same 20k-section test sample (seed 0). Train with `python model/train_gru.py`.

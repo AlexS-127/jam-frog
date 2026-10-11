@@ -32,6 +32,8 @@ export interface PetControllerOptions {
   /** Display scale for layouts that need the pet to share space with overlay controls. */
   scale?: number;
   initialPosition?: Point;
+  /** false: the frog stays where it is placed (no drag, fling or click reactions); it still animates */
+  interactive?: boolean;
 }
 
 const AMBIENT: Action[] = ['idle', 'idle', 'idle', 'idle', 'waiting', 'waving', 'jumping', 'review', 'idle'];
@@ -214,7 +216,14 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   images.main.src = new URL('./green-frog.png', import.meta.url).href;
   images.playing.src = new URL('./keyboard-frog.png', import.meta.url).href;
 
-  button.addEventListener('pointerdown', (event) => {
+  const interactive = options.interactive ?? true;
+  if (!interactive) {
+    button.tabIndex = -1;
+    button.style.pointerEvents = 'none';
+    button.setAttribute('aria-label', 'Jam Frog');
+  }
+
+  if (interactive) button.addEventListener('pointerdown', (event) => {
     if (event.button !== 0 || !event.isPrimary || !loaded || drag) return;
     event.preventDefault();
     button.focus({ preventScroll: true });
@@ -267,7 +276,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
 
   const observer = new ResizeObserver(() => {
     bounds = movementBounds(measure(), displaySize);
-    position = clampPosition(position, bounds);
+    position = options.initialPosition ? clampPosition(options.initialPosition, bounds) : clampPosition(position, bounds);
     draw();
   });
   observer.observe(stage);

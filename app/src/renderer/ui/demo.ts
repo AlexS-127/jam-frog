@@ -1,4 +1,3 @@
-import type { ChordSymbol } from '../../core/types';
 import { GENRES } from '../../core/vocab';
 import { createOverlay, type Handlers, type UiState } from './overlay';
 import { ACTIONS, type Action } from './frog/motion';
@@ -13,9 +12,9 @@ root.innerHTML = `
     </header>
     <div class="demo-layout">
       <section class="preview-column" aria-label="Frog preview">
-        <div class="stage-label"><span>OVERLAY PREVIEW</span><span>360 × 480</span></div>
+        <div class="stage-label"><span>OVERLAY PREVIEW</span><span>440 × 640</span></div>
         <div class="preview-surface" data-ref="stage"></div>
-        <p class="gesture-hint">Drag the frog · click to greet · use the controls to explore</p>
+        <p class="gesture-hint">The frog sits on the amp · use the controls to explore</p>
       </section>
       <aside class="demo-controls" aria-label="Demo controls">
         <div class="control-heading"><span class="eyebrow">PLAYGROUND</span><span class="live-dot">MOCK DATA</span></div>
@@ -64,20 +63,12 @@ for (const [action, details] of Object.entries(ACTIONS) as [Action, (typeof ACTI
   actionSelect.add(new Option(details.label, action));
 }
 
-const pitch = (rootNote: number, intervals: number[]): number[] => intervals.map((interval) => 60 + rootNote + interval);
-const symbol = (rootNote: number, quality: ChordSymbol['quality']): ChordSymbol => ({ root: rootNote, quality });
 const state: UiState = {
-  mood: 'idle', current: 'Am7', trail: ['Cmaj7', 'Am7', 'Fmaj7', 'G7'],
-  suggestions: [
-    { chord: symbol(5, 'maj7'), name: 'Fmaj7', voicing: pitch(5, [0, 4, 7, 11]), prob: 0.42, borrowed: false },
-    { chord: symbol(7, 'dom7'), name: 'G7', voicing: pitch(7, [0, 4, 7, 10]), prob: 0.31, borrowed: false },
-    { chord: symbol(8, 'maj'), name: 'Ab', voicing: pitch(8, [0, 4, 7]), prob: 0.17, borrowed: false },
-  ],
-  answer: { chords: [{ chord: symbol(5, 'maj7'), name: 'Fmaj7', voicing: pitch(5, [0, 4, 7, 11]) },
-    { chord: symbol(9, 'min7'), name: 'Am7', voicing: pitch(9, [0, 3, 7, 10]) }], beatsPerChord: 2 },
-  progress: { status: 'idle', bar: 0, bars: 4 },
-  weirdness: 0.24, genre: 'jazz', phraseBars: 4, answersOn: true, bridge: 'osc', bpm: 120,
-  liveTempo: 120, bar: 18, status: 'Connected to Max for Live', musicPlaying: false,
+  mood: 'idle', phase: 'listening', bar: 2, bars: 4,
+  yourChords: ['Cmaj7', 'Am7', 'Fmaj7'], frogChords: ['Dm7', 'G7', 'Cmaj7', 'Am7'], frogIndex: 1,
+  suggestions: ['G7', 'Dm7', 'Ab'], borrowed: false,
+  weirdness: 0.24, genre: 'jazz', phraseBars: 4, answersOn: true, rhythm: false, model: 'gru', bpm: 120,
+  liveTempo: 120, liveBar: 18, status: '',
 };
 let moodIndex = 0;
 const moods: UiState['mood'][] = ['idle', 'listening', 'thinking', 'weird'];
@@ -87,8 +78,9 @@ const handlers: Handlers = {
   onWeirdness(value) { state.weirdness = value; overlay.update(state); },
   onGenre(value) { state.genre = value; overlay.update(state); },
   onAnswersToggle(value) { state.answersOn = value; overlay.update(state); },
-  onPhraseBars(value) { state.phraseBars = value; state.progress = { ...state.progress, bars: value }; overlay.update(state); },
-  onBridge(value) { state.bridge = value; state.status = `Demo bridge: ${value === 'osc' ? 'Max for Live' : 'Ports / IAC'}`; overlay.update(state); },
+  onPhraseBars(value) { state.phraseBars = value; state.bars = value; overlay.update(state); },
+  onRhythm(value) { state.rhythm = value; overlay.update(state); },
+  onModel(value) { state.model = value; overlay.update(state); },
   onBpm(value) { state.bpm = value; overlay.update(state); },
 };
 overlay = createOverlay(stage, handlers);
@@ -105,25 +97,24 @@ actionSelect.addEventListener('change', () => pet.preview(actionSelect.value ===
 moodSelect.addEventListener('change', () => {
   moodIndex = moods.indexOf(moodSelect.value as UiState['mood']);
   state.mood = moods[moodIndex];
-  state.progress = { ...state.progress, status: state.mood === 'listening' ? 'listening' : 'idle' };
+  state.phase = state.mood === 'listening' ? 'listening' : 'idle';
   actionSelect.value = '';
   pet.preview(null);
   overlay.update(state);
 });
 ambientToggle.addEventListener('change', () => pet.setAmbientEnabled(ambientToggle.checked));
 musicToggle.addEventListener('change', () => {
-  state.musicPlaying = musicToggle.checked;
-  state.progress = { ...state.progress, status: musicToggle.checked ? 'playing' : 'idle' };
+  state.phase = musicToggle.checked ? 'playing' : 'listening';
   overlay.update(state);
 });
 root.querySelector<HTMLButtonElement>('[data-action="next"]')!.addEventListener('click', () => {
   moodIndex = (moodIndex + 1) % moods.length;
   state.mood = moods[moodIndex];
-  state.progress = { ...state.progress, status: state.mood === 'listening' ? 'listening' : 'idle' };
+  state.phase = state.mood === 'listening' ? 'listening' : 'idle';
   moodSelect.value = state.mood;
   actionSelect.value = '';
   pet.preview(null);
-  state.suggestions = state.suggestions.map((item, index) => ({ ...item, borrowed: state.mood === 'weird' && index === 2 }));
+  state.borrowed = state.mood === 'weird';
   overlay.update(state);
 });
 root.querySelector<HTMLButtonElement>('[data-action="reset"]')!.addEventListener('click', () => pet.resetPosition());

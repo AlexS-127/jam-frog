@@ -1,14 +1,12 @@
 import { buildCases, tally, type ListeningCase, type Vote } from '../core/listening';
 import type { NoteSink } from '../core/types';
 import { OscNoteSink } from './bridges/osc';
-import { getMidiAccess, WebMidiNoteSink } from './bridges/webmidi';
 import { loadModels } from './models';
 
 // Feature 8: blind A/B listening test of the n-gram against the GRU (see core/listening.ts).
 // Votes live only in this page (no storage); "Copy results" puts them on the clipboard.
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const bridgeSel = $<HTMLSelectElement>('bridge');
 const bpmInput = $<HTMLInputElement>('bpm');
 const status = $('status');
 const LETTERS = 'ABCD';
@@ -22,17 +20,7 @@ let sink: NoteSink | null = null;
 let playing: { timers: ReturnType<typeof setTimeout>[]; sounding: Set<number>; button: HTMLButtonElement } | null = null;
 
 async function getSink(): Promise<NoteSink | null> {
-  if (sink) return sink;
-  if (bridgeSel.value === 'osc') return (sink = new OscNoteSink());
-  try {
-    const access = await getMidiAccess();
-    const out = [...access.outputs.values()].find((o) => (o.name ?? '').includes('JamFrog Out'));
-    if (!out) status.textContent = 'No "JamFrog Out" port (see ableton/SETUP.md)';
-    return (sink = out ? new WebMidiNoteSink(out) : null);
-  } catch (err) {
-    status.textContent = `MIDI unavailable: ${String(err)}`;
-    return null;
-  }
+  return (sink ??= new OscNoteSink()); // plays on the Frog track through Frog Voice
 }
 
 function stop(): void {
@@ -135,11 +123,6 @@ $('copy').onclick = async () => {
   status.textContent = 'Results copied';
 };
 $('stop').onclick = stop;
-bridgeSel.onchange = () => {
-  stop();
-  sink?.close();
-  sink = null;
-};
 window.addEventListener('beforeunload', () => {
   stop();
   sink?.close();

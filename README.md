@@ -4,12 +4,13 @@ A real-time jam partner for Ableton Live Suite 12 (Hacklanta 2026, Adobe Creativ
 
 You play chords in Ableton. A frog overlay floats above Live and:
 
-1. **Suggests** the top 3 next chords every time it recognises one, with a mini keyboard for each.
-2. **Answers** (toggle): when you pause, it plays a 2–4 chord continuation on its own track.
+1. **Suggests** what to play next, in a speech bubble ("Try **F**, **Am** or **G**"), every time it recognises a chord.
+2. **Answers** (toggle): you play a 2, 4 or 8-bar phrase; on the next downbeat the frog answers with as many bars of
+   its own chords on its Ableton track, changing chord where you did (anticipations included), in your register.
 
 A weirdness knob and a genre picker reshape both. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
 
-> Status: live suggestions, call-and-response frog answers (4 or 8 bar phrases, on Live's bar lines, in your register) work over both bridges. The overlay is Kevin's animated frog-on-an-amp UI; a Model picker switches between the n-gram and Katie's GRU. The listening test compares the two models blind.
+> Status: feature-complete for the demo. Bridge: Max for Live (Frog Ear + Frog Voice). Models: a GRU (default) and an n-gram, switchable in ⚙ Settings.
 
 ## Repo layout (one lane per folder)
 
@@ -43,8 +44,8 @@ progression and then answer A or B on the frog track; the models are hidden and 
 Nothing.
 
 - Jam Frog has no login, no analytics, no cookies, and keeps no persistent storage.
-- MIDI travels only between Ableton and the app on your own Mac: through the IAC Driver virtual ports, or over UDP on `127.0.0.1` (localhost) for the Max for Live devices.
-- The chord models ship inside the app and run locally; no notes are sent to any server.
+- MIDI travels only between Ableton and the app on your own Mac, over UDP on `127.0.0.1` (localhost), through the Max for Live devices.
+- The chord models ship inside the app and run locally; no notes are sent to any server. The app asks for no browser permissions.
 - Jam Frog writes no files. To keep what you played, record it in Live.
 
 ## Credits

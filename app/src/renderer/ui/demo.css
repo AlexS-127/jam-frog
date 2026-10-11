@@ -12,13 +12,13 @@ button, select, input { font: inherit; }
 .eyebrow { margin: 0; color: #89aa8c; font-size: 10px; font-weight: 700; letter-spacing: .14em; }
 .demo-heading h1 { margin: 2px 0 0; font-size: 24px; letter-spacing: -.04em; }
 .demo-intro { margin: 0 0 0 auto; color: #a9b9a9; font-size: 13px; }
-.demo-layout { display: grid; grid-template-columns: 360px minmax(250px, 1fr); align-items: start; gap: 22px; }
+.demo-layout { display: grid; grid-template-columns: 440px minmax(250px, 1fr); align-items: start; gap: 22px; }
 .stage-label { display: flex; justify-content: space-between; margin-bottom: 8px; padding: 0 2px; color: #8ca28e; font-size: 9px; font-weight: 700; letter-spacing: .13em; }
 .stage-label span:last-child { color: #647c68; font-variant-numeric: tabular-nums; }
 .preview-surface {
   position: relative;
-  width: 360px;
-  height: 480px;
+  width: 440px;
+  height: 640px;
   overflow: hidden;
   outline: 1px solid rgba(164, 229, 142, .22);
   border-radius: 16px;
@@ -53,11 +53,11 @@ button, select, input { font: inherit; }
 .keyboard-hint { margin: -2px 0 0; color: #829684; font-size: 10px; }
 .demo-page :focus-visible { outline: 2px solid #c7ec88; outline-offset: 3px; }
 @media (max-width: 720px) {
-  .demo-page { width: min(100% - 28px, 480px); padding-top: 22px; }
+  .demo-page { width: min(100% - 28px, 640px); padding-top: 22px; }
   .demo-layout { grid-template-columns: 1fr; justify-items: center; }
-  .preview-column { width: 360px; max-width: 100%; }
+  .preview-column { width: 440px; max-width: 100%; }
   .preview-surface { max-width: 100%; }
-  .demo-controls { width: min(100%, 360px); }
+  .demo-controls { width: min(100%, 440px); }
   .demo-intro { display: none; }
 }
 @media (max-width: 390px) {

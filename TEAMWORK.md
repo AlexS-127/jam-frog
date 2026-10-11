@@ -35,8 +35,6 @@ Alex verifies everything in Live at the two integration points (9 PM and 11 PM).
 
 **Hearing the app without Live (optional):**
 - **Ableton's free 30-day trial of Live 12 Suite** (Max for Live included) runs the full setup from `ableton/SETUP.md`.
-- **GarageBand** (free on Mac) can play the frog's notes through the IAC ports, using the overlay's **Ports** bridge.
-  Set up the ports with steps 1–2 of the Ports bridge section in `ableton/SETUP.md`.
 
 ### Kevin's order of work
 
@@ -125,15 +123,15 @@ Feature 7. **Can start now with mock data**; no engine needed.
 Build `createOverlay(root: HTMLElement, handlers: Handlers): { update(state: UiState): void }` in `ui/overlay.ts`:
 
 ```ts
-interface UiState {
-  mood: FrogMood; current: string | null; trail: string[]; suggestions: Suggestion[];
-  answer: AnswerPlan | null; progress: AnswerProgress; // {status: 'idle'|'listening'|'playing', bar, bars}
-  weirdness: number; genre: string; answersOn: boolean; phraseBars: 4 | 8; rhythm?: boolean; model?: string;
-  bridge: 'osc' | 'ports'; bpm: number; liveTempo: number | null; bar: number | null; status: string;
+interface UiState {   // as built (see app/src/renderer/ui/overlay.ts)
+  mood: FrogMood; phase: 'idle' | 'listening' | 'playing'; bar: number; bars: number;
+  yourChords: string[]; frogChords: string[]; frogIndex: number; suggestions: string[]; borrowed: boolean;
+  weirdness: number; genre: string; phraseBars: 2 | 4 | 8; answersOn: boolean; rhythm: boolean; model: string;
+  bpm: number; liveTempo: number | null; liveBar: number | null; status: string;
 }
 interface Handlers {
-  onWeirdness(v: number): void; onGenre(g: string): void; onAnswersToggle(on: boolean): void;
-  onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void; onPhraseBars(bars: 4 | 8): void; onRhythm?(on: boolean): void; onModel?(m: string): void;
+  onWeirdness(v: number): void; onGenre(g: string): void; onPhraseBars(b: 2 | 4 | 8): void;
+  onAnswersToggle(on: boolean): void; onRhythm(on: boolean): void; onModel(m: string): void; onBpm(bpm: number): void;
 }
 ```
 

@@ -98,7 +98,7 @@ describe('AnswerEngine (phrase call and response)', () => {
 
   it('with Live playing: the answer starts on the /bar that ends the phrase', () => {
     const { sink, liveBars } = setup();
-    liveBars(6000, [['C', 100], ['Am', 2100]]);
+    liveBars(6000, [['C', 100], ['Am', 2100]]); // a human 100 ms after the bar: snapped onto it
     expect(sink.log).toHaveLength(0);
     liveBars(8000, []);
     expect(sink.chordTimes()[0]).toBe(8000);
@@ -106,9 +106,10 @@ describe('AnswerEngine (phrase call and response)', () => {
 
   it('treats a chord in the last quarter of a bar as the start of the next bar', () => {
     const { sink, liveBars } = setup();
-    // C at 1.8 s anticipates bar 2 (which starts at 2 s)
+    // C at 1.8 s anticipates bar 2 (which starts at 2 s): the phrase is bars 2-5, the answer bars 6-9
     liveBars(10000, [['C', 1800], ['Am', 3000]]);
-    expect(sink.chordTimes()[0]).toBe(10000); // bar 2 + 4 bars = bar 6, at 10 s
+    // ...and the frog anticipates its bar 6 the same way: an 8th early (1.8 s is 0.4 beats early, snapped to 0.5)
+    expect(sink.chordTimes()[0]).toBe(9750);
   });
 
   it('follows the bar length of Live, even when the BPM setting is wrong (Live 93 BPM, app still on 120)', () => {
@@ -148,12 +149,31 @@ describe('AnswerEngine (phrase call and response)', () => {
     expect(sink.held.size).toBe(0);
   });
 
-  it('spreads 2 answer chords over an 8-bar answer (4 bars each)', () => {
+  it('changes chord where the player did, and fills the whole answer (8 bars in, 8 bars out)', () => {
     const { sink, play, until } = setup({ phraseBars: 8 });
     play('C', 0);
-    play('G', 4000);
+    play('G', 4000); // bar 3
+    until(31000);
+    expect(sink.chordTimes()).toEqual([16000, 20000]); // bar 1 and bar 3 of the answer
+    expect(sink.held.size).toBe(3); // the last chord is still sounding near the end of bar 8
     until(32000);
-    expect(sink.chordTimes()).toEqual([16000, 24000]);
+    expect(sink.held.size).toBe(0);
+  });
+
+  it('answers with as many chords as the player changed to, up to 8', () => {
+    const { sink, play, until } = setup({ phraseBars: 4 });
+    ['C', 'Am', 'F', 'G', 'C', 'Am'].forEach((n, i) => play(n, i * 1000));
+    until(16000);
+    expect(sink.chordTimes()).toHaveLength(6);
+  });
+
+  it('works with 2-bar phrases', () => {
+    const { sink, play, until } = setup({ phraseBars: 2 });
+    play('C', 0);
+    play('F', 2000);
+    until(7000);
+    expect(sink.chordTimes()).toEqual([4000, 6000]);
+    until(8000);
     expect(sink.held.size).toBe(0);
   });
 
@@ -225,9 +245,9 @@ describe('AnswerEngine (phrase call and response)', () => {
     const { progress, play, until } = setup();
     play('C', 0);
     play('Am', 2000);
-    expect(progress.at(-1)).toEqual({ status: 'listening', bar: 2, bars: 4 });
+    expect(progress.at(-1)).toEqual({ status: 'listening', bar: 2, bars: 4, chord: -1 });
     until(8000);
-    expect(progress.at(-1)).toEqual({ status: 'playing', bar: 1, bars: 4 });
+    expect(progress.at(-1)).toEqual({ status: 'playing', bar: 1, bars: 4, chord: 0 });
     until(16000);
     expect(progress.at(-1)!.status).toBe('idle');
   });
@@ -274,7 +294,7 @@ describe('AnswerEngine rhythm and dynamics', () => {
     return { engine, sink };
   }
 
-  it('copies the rhythm: strike positions, re-strikes and lengths, starting at the answer', () => {
+  it('copies the rhythm: strike positions, re-strikes and lengths (on a 16th grid), from the answer', () => {
     const { engine, sink } = rig(true);
     // bar 1: C on beat 1 (held 1 beat), C again on beat 3 (held half a beat); bar 2: Am on beat 2 (held 2 beats)
     strike(engine, V.C, 0, 100, 500);
@@ -302,12 +322,12 @@ describe('AnswerEngine rhythm and dynamics', () => {
     expect(velAt(9000)).toEqual([40, 40, 45]); // soft ghost strike: soft answer
   });
 
-  it('without rhythm mode, plays one chord per bar at the phrase\'s average dynamics', () => {
+  it('without rhythm mode, changes chord where the player did, at the phrase\'s dynamics', () => {
     const { engine, sink } = rig(false);
     strike(engine, V.C, 0, 50, 500);
     strike(engine, V.Am, 2000, 50, 500);
     vi.advanceTimersByTime(16000 - Date.now());
-    expect(sink.chordTimes()).toEqual([8000, 12000]); // 2 chords over 4 bars
+    expect(sink.chordTimes()).toEqual([8000, 10000]); // bar 1 and bar 2, as played; Am then held to the end
     const first = sink.log.filter((e) => e.t === 8000 && e.velocity > 0).map((e) => e.velocity);
     expect(first).toEqual([56, 56, 61]); // soft player -> soft frog (first chord accented +6, top voice +5)
   });
@@ -373,8 +393,9 @@ describe('AnswerEngine background planning', () => {
       now: () => Date.now(),
     });
     engine.chord(detectChord([60, 64, 67])!);
+    vi.advanceTimersByTime(250);
     engine.chord(detectChord([57, 60, 64])!);
-    vi.advanceTimersByTime(600); // 1 bar at 480 BPM = 500 ms; planning would need longer than that here
+    vi.advanceTimersByTime(350); // 1 bar at 480 BPM = 500 ms; planning would need longer than that here
     expect(sink.held.size).toBe(3);
     engine.cancel();
   });
