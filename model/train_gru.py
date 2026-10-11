@@ -76,12 +76,12 @@ def windows(genres: list[str], seqs: list[np.ndarray]) -> tuple[np.ndarray, np.n
 
 
 class ChordGRU(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, emb: int = EMB, hid: int = HID, layers: int = 1) -> None:
         super().__init__()
-        self.tok = nn.Embedding(V, EMB)
-        self.genre = nn.Embedding(N_GENRE_IDS, EMB)
-        self.gru = nn.GRU(EMB, HID, batch_first=True)
-        self.head = nn.Linear(HID, N_TARGETS)
+        self.tok = nn.Embedding(V, emb)
+        self.genre = nn.Embedding(N_GENRE_IDS, emb)
+        self.gru = nn.GRU(emb, hid, num_layers=layers, batch_first=True)
+        self.head = nn.Linear(hid, N_TARGETS)
 
     def forward(self, tokens: torch.Tensor, genre: torch.Tensor) -> torch.Tensor:
         x = self.tok(tokens) + self.genre(genre)[:, None, :]
@@ -137,6 +137,11 @@ def main() -> None:
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--device", default="auto")
     ap.add_argument("--quick", action="store_true", help="tiny run to check everything works end to end")
+    ap.add_argument("--emb", type=int, default=EMB, help="embedding size")
+    ap.add_argument("--hidden", type=int, default=HID, help="GRU hidden size")
+    ap.add_argument("--layers", type=int, default=1, help="GRU layers")
+    ap.add_argument("--trial", metavar="NAME", help="experiment: evaluate only, results in model/checkpoints/NAME, "
+                                                       "never touches model/export (the app's model)")
     args = ap.parse_args()
     if args.quick:
         args.minutes, args.epochs, args.max_train_seqs = 2, 1, 20_000
@@ -159,7 +164,9 @@ def main() -> None:
         x_va, g_va, y_va = x_va[keep], g_va[keep], y_va[keep]
     print(f"train windows: {len(x_tr):,}  val windows: {len(x_va):,}  ({time.time() - t0:.0f}s to load)")
 
-    model = ChordGRU().to(device)
+    if (args.emb, args.hidden, args.layers) != (EMB, HID, 1) and not (args.trial or args.quick):
+        raise SystemExit("other sizes need --trial: the app's gru.ts reads a 1-layer, 64/256 model")
+    model = ChordGRU(args.emb, args.hidden, args.layers).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     sched = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.5)
     loss_fn = nn.CrossEntropyLoss()
@@ -202,9 +209,41 @@ def main() -> None:
 
     model.load_state_dict(best_state)
     model = model.cpu()
+    if args.trial:
+        trial_report(model, args, best_top1)
+        return
     out = HERE / "checkpoints" / "quick" if args.quick else EXPORT  # a smoke test never overwrites the real export
     out.mkdir(parents=True, exist_ok=True)
     evaluate_and_export(model, rng_seed=0, quick=args.quick, out=out)
+
+
+def app_cost(emb: int, hid: int, layers: int) -> int:
+    """Multiply-adds per time step in gru.ts (input and recurrent matrices, all layers)."""
+    return 3 * hid * (emb + hid) + (layers - 1) * 3 * hid * (2 * hid)
+
+
+def trial_report(model: ChordGRU, args, val_top1: float) -> None:
+    """Accuracy on the usual 20k test sections, plus how much slower it would be in the app than today's GRU."""
+    te_g, te_s = load("test")
+    sample = np.random.default_rng(0).choice(len(te_s), size=min(20_000, len(te_s)), replace=False)
+    x, g, y = windows([te_g[i] for i in sample], [te_s[i] for i in sample])
+    top1, top3 = accuracy(predict(model, x, g, torch.device("cpu")), y)
+    ratio = app_cost(args.emb, args.hidden, args.layers) / app_cost(EMB, HID, 1)
+    result = {
+        "trial": args.trial, "emb": args.emb, "hidden": args.hidden, "layers": args.layers,
+        "minutes": args.minutes, "max_train_seqs": args.max_train_seqs,
+        "params": sum(p.numel() for p in model.parameters()),
+        "val_top1": val_top1, "test_top1": top1, "test_top3": top3,
+        "app_cost_vs_current": round(ratio, 2),
+    }
+    out = HERE / "checkpoints" / args.trial
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "trial.json").write_text(json.dumps(result, indent=2) + "\n")
+    torch.save(model.state_dict(), out / "model.pt")
+    print(json.dumps(result, indent=2))
+    print(f"\ntrial {args.trial}: {args.layers}x{args.hidden} (emb {args.emb}), {result['params']:,} params: "
+          f"test {top1:.1%} / {top3:.1%}; ~{ratio:.1f}x the app's per-prediction cost "
+          f"(today's GRU: ~2-5 ms a prediction). Saved in {out}; model/export untouched.")
 
 
 def evaluate_and_export(model: ChordGRU, rng_seed: int, quick: bool, out: Path) -> None:
