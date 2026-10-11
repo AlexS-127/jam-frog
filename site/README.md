@@ -38,13 +38,13 @@ mode and weirdness examples are illustrative. Missing recordings have a silent
 ## Build for hosting
 
 From `app/`, run `npm run site:build`. The static website is generated in
-`site/dist/`, including the shared sprites, font, recordings, and artwork. Upload
-the contents of that folder to a static host, or publish it through Sites. Rebuild
-and republish after adding or replacing media.
+`site/dist/`, including the shared sprites, font, recordings, and artwork. GitHub
+Pages builds and publishes that folder automatically after relevant changes land
+on `main`. The workflow can also be run manually from the repository's Actions tab.
 
 Pitch, judge Q&A, and the submission checklist live in
 `docs/hackathon-pitch.md`. The durable team history is in `docs/project-story.md`.
 
-GoDaddy is the domain registrar for `jamfrog.us`; hosting serves the actual
-website. The domain's DNS records connect those two. Hosting instructions and
-the exact provider-returned records are recorded in `docs/website-hosting.md`.
+Domain registration, DNS, and hosting are separate. GitHub Pages hosts the site;
+the DNS records for `jamfrog.us` connect the domain to it. Setup instructions are
+recorded in `docs/website-hosting.md`.

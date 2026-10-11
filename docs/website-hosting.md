@@ -1,60 +1,50 @@
 # Put Jam Frog online at jamfrog.us
 
-The website is built and deployed through Sites. GoDaddy registers the domain;
-you do not need to buy a GoDaddy website builder or hosting package to use it.
+The showcase is hosted by GitHub Pages and deployed automatically from `main`.
+The domain can stay with its current registrar and DNS provider; no separate
+website-builder package is required.
 
-- Hosted site: https://jam-frog-bandmate.ampletapir9.chatgpt.site
-- Domain: jamfrog.us
-- Sites project ID: appgprj_6acb649e622481919fd44ea8262d53bb
-- Hosting snapshot: /Users/alex/.codex/visualizations/2026/10/11/01a12a4f-e116-7e61-95cb-364b32b438f6/jam-frog-site
+- Repository: https://github.com/AlexS-127/jam-frog
+- Temporary Pages URL: https://alexs-127.github.io/jam-frog/
+- Custom domain: https://jamfrog.us
 
-## 1. Make the hosted page public
+## 1. Enable GitHub Pages
 
-The deployed page currently has owner-only access. Public access is separate from
-DNS: a working domain would still show an access gate until the site is made public.
-Tell Codex "Make the Jam Frog website public" to authorize that access change.
-The public access decision was not made during this session.
+Open the repository's **Settings > Pages**. Under **Build and deployment**, set
+the source to **GitHub Actions**. The workflow in `.github/workflows/pages.yml`
+builds the Vite showcase and publishes `site/dist` whenever relevant files change
+on `main`. It can also be started manually from **Actions**.
 
-## 2. Open the domain's DNS settings
+After the first successful deployment, enter `jamfrog.us` under **Custom domain**
+and save it. Enable **Enforce HTTPS** once GitHub makes the option available.
 
-Sign in to GoDaddy, open your Domain Portfolio, select jamfrog.us, and select DNS.
-If the domain uses GoDaddy nameservers, its records are editable there.
+## 2. Replace the old website records
 
-The official instructions are:
+Edit DNS wherever the authoritative DNS records for `jamfrog.us` are managed.
+Delete conflicting parking records and the superseded OpenAI Sites records. Add
+the following GitHub Pages records; leave TTL at its provider default.
 
-- [Manage DNS records](https://www.godaddy.com/help/manage-dns-records-680)
-- [Add or edit an A record](https://www.godaddy.com/help/add-or-edit-an-a-record-42546)
-- [Add a CNAME record](https://www.godaddy.com/help/add-a-cname-record-19236)
-
-## 3. Enter these records
-
-These are the exact hosting-provider values returned on October 11, 2026. The
-Name column is relative to jamfrog.us, as GoDaddy expects. Leave TTL at its default.
-
-| Type | Name | Value |
+| Type | Host | Value |
 | --- | --- | --- |
-| A | @ | 162.159.143.30 |
-| A | @ | 172.66.3.26 |
-| TXT | _openai-site-verification | openai-site-verification=H06WH-6e9nb3Kt2eG-5SlpFQFrAClNufYsD4ncH7RxU |
-| TXT | _cf-custom-hostname | 751457de-9526-4e81-a622-ab47e36dcc95 |
-| CNAME | www | custom-domains.chatgpt.site. |
-| TXT | _openai-site-verification.www | openai-site-verification=lpXQeIFq_YaFSQVGmo9LQMq3eQVutwUJtRdx2KE1Hs4 |
-| TXT | _cf-custom-hostname.www | 991c9ff9-2d46-47cb-8e08-dfba7b6c0722 |
+| A | root (`@`, or blank if required by the provider) | 185.199.108.153 |
+| A | root (`@`, or blank if required by the provider) | 185.199.109.153 |
+| A | root (`@`, or blank if required by the provider) | 185.199.110.153 |
+| A | root (`@`, or blank if required by the provider) | 185.199.111.153 |
+| CNAME | www | alexs-127.github.io. |
 
-If there are existing parking A records for @, replace those with the two A values
-above. Update an existing www CNAME instead of creating a conflicting second one.
-Keep email records such as MX, SPF, and DKIM in place.
+In Porkbun's DNS form, leave **Host** blank for each root A record; entering `@`
+there may create `@.jamfrog.us`. Update an existing `www` record rather than
+creating a second conflicting one. Keep unrelated email records such as MX, SPF,
+and DKIM.
 
-## 4. Validate the domain
+The old `_openai-site-verification`, `_cf-custom-hostname`, OpenAI A records, and
+`custom-domains.chatgpt.site` CNAME are not needed after this move.
 
-After saving the DNS records, tell Codex "I added the jamfrog.us DNS records."
-Codex can refresh domain verification for both hostnames and check certificate
-status. The custom domains are currently pending DNS validation; HTTPS is not yet
-confirmed. GoDaddy says most DNS updates take effect within an hour but can take
-up to 48 hours globally.
+## 3. Check DNS and HTTPS
 
-Once public access, DNS, and the HTTPS certificate are ready, visitors can use
-https://jamfrog.us and https://www.jamfrog.us.
+DNS changes can take up to 24 hours to propagate. GitHub will issue the HTTPS
+certificate after the records resolve correctly. Both `jamfrog.us` and
+`www.jamfrog.us` should then lead to the same Pages site.
 
 ## Add your recordings and artwork
 
@@ -67,6 +57,6 @@ prefers jam-frog.* if supplied, then jf.*, then other supported images. JPG,
 WebP, AVIF, and SVG are supported too. The alternate jf_transparent.png is
 retained; the full drawing is selected so the handwritten message is complete.
 
-Run npm run site:build from /Users/alex/jam-frog/app after changing content or media,
-then republish the new site/dist snapshot. Local edits do not automatically update
-the hosted website.
+Commit and push changed content or media to `main`; GitHub Actions will rebuild and
+publish the website. For a local check, run `npm run site:build` from
+`/Users/alex/jam-frog/app`.
