@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsc -p tsconfig.electron.json && node scripts/dev.mjs",
     "build": "tsc -p tsconfig.electron.json && vite build",
+    "site": "vite --config vite.site.config.mts",
     "start": "npm run build && electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.electron.json"

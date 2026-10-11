@@ -54,6 +54,8 @@ GEMINI_API_KEY=your-key-here
 
 and restart the app. Without it (or with **⚙ Settings → Jam report → On this Mac only**) the report is written locally.
 
+**Hackathon showcase page:** from `app/`, run `npm run site` to preview the standalone project page.
+
 **Listening test** (n-gram vs GRU): in the running app, **Jam Frog → Listening test…** (Cmd+Shift+L). Each row plays a
 progression and then answer A or B on the frog track; the models are hidden and shuffled. Vote, then **Reveal**.
 
