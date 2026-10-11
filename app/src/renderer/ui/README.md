@@ -13,7 +13,10 @@ Reduced motion freezes the displayed pose and disables ambient gestures and flin
 
 The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from the engine. This browser demo does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
 
-The overlay (440×640) is laid out as Alex asked on Saturday night: a big display that shows **your chords** while you play
+The overlay (440×640) has no background of its own: the frog sits on a guitar amp whose head holds the controls
+(logo plate, ⚙, ×, then the control panel) and whose cabinet front is the screen, set in grille cloth. The frog wears
+the genre's outfit (`frog/looks.ts`, Kevin's `genre-outfits.png` from the showcase site). Before that, it was laid
+out as Alex asked on Saturday night: a big display that shows **your chords** while you play
 and **the frog's** while it plays, bar by bar (a box per bar, each chord as wide as it lasts, a dotted stretch where a
 chord is held over; the sounding chord lit; in Jam mode the next block underneath in blue, so you can get ready), the
 key centre (it flashes on a key change), bar dots for the phrase, the frog sitting fixed on the amp

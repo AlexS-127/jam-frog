@@ -1,4 +1,5 @@
-/* Jam Frog overlay: 440x640, frameless and transparent (Electron). The frog sits on the amp (the controls). */
+/* Jam Frog overlay: 440x640, frameless and transparent (Electron). No panel behind it: just the frog, sitting
+   on a guitar amp whose head holds the controls and whose cabinet is the screen. */
 .jf-shell, .jf-shell *, .jf-shell *::before, .jf-shell *::after { box-sizing: border-box; }
 html, body, #overlay-root { width: 100%; height: 100%; margin: 0; }
 html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e8f3e6; }
@@ -6,15 +7,32 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 
 .jf-shell {
   --accent: #a4e58e; --muted: #91a894; --line: rgba(164, 229, 142, .18); --gold: #e3c46b;
-  position: relative; width: 440px; height: 640px; overflow: hidden; padding: 12px 14px 10px;
-  display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(164, 229, 142, .22); border-radius: 18px;
-  background: linear-gradient(160deg, rgba(24, 41, 29, .62), rgba(12, 22, 16, .74)); color: #edf6e9;
+  --tolex: #1c1d1b; --piping: #b9a46a;
+  position: relative; width: 440px; height: 640px; overflow: hidden; padding: 6px 10px 4px;
+  display: flex; flex-direction: column; background: transparent; color: #edf6e9;
 }
 
+/* the amp: head (controls) on top of the cabinet (the screen), on little rubber feet */
+.jf-rig { position: relative; z-index: 1; flex: 0 0 auto; display: flex; flex-direction: column; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .45)); }
+.jf-head { padding: 6px 8px 8px; border-radius: 12px 12px 6px 6px; background: var(--tolex);
+  background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 3px 3px;
+  box-shadow: inset 0 0 0 2px #0e0f0d, inset 0 2px 0 3px rgba(255, 255, 255, .06); }
+.jf-cab { position: relative; margin-top: 3px; padding: 10px; border-radius: 6px 6px 10px 10px; background: var(--tolex);
+  background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 3px 3px;
+  box-shadow: inset 0 0 0 2px #0e0f0d; }
+/* metal corner protectors */
+.jf-cab::before, .jf-cab::after { content: ""; position: absolute; bottom: 3px; width: 14px; height: 14px; border-radius: 3px;
+  background: linear-gradient(135deg, #d9d6cc, #8d8a80); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35); }
+.jf-cab::before { left: 3px; }
+.jf-cab::after { right: 3px; }
+.jf-feet { display: flex; justify-content: space-between; padding: 0 22px; }
+.jf-feet i { width: 34px; height: 7px; border-radius: 0 0 6px 6px; background: #0b0c0b; }
+
 /* header: drag the window from here */
-.jf-header { display: flex; flex: 0 0 30px; align-items: center; gap: 6px; -webkit-app-region: drag; }
+.jf-header { display: flex; flex: 0 0 30px; align-items: center; gap: 6px; padding: 0 2px 4px 8px; -webkit-app-region: drag; }
 .jf-brand { display: flex; flex: 1; align-items: baseline; gap: 10px; }
-.jf-brand strong { font-size: 15px; letter-spacing: .16em; }
+/* the amp's logo plate */
+.jf-brand strong { padding: 1px 8px; border: 1px solid var(--piping); border-radius: 4px; color: #f1e3b1; font: italic 800 14px/1.4 Georgia, "Times New Roman", serif; letter-spacing: .12em; text-shadow: 0 1px 0 #000; }
 .jf-brand span { color: var(--accent); font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
 .jf-icon { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: #b9cbb6; font-size: 18px; cursor: pointer; }
 .jf-icon:hover { background: rgba(255, 255, 255, .08); color: #f2ffe7; }
@@ -22,8 +40,15 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-icon[data-action="report"] { font-size: 15px; }
 
 /* the display: your chords while you play, the frog's while it plays */
-.jf-display { flex: 0 0 auto; min-height: 168px; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px;
-  border: 1px solid var(--line); border-radius: 14px; background: rgba(5, 15, 9, .5); }
+/* the cabinet's front is a screen, set in grille cloth */
+.jf-display { min-height: 200px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 8px;
+  border: 9px solid transparent; border-radius: 8px;
+  background:
+    linear-gradient(170deg, rgba(255, 255, 255, .05), transparent 40%) padding-box,
+    linear-gradient(#0b1a10, #07120b) padding-box,
+    repeating-linear-gradient(45deg, #5a5040 0 1px, #2a251c 1px 3px) border-box,
+    repeating-linear-gradient(-45deg, #5a5040 0 1px, #2a251c 1px 3px) border-box;
+  box-shadow: inset 0 0 0 1px rgba(164, 229, 142, .25), inset 0 0 18px rgba(0, 0, 0, .8); }
 .jf-display-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .jf-key { margin-right: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; color: #cfe3c8; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
 .jf-key[hidden] { display: none; }
@@ -59,28 +84,30 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-hint { margin: auto 0; color: var(--muted); font-size: 13px; text-align: center; }
 
 /* the frog and its speech bubble, sitting on the amp */
-.jf-scene { position: relative; flex: 1 1 auto; min-height: 0; }
-.jf-pet-stage { position: absolute; inset: 0 0 -30px 0; overflow: visible; pointer-events: none; }
+.jf-scene { position: relative; z-index: 2; flex: 1 1 auto; min-height: 0; }
+/* the frog's feet rest on top of the amp head */
+.jf-pet-stage { position: absolute; inset: 0 0 -23px 0; overflow: visible; pointer-events: none; }
 .jf-pet { position: absolute; top: 0; left: 0; display: block; margin: 0; padding: 0; border: 0; background: transparent; }
 .jf-pet canvas { display: block; image-rendering: pixelated; }
 .jf-pet-notice { position: absolute; left: 0; right: 0; bottom: 40px; color: #a8bda7; font-size: 11px; text-align: center; }
-/* the bubble sits above and right of the frog (bottom-anchored, so 1 or 2 lines both stay put), its tail
-   pointing down-left at the frog's head */
-.jf-bubble { position: absolute; z-index: 3; bottom: 104px; left: 100px; max-width: 300px; padding: 12px 14px; border-radius: 16px;
+/* the bubble sits right of the frog (clear of its outfit and instrument), bottom-anchored so 1 or 2 lines both
+   stay put, its tail pointing left at the frog's head */
+.jf-bubble { position: absolute; z-index: 3; bottom: 92px; left: 186px; right: 6px; padding: 12px 14px; border-radius: 16px;
   background: #f4f1df; color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
-.jf-bubble::before { content: ""; position: absolute; left: 22px; bottom: -13px; border-top: 14px solid #f4f1df; border-right: 16px solid transparent; }
+.jf-bubble::before { content: ""; position: absolute; left: -13px; bottom: 16px; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 14px solid #f4f1df; }
 .jf-bubble b { color: #1f6b2c; font-size: 18px; }
 /* the jam report: beside the frog's head (more room), the tail pointing left at it */
-.jf-bubble.is-report { left: 158px; right: 8px; bottom: 30px; max-width: none; display: grid; gap: 8px; font-size: 14px; }
-.jf-bubble.is-report::before { left: -13px; bottom: 26px; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 14px solid #f4f1df; }
+.jf-bubble.is-report { bottom: 40px; display: grid; gap: 8px; font-size: 14px; }
+.jf-bubble.is-report::before { bottom: 66px; }
 .jf-more { justify-self: start; padding: 4px 10px; border: 0; border-radius: 8px; background: #1f6b2c; color: #f4f1df; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .jf-more:hover { background: #2a8a3b; }
 .jf-shell[data-phase="playing"] .jf-bubble b { color: #7a5a00; }
 
 /* the amp: the controls */
-.jf-amp { position: relative; z-index: 1; flex: 0 0 154px; display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
-  padding: 14px 16px; border: 1px solid #526851; border-radius: 10px 10px 14px 14px;
-  background: linear-gradient(145deg, #374838, #1c2b20 64%, #152219); box-shadow: inset 0 3px 0 #71826a, 0 8px 16px rgba(0, 0, 0, .3); }
+/* the head's control panel */
+.jf-amp { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
+  padding: 10px 14px; border: 1px solid var(--piping); border-radius: 6px;
+  background: linear-gradient(180deg, #3b4a3c, #243126 70%, #1d281f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15); }
 .jf-knob-control { display: grid; justify-items: center; gap: 6px; color: #aebda9; font-size: 10px; letter-spacing: .1em; }
 .jf-knob { position: relative; display: block; width: 74px; height: 74px; cursor: ns-resize; touch-action: none; outline: none; }
 .jf-knob-visual { position: absolute; inset: 3px; border: 3px solid #687b63; border-radius: 50%;
@@ -105,14 +132,14 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-check { display: flex; align-items: center; gap: 8px; color: #dce9d8; font-size: 13px; cursor: pointer; }
 .jf-check input { width: 16px; height: 16px; margin: 0; accent-color: #91d77d; }
 
-.jf-footer { display: flex; flex: 0 0 16px; align-items: center; gap: 10px; color: #77947c; font-size: 10px; letter-spacing: .08em; }
+.jf-footer { display: flex; flex: 0 0 14px; margin-top: auto; align-items: center; gap: 10px; color: #77947c; font-size: 10px; letter-spacing: .08em; }
 .jf-footer b { color: #b8cbb8; font-weight: 600; }
 .jf-status { min-width: 0; overflow: hidden; color: #c1d2bf; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0; }
 
 /* the jam report panel */
-.jf-report { position: absolute; z-index: 11; inset: 0; display: grid; place-items: center; padding: 14px; background: rgba(6, 12, 8, .78); }
+.jf-report { position: absolute; z-index: 11; inset: 0; display: grid; place-items: center; padding: 10px; }
 .jf-report[hidden] { display: none; }
-.jf-report-card { width: 100%; max-height: 100%; overflow-y: auto; display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #152219; }
+.jf-report-card { width: 100%; max-height: 100%; overflow-y: auto; display: grid; gap: 10px; padding: 16px; border: 1px solid var(--piping); border-radius: 14px; background: #152219; box-shadow: 0 12px 30px rgba(0, 0, 0, .6); }
 .jf-report-card h2 { margin: 0; font-size: 17px; }
 .jf-report-meta { margin: 0; color: var(--muted); font-size: 11px; letter-spacing: .06em; }
 .jf-report-summary { margin: 0; font-size: 15px; line-height: 1.4; }
@@ -126,9 +153,9 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-trivia[hidden] { display: none; }
 
 /* settings */
-.jf-settings { position: absolute; z-index: 10; inset: 0; display: grid; place-items: center; background: rgba(6, 12, 8, .72); }
+.jf-settings { position: absolute; z-index: 10; inset: 0; display: grid; place-items: center; }
 .jf-settings[hidden] { display: none; }
-.jf-settings-card { width: 360px; display: grid; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #152219; }
+.jf-settings-card { width: 380px; display: grid; gap: 14px; padding: 18px; border: 1px solid var(--piping); border-radius: 14px; background: #152219; box-shadow: 0 12px 30px rgba(0, 0, 0, .6); }
 .jf-settings-card h2 { margin: 0; font-size: 16px; }
 .jf-settings-card .jf-field select, .jf-settings-card .jf-field input { width: 190px; }
 .jf-note { margin: 0; color: var(--muted); font-size: 11px; }

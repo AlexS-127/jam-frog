@@ -14,8 +14,10 @@ You play chords in Ableton. A frog overlay floats above Live and:
    interesting moments in Roman numerals (key changes, substitutions, borrowed chords, secondary dominants, cadences,
    famous progressions) with a little trivia. Written by Gemini if you add an API key (see below), otherwise on your Mac.
 
-The display shows the chords bar by bar, each as wide as it lasts, so you can see when the changes come; the key
-centre sits above them and lights up when it changes. The frog dances in time with Live's tempo.
+The frog sits on a guitar amp: the head holds the controls, and the cabinet is the screen. The screen shows the chords
+bar by bar, each as wide as it lasts, so you can see when the changes come; the key centre sits above them and lights
+up when it changes. The frog dances in time with Live's tempo and dresses for the genre you pick (Kevin's outfits:
+jazz, rock, country and electronic; pop and all styles keep the classic frog with its keyboard).
 
 A weirdness knob and a genre picker reshape both. Weird means colourful (borrowed chords like ♭VI and ♭VII, secondary dominants), not lost: the frog stays in your key. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
 
