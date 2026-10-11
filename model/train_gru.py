@@ -164,8 +164,8 @@ def main() -> None:
         x_va, g_va, y_va = x_va[keep], g_va[keep], y_va[keep]
     print(f"train windows: {len(x_tr):,}  val windows: {len(x_va):,}  ({time.time() - t0:.0f}s to load)")
 
-    if (args.emb, args.hidden, args.layers) != (EMB, HID, 1) and not (args.trial or args.quick):
-        raise SystemExit("other sizes need --trial: the app's gru.ts reads a 1-layer, 64/256 model")
+    if args.layers != 1 and not (args.trial or args.quick):
+        raise SystemExit("more than 1 layer needs --trial: the app's gru.ts runs a 1-layer GRU (any size)")
     model = ChordGRU(args.emb, args.hidden, args.layers).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     sched = torch.optim.lr_scheduler.StepLR(opt, step_size=1, gamma=0.5)
@@ -299,7 +299,8 @@ def export_weights(model: ChordGRU, out_dir: Path) -> None:
         return [round(float(v), 6) for v in a.ravel()]
 
     out = {
-        "vocabSize": V, "interval0": I0, "ctx": CTX, "emb": EMB, "hidden": HID, "genreIds": N_GENRE_IDS,
+        "vocabSize": V, "interval0": I0, "ctx": CTX, "emb": model.tok.embedding_dim, "hidden": model.gru.hidden_size,
+        "genreIds": N_GENRE_IDS,
         "tok": flat(sd["tok.weight"]),                # [V, EMB]
         "genre": flat(sd["genre.weight"]),            # [13, EMB]
         "wIh": flat(sd["gru.weight_ih_l0"]),          # [3*HID, EMB], gate order r, z, n

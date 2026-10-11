@@ -20,6 +20,11 @@ export interface AnswerSettings {
    * changes chord where the player changed chord and holds each chord until the next change.
    */
   rhythm?: boolean;
+  /**
+   * Jam: after the player's phrase, keep playing phrase after phrase (continuing the progression, in the
+   * player's rhythm) until stopped. Off: answer once, then wait for the next phrase.
+   */
+  continuous?: boolean;
 }
 
 export type AnswerStatus = 'idle' | 'listening' | 'playing';
@@ -159,6 +164,10 @@ interface PlanJob {
   prior: Float32Array;
   history: ChordSymbol[];
   phrase: Chord[];
+  /** chords the candidates should not just repeat */
+  avoid: ChordSymbol[];
+  /** the voicing the first chord leads from */
+  startVoicing: number[] | null;
   cands: { chords: ChordSymbol[]; score: number }[];
   seen: Set<string>;
   tries: number;
@@ -203,6 +212,9 @@ export class AnswerEngine {
   /** the answer locked in for this phrase: its chords and its timed events (from the player's phrase) */
   private prepared: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null = null;
   private currentChord = -1;
+  /** jam mode: the progression so far (the player's + the frog's), and the next block planned ahead */
+  private jam: { history: ChordSymbol[]; next: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null; job: PlanJob | null } | null = null;
+  private jamTimer: ReturnType<typeof setTimeout> | null = null;
   private noteTimers: ReturnType<typeof setTimeout>[] = [];
   private clock: ReturnType<typeof setTimeout> | null = null;
   private planTimer: ReturnType<typeof setTimeout> | null = null;
@@ -253,6 +265,7 @@ export class AnswerEngine {
       }
     }
 
+    if (this.status === 'playing' && this.jam) return; // jamming: the player plays along; only Stop ends it
     if (this.status === 'playing') {
       // A chord in the answer's first beat is the tail of the player's phrase; later, the player takes over.
       if (this.now() - this.lastBarAt < this.beatMs() && this.barIndex === this.answerStart) return;
@@ -408,12 +421,19 @@ export class AnswerEngine {
     }
     if (this.status === 'playing') {
       const bar = this.barIndex - this.answerStart;
+      if (bar >= s.phraseBars && this.jam && s.continuous && s.answersOn) {
+        this.nextBlock(s);
+        return;
+      }
       if (bar >= s.phraseBars) {
         this.stopAnswer();
         this.cancel();
         return;
       }
       this.playBar(bar);
+      if (this.jam && bar === s.phraseBars - 1) {
+        this.scheduleAnticipations(s, () => this.lockNextBlock(this.d.settings()), () => this.status === 'playing' && !!this.jam);
+      }
     }
     this.emit();
   }
@@ -427,8 +447,82 @@ export class AnswerEngine {
     this.plan = prepared.plan;
     this.status = 'playing';
     this.answerStart = this.barIndex;
+    if (s.continuous) {
+      this.jam = { history: [...this.history, ...prepared.plan.chords.map((c) => c.chord)], next: null, job: null };
+      this.planNextBlock(s);
+    }
     this.playBar(0);
     this.emit();
+  }
+
+  // ---- jam: keep playing until stopped ----
+
+  /** Plan the next block in the background (sliced like the answer planning) while this one plays. */
+  private planNextBlock(s: AnswerSettings): void {
+    const jam = this.jam;
+    if (!jam || !this.prepared) return;
+    const current = this.prepared.plan.chords;
+    const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing);
+    jam.job = job;
+    jam.next = null;
+    const slice = () => {
+      this.jamTimer = null;
+      if (this.jam !== jam || jam.job !== job) return;
+      this.workOn(job, PLAN_SLICE_MS);
+      if (job.tries < this.candidates && job.spent < PLAN_BUDGET_MS) {
+        this.jamTimer = setTimeout(slice, 0);
+        return;
+      }
+      jam.next = this.blockFrom(job);
+      jam.job = null;
+    };
+    this.jamTimer = setTimeout(slice, 0);
+  }
+
+  private blockFrom(job: PlanJob): { key: string; plan: AnswerPlan; events: RhythmEvent[] } {
+    const plan = this.finishJob(job);
+    return { key: job.forKey, plan, events: this.eventsFor(job.s, plan) };
+  }
+
+  /** The next block, now: planned ahead if ready, else the best candidate so far, else a quick plan. */
+  private lockNextBlock(s: AnswerSettings): { key: string; plan: AnswerPlan; events: RhythmEvent[] } {
+    const jam = this.jam!;
+    if (!jam.next) {
+      if (jam.job && jam.job.cands.length) jam.next = this.blockFrom(jam.job);
+      else {
+        const current = this.prepared!.plan.chords;
+        const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing);
+        this.workOn(job, QUICK_PLAN_MS, 8);
+        jam.next = this.blockFrom(job);
+      }
+      jam.job = null;
+      if (this.jamTimer) clearTimeout(this.jamTimer);
+      this.jamTimer = null;
+    }
+    return jam.next;
+  }
+
+  private nextBlock(s: AnswerSettings): void {
+    const jam = this.jam!;
+    const next = this.lockNextBlock(s);
+    jam.next = null;
+    jam.history.push(...next.plan.chords.map((c) => c.chord));
+    if (jam.history.length > SESSION_CHORDS) jam.history.splice(0, jam.history.length - SESSION_CHORDS);
+    this.prepared = { key: next.key, plan: next.plan, events: next.events };
+    this.plan = next.plan;
+    this.answerStart = this.barIndex;
+    this.playBar(0);
+    this.planNextBlock(s);
+    this.emit();
+  }
+
+  /** The answer's timed events for a plan, from the player's phrase (rhythm or chord changes). */
+  private eventsFor(s: AnswerSettings, plan: AnswerPlan): RhythmEvent[] {
+    const total = s.phraseBars * BEATS_PER_BAR;
+    const n = plan.chords.length;
+    return s.rhythm
+      ? mirrorRhythm(this.strikes, this.phrase.length, n, total)
+      : harmonicRhythm(this.strikes, this.phrase.length, n, total);
   }
 
   /**
@@ -443,12 +537,7 @@ export class AnswerEngine {
     if (this.planFor === key && this.plan) plan = this.plan;
     else if (this.job && this.job.forKey === key && this.job.cands.length) plan = this.finishJob(this.job);
     else plan = this.makePlan(s, QUICK_PLAN_MS);
-    const total = s.phraseBars * BEATS_PER_BAR;
-    const n = plan.chords.length;
-    const events = s.rhythm
-      ? mirrorRhythm(this.strikes, this.phrase.length, n, total)
-      : harmonicRhythm(this.strikes, this.phrase.length, n, total);
-    this.prepared = { key, plan, events };
+    this.prepared = { key, plan, events: this.eventsFor(s, plan) };
     return this.prepared;
   }
 
@@ -456,7 +545,11 @@ export class AnswerEngine {
    * In the phrase's last bar: if the phrase opened with an anticipation (a strike before its bar 1), the answer
    * anticipates its bar 1 the same way. Those strikes are timed back from the coming bar line.
    */
-  private scheduleAnticipations(s: AnswerSettings): void {
+  private scheduleAnticipations(
+    s: AnswerSettings,
+    lock: () => { plan: AnswerPlan; events: RhythmEvent[] } = () => this.prepare(this.d.settings()),
+    stillDue: () => boolean = () => this.status === 'listening',
+  ): void {
     if (!s.answersOn || this.phrase.length < this.minChords) return;
     // The same mapping prepare() will use (so the timers line up with the events), before the plan is locked.
     const n = Math.min(8, Math.max(2, this.phrase.length));
@@ -469,9 +562,8 @@ export class AnswerEngine {
     for (const start of new Set(early)) {
       const at = barLine + start * beat - this.now();
       this.noteTimers.push(setTimeout(() => {
-        if (this.status !== 'listening') return;
-        const { plan, events } = this.prepare(this.d.settings());
-        this.plan = plan;
+        if (!stillDue()) return;
+        const { plan, events } = lock();
         for (const ev of events) if (Math.abs(ev.start - start) < 1e-6) this.playEvent(ev, plan);
       }, Math.max(0, at)));
     }
@@ -517,6 +609,9 @@ export class AnswerEngine {
 
   private stopAnswer(): void {
     this.cancelPlanning();
+    if (this.jamTimer) clearTimeout(this.jamTimer);
+    this.jamTimer = null;
+    this.jam = null;
     this.noteTimers.forEach(clearTimeout);
     this.noteTimers = [];
     this.prepared = null;
@@ -570,16 +665,22 @@ export class AnswerEngine {
     return this.finishJob(job);
   }
 
-  private newJob(s: AnswerSettings): PlanJob {
+  /**
+   * A planning job. Answers continue the session's history and avoid echoing the player's phrase; jam blocks
+   * continue the jam's progression, avoid repeating the previous block, and voice-lead from its last chord.
+   */
+  private newJob(s: AnswerSettings, history?: ChordSymbol[], avoid?: ChordSymbol[], startVoicing?: number[]): PlanJob {
     return {
       forKey: this.phraseKey(),
       s,
       // one answer chord per chord change in the phrase (up to 8), so every change has a partner
       length: Math.min(8, Math.max(2, this.phrase.length)),
-      key: this.key(),
+      key: history ? estimateKey(history) : this.key(),
       prior: priorFor(this.d.model, s.genre),
-      history: [...this.history],
+      history: [...(history ?? this.history)],
       phrase: [...this.phrase],
+      avoid: avoid ?? this.phrase,
+      startVoicing: startVoicing ?? this.phrase.at(-1)?.pitches ?? null,
       cands: [],
       seen: new Set(),
       tries: 0,
@@ -614,7 +715,7 @@ export class AnswerEngine {
       const id = chords.map((c) => `${c.root}${c.quality}`).join(' ');
       if (job.seen.has(id)) continue;
       job.seen.add(id);
-      job.cands.push({ chords, score: scoreAnswer(chords, logp / job.length, job.phrase, job.key) });
+      job.cands.push({ chords, score: scoreAnswer(chords, logp / job.length, job.avoid, job.key) });
     }
     job.spent += this.now() - t0;
   }
@@ -633,7 +734,7 @@ export class AnswerEngine {
     }
     // Play where the player played: their phrase's register (and bass line, if they had one).
     const reg = registerOf(job.phrase.map((c) => c.pitches)) ?? { lo: 60, hi: 84, bass: null };
-    let prevVoicing: number[] | null = job.phrase.at(-1)?.pitches ?? null;
+    let prevVoicing: number[] | null = job.startVoicing;
     const chords = pick.chords.map((chord) => {
       const voicing = voiceInRegister(chord, prevVoicing, reg);
       prevVoicing = voicing;

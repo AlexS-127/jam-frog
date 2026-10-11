@@ -36,4 +36,5 @@ per genre that the shared long contexts sit on top of (16.7 MB). Longer contexts
 C G Am F, which is where most of the gain comes from.
 
 GRU: token + genre embeddings (64), 1 GRU layer (256), last 8 tokens; retrained on all 2.6M training sections
-(`--max-train-seqs 3000000 --minutes 70`, ~1 h on Apple Silicon). Size experiments: `--trial NAME --hidden 512`. Same 20k-section test sample (seed 0). Train with `python model/train_gru.py`.
+(`--max-train-seqs 3000000 --minutes 70`, ~1 h on Apple Silicon). Size experiments: `--trial NAME --hidden 512` (trial only, never exported). Any 1-layer size can be trained for real
+(e.g. `--hidden 512`); it is exported only if it beats the current GRU on the test set. Same 20k-section test sample (seed 0). Train with `python model/train_gru.py`.

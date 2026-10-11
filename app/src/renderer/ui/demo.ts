@@ -67,7 +67,7 @@ const state: UiState = {
   mood: 'idle', phase: 'listening', bar: 2, bars: 4,
   yourChords: ['Cmaj7', 'Am7', 'Fmaj7'], frogChords: ['Dm7', 'G7', 'Cmaj7', 'Am7'], frogIndex: 1,
   suggestions: ['G7', 'Dm7', 'Ab'], borrowed: false,
-  weirdness: 0.24, genre: 'jazz', phraseBars: 4, answersOn: true, rhythm: false, model: 'gru', bpm: 120,
+  weirdness: 0.24, genre: 'jazz', phraseBars: 4, frogMode: 'answer', rhythm: false, model: 'gru', bpm: 120,
   liveTempo: 120, liveBar: 18, status: '',
 };
 let moodIndex = 0;
@@ -77,7 +77,8 @@ let overlay: ReturnType<typeof createOverlay>;
 const handlers: Handlers = {
   onWeirdness(value) { state.weirdness = value; overlay.update(state); },
   onGenre(value) { state.genre = value; overlay.update(state); },
-  onAnswersToggle(value) { state.answersOn = value; overlay.update(state); },
+  onFrogMode(value) { state.frogMode = value; overlay.update(state); },
+  onStop() { state.phase = 'idle'; overlay.update(state); },
   onPhraseBars(value) { state.phraseBars = value; state.bars = value; overlay.update(state); },
   onRhythm(value) { state.rhythm = value; overlay.update(state); },
   onModel(value) { state.model = value; overlay.update(state); },

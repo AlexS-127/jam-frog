@@ -23,7 +23,8 @@ export interface UiState {
   weirdness: number;
   genre: string;
   phraseBars: 2 | 4 | 8;
-  answersOn: boolean;
+  /** off, answer each phrase once, or jam (keep playing until stopped) */
+  frogMode: FrogMode;
   rhythm: boolean;
   model: string;
   bpm: number;
@@ -32,11 +33,15 @@ export interface UiState {
   status: string;
 }
 
+export type FrogMode = 'off' | 'answer' | 'jam';
+
 export interface Handlers {
   onWeirdness(value: number): void;
   onGenre(genre: string): void;
   onPhraseBars(bars: 2 | 4 | 8): void;
-  onAnswersToggle(on: boolean): void;
+  onFrogMode(mode: FrogMode): void;
+  /** stop the frog (ends a jam) */
+  onStop(): void;
   onRhythm(on: boolean): void;
   onModel(model: string): void;
   onBpm(bpm: number): void;
@@ -54,6 +59,9 @@ export function suggestionText(names: string[]): (string | HTMLElement)[] {
   return parts;
 }
 
+/** Pixels of vertical drag for the knob's full travel (0% to 100%). */
+const KNOB_TRAVEL_PX = 160;
+
 const MOOD_LABELS: Record<FrogMood, string> = { idle: 'Ready', listening: 'Listening', thinking: 'Thinking', weird: 'Weird' };
 
 export function createOverlay(root: HTMLElement, handlers: Handlers) {
@@ -70,21 +78,24 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     <section class="jf-display" aria-live="polite">
       <div class="jf-display-top">
         <span class="jf-who" data-ref="who">YOUR CHORDS</span>
-        <span class="jf-bars" data-ref="bars" aria-label="Bar"></span>
+        <span class="jf-display-right">
+          <button type="button" class="jf-stop" data-action="stop" hidden>■ Stop</button>
+          <span class="jf-bars" data-ref="bars" aria-label="Bar"></span>
+        </span>
       </div>
       <ol class="jf-chords" data-ref="chords"></ol>
-      <p class="jf-hint" data-ref="hint">Play some chords. The frog answers after your phrase.</p>
+      <p class="jf-hint" data-ref="hint">Play some chords. The frog answers after your phrase (or jams on, in Jam mode).</p>
     </section>
     <section class="jf-scene">
       <div class="jf-bubble" data-ref="bubble" role="status"></div>
       <div class="jf-pet-stage" data-ref="pet-stage"></div>
     </section>
     <section class="jf-amp" aria-label="Controls">
-      <label class="jf-knob-control" for="jf-weirdness"><span>WEIRDNESS</span>
-        <span class="jf-knob-wrap"><span class="jf-knob-visual" data-ref="knob" aria-hidden="true"></span>
-          <input id="jf-weirdness" data-control="weirdness" type="range" min="0" max="1" step="0.01" aria-label="Weirdness" />
-        </span><output data-ref="weirdness-value" for="jf-weirdness"></output>
-      </label>
+      <div class="jf-knob-control"><span>WEIRDNESS</span>
+        <span class="jf-knob" data-control="weirdness" role="slider" tabindex="0" aria-label="Weirdness"
+          aria-valuemin="0" aria-valuemax="100" title="Drag up or down"><span class="jf-knob-visual" data-ref="knob"></span></span>
+        <output data-ref="weirdness-value"></output>
+      </div>
       <div class="jf-amp-right">
         <label class="jf-field"><span>GENRE</span><select data-control="genre"></select></label>
         <div class="jf-field"><span>PHRASE</span>
@@ -94,7 +105,13 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
             <button type="button" data-bars="8" role="radio">8</button>
           </div>
         </div>
-        <label class="jf-check"><input data-control="answers" type="checkbox" /><span>Frog answers</span></label>
+        <div class="jf-field"><span>FROG</span>
+          <div class="jf-segments" role="radiogroup" aria-label="What the frog does">
+            <button type="button" data-mode="off" role="radio" title="The frog only suggests">Off</button>
+            <button type="button" data-mode="answer" role="radio" title="The frog answers each phrase">Answer</button>
+            <button type="button" data-mode="jam" role="radio" title="After your phrase the frog keeps playing until you stop it">Jam</button>
+          </div>
+        </div>
         <label class="jf-check" title="The frog answers in the rhythm and dynamics you played"><input data-control="rhythm" type="checkbox" /><span>Copy my rhythm</span></label>
       </div>
     </section>
@@ -114,20 +131,53 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
 
   const q = <T extends HTMLElement>(selector: string) => shell.querySelector<T>(selector)!;
   const pet = createFrogPet(q('[data-ref="pet-stage"]'), { scale: 0.8, interactive: false, initialPosition: { x: 24, y: 9999 } });
-  const weirdness = q<HTMLInputElement>('[data-control="weirdness"]');
+  const knob = q<HTMLElement>('[data-control="weirdness"]');
   const genre = q<HTMLSelectElement>('[data-control="genre"]');
-  const answers = q<HTMLInputElement>('[data-control="answers"]');
   const rhythm = q<HTMLInputElement>('[data-control="rhythm"]');
   const model = q<HTMLSelectElement>('[data-control="model"]');
   const bpm = q<HTMLInputElement>('[data-control="bpm"]');
   const settings = q<HTMLElement>('[data-ref="settings"]');
   const segments = [...shell.querySelectorAll<HTMLButtonElement>('[data-bars]')];
+  const modes = [...shell.querySelectorAll<HTMLButtonElement>('[data-mode]')];
+  const stop = q<HTMLButtonElement>('[data-action="stop"]');
   genre.add(new Option('All styles', 'all'));
   for (const g of GENRES) genre.add(new Option(g[0].toUpperCase() + g.slice(1), g));
 
-  weirdness.addEventListener('input', () => handlers.onWeirdness(Number(weirdness.value)), { signal });
+  // The knob turns like a hardware knob: press anywhere on it and drag up (clockwise, more) or down (less),
+  // relative to where you pressed, so it never jumps. Arrow keys work too.
+  let weirdValue = 0;
+  const setWeird = (v: number) => {
+    weirdValue = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+    drawKnob(weirdValue);
+    handlers.onWeirdness(weirdValue);
+  };
+  let drag: { id: number; y: number; from: number } | null = null;
+  knob.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    knob.setPointerCapture(e.pointerId);
+    drag = { id: e.pointerId, y: e.clientY, from: weirdValue };
+  }, { signal });
+  knob.addEventListener('pointermove', (e) => {
+    if (drag && e.pointerId === drag.id) setWeird(drag.from + (drag.y - e.clientY) / KNOB_TRAVEL_PX);
+  }, { signal });
+  const endDrag = (e: PointerEvent) => {
+    if (drag && e.pointerId === drag.id) drag = null;
+  };
+  knob.addEventListener('pointerup', endDrag, { signal });
+  knob.addEventListener('pointercancel', endDrag, { signal });
+  knob.addEventListener('keydown', (e) => {
+    const step = { ArrowUp: 0.05, ArrowRight: 0.05, ArrowDown: -0.05, ArrowLeft: -0.05 }[e.key];
+    if (step === undefined) return;
+    e.preventDefault();
+    setWeird(weirdValue + step);
+  }, { signal });
+  function drawKnob(w: number): void {
+    q('[data-ref="weirdness-value"]').textContent = `${Math.round(w * 100)}%`;
+    q('[data-ref="knob"]').style.setProperty('--knob-angle', `${-135 + w * 270}deg`);
+    knob.setAttribute('aria-valuenow', String(Math.round(w * 100)));
+  }
   genre.addEventListener('change', () => handlers.onGenre(genre.value), { signal });
-  answers.addEventListener('change', () => handlers.onAnswersToggle(answers.checked), { signal });
   rhythm.addEventListener('change', () => handlers.onRhythm(rhythm.checked), { signal });
   model.addEventListener('change', () => handlers.onModel(model.value), { signal });
   bpm.addEventListener('change', () => {
@@ -138,6 +188,8 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   for (const b of segments) {
     b.addEventListener('click', () => handlers.onPhraseBars(Number(b.dataset.bars) as 2 | 4 | 8), { signal });
   }
+  for (const b of modes) b.addEventListener('click', () => handlers.onFrogMode(b.dataset.mode as FrogMode), { signal });
+  stop.addEventListener('click', () => handlers.onStop(), { signal });
   q('[data-action="settings"]').addEventListener('click', () => (settings.hidden = !settings.hidden), { signal });
   q('[data-action="settings-done"]').addEventListener('click', () => (settings.hidden = true), { signal });
   q('[data-action="close"]').addEventListener('click', () => window.close(), { signal });
@@ -181,16 +233,17 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
 
       // The frog's speech bubble suggests what to play next.
       const bubble = q('[data-ref="bubble"]');
-      if (state.phase === 'playing') bubble.replaceChildren('Listen… then your turn!');
+      if (state.phase === 'playing') bubble.replaceChildren(state.frogMode === 'jam' ? 'Jamming! Play along, or press Stop.' : 'Listen… then your turn!');
       else if (state.suggestions.length) bubble.replaceChildren(...suggestionText(state.suggestions));
       else bubble.replaceChildren('Play me a chord!');
 
-      const w = Math.max(0, Math.min(1, state.weirdness));
-      setValue(weirdness, String(w));
-      q('[data-ref="weirdness-value"]').textContent = `${Math.round(w * 100)}%`;
-      q('[data-ref="knob"]').style.setProperty('--knob-angle', `${-135 + w * 270}deg`);
+      if (!drag) {
+        weirdValue = Math.max(0, Math.min(1, state.weirdness));
+        drawKnob(weirdValue);
+      }
       setValue(genre, state.genre || 'all');
-      setChecked(answers, state.answersOn);
+      for (const b of modes) b.setAttribute('aria-checked', String(b.dataset.mode === state.frogMode));
+      stop.hidden = !(state.frogMode === 'jam' && state.phase === 'playing');
       setChecked(rhythm, state.rhythm);
       setValue(model, state.model);
       setValue(bpm, String(state.bpm));

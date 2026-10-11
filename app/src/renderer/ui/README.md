@@ -16,7 +16,8 @@ The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from
 The overlay (440×640) is laid out as Alex asked on Saturday night: a big display that shows **your chords** while you play
 and **the frog's** while it plays (the sounding chord lit), bar dots for the phrase, the frog sitting fixed on the amp
 (no dragging; it still animates and changes mood), a speech bubble suggesting the next chords, and the amp's controls:
-weirdness knob, genre, phrase length (2/4/8 bars), frog answers on/off and Copy my rhythm. The model and the
+weirdness knob (drag up/down from where you press), genre, phrase length (2/4/8 bars), FROG Off / Answer / Jam
+(with a Stop button while jamming) and Copy my rhythm. The model and the
 fallback BPM are in the ⚙ settings panel. No mini keyboards.
 
 ## Files

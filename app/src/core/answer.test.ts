@@ -415,3 +415,58 @@ describe('scoreAnswer', () => {
     expect(scoreAnswer([ch(9, 'min'), ch(5), ch(7)], -1, phrase, C)).toBeLessThan(scoreAnswer([ch(9, 'min'), ch(5), ch(0)], -1, phrase, C));
   });
 });
+
+describe('AnswerEngine jam mode', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  function jamRig(model: ChordModel = alwaysIV) {
+    vi.setSystemTime(0);
+    const sink = new RecordingSink();
+    const settings: AnswerSettings = { answersOn: true, weirdness: 0.1, genre: 'all', bpm: 120, phraseBars: 4, continuous: true };
+    const engine = new AnswerEngine({ model, sink: () => sink, settings: () => settings, now: () => Date.now(), rng: () => 0.5 });
+    const play = (pitches: number[], at: number) => {
+      vi.advanceTimersByTime(at - Date.now());
+      for (const p of pitches) engine.note({ pitch: p, velocity: 90, time: Date.now() });
+      engine.chord(detectChord(pitches)!);
+      vi.advanceTimersByTime(1500);
+      for (const p of pitches) engine.note({ pitch: p, velocity: 0, time: Date.now() });
+    };
+    return { engine, sink, settings, play };
+  }
+
+  it("keeps playing block after block in the player's chord-change rhythm until stopped", () => {
+    const { engine, sink, play } = jamRig();
+    [V.C, V.Am, V.F, V.G].forEach((ch, i) => play(ch, i * 2000)); // one chord per bar
+    vi.advanceTimersByTime(39999 - Date.now()); // the phrase (8 s) then 4 blocks of 8 s
+    expect(sink.chordTimes()).toEqual([8000, 10000, 12000, 14000, 16000, 18000, 20000, 22000,
+      24000, 26000, 28000, 30000, 32000, 34000, 36000, 38000]);
+    engine.cancel(); // Stop
+    expect(sink.held.size).toBe(0);
+    vi.advanceTimersByTime(20000);
+    expect(sink.chordTimes()).toHaveLength(16); // nothing after Stop
+  });
+
+  it('continues the progression: each block follows on from the last (always IV here)', () => {
+    const { engine, sink, play } = jamRig();
+    play(V.C, 0);
+    play(V.G, 4000); // C then G: two changes per 4-bar phrase
+    vi.advanceTimersByTime(23999 - Date.now());
+    const names = sink.chordTimes().map((t) => detectChord(sink.log.filter((e) => e.t === t && e.velocity > 0).map((e) => e.pitch))!.name);
+    // after G the answer goes C, F; the next block carries on from F: Bb, Eb
+    expect(names).toEqual(['C', 'F', 'Bb', 'Eb']);
+    expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 20000]);
+    engine.cancel();
+  });
+
+  it('lets the player play along without stopping the jam', () => {
+    const { engine, sink, play } = jamRig();
+    play(V.C, 0);
+    play(V.Am, 4000);
+    vi.advanceTimersByTime(9000 - Date.now());
+    play(V.F, 9000); // the player joins in during the frog's first block
+    vi.advanceTimersByTime(23999 - Date.now());
+    expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 20000]);
+    engine.cancel();
+  });
+});

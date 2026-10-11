@@ -126,12 +126,12 @@ Build `createOverlay(root: HTMLElement, handlers: Handlers): { update(state: UiS
 interface UiState {   // as built (see app/src/renderer/ui/overlay.ts)
   mood: FrogMood; phase: 'idle' | 'listening' | 'playing'; bar: number; bars: number;
   yourChords: string[]; frogChords: string[]; frogIndex: number; suggestions: string[]; borrowed: boolean;
-  weirdness: number; genre: string; phraseBars: 2 | 4 | 8; answersOn: boolean; rhythm: boolean; model: string;
+  weirdness: number; genre: string; phraseBars: 2 | 4 | 8; frogMode: 'off' | 'answer' | 'jam'; rhythm: boolean; model: string;
   bpm: number; liveTempo: number | null; liveBar: number | null; status: string;
 }
 interface Handlers {
   onWeirdness(v: number): void; onGenre(g: string): void; onPhraseBars(b: 2 | 4 | 8): void;
-  onAnswersToggle(on: boolean): void; onRhythm(on: boolean): void; onModel(m: string): void; onBpm(bpm: number): void;
+  onFrogMode(m: 'off' | 'answer' | 'jam'): void; onStop(): void; onRhythm(on: boolean): void; onModel(m: string): void; onBpm(bpm: number): void;
 }
 ```
 

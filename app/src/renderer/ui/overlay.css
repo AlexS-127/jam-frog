@@ -52,13 +52,11 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
   padding: 14px 16px; border: 1px solid #526851; border-radius: 10px 10px 14px 14px;
   background: linear-gradient(145deg, #374838, #1c2b20 64%, #152219); box-shadow: inset 0 3px 0 #71826a, 0 8px 16px rgba(0, 0, 0, .3); }
 .jf-knob-control { display: grid; justify-items: center; gap: 6px; color: #aebda9; font-size: 10px; letter-spacing: .1em; }
-.jf-knob-wrap { position: relative; width: 74px; height: 74px; }
+.jf-knob { position: relative; display: block; width: 74px; height: 74px; cursor: ns-resize; touch-action: none; outline: none; }
 .jf-knob-visual { position: absolute; inset: 3px; border: 3px solid #687b63; border-radius: 50%;
   background: radial-gradient(circle at 35% 28%, #63735b, #263529 64%, #141e16); box-shadow: 0 3px 5px #0c130e, inset 0 1px 2px rgba(255, 255, 255, .18); }
 .jf-knob-visual::before { content: ""; position: absolute; width: 4px; height: 22px; top: 4px; left: calc(50% - 2px); border-radius: 2px;
   background: #d7e2ba; transform-origin: 2px 30px; transform: rotate(var(--knob-angle, -72deg)); }
-.jf-knob-wrap input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: .01; cursor: ew-resize; }
-.jf-knob-wrap:focus-within .jf-knob-visual { outline: 2px solid #c7ec88; outline-offset: 2px; }
 .jf-knob-control output { color: #d4ebc6; font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .jf-amp-right { display: grid; gap: 8px; }
 .jf-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #aebda9; font-size: 10px; letter-spacing: .1em; }
@@ -68,6 +66,12 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-segments button { flex: 1; height: 28px; border: 0; background: #18251b; color: #cfe0ca; font: inherit; font-size: 13px; cursor: pointer; }
 .jf-segments button + button { border-left: 1px solid #75866a; }
 .jf-segments button[aria-checked="true"] { background: var(--accent); color: #0d1a10; font-weight: 700; }
+.jf-display-right { display: flex; align-items: center; gap: 10px; }
+.jf-stop { height: 24px; padding: 0 10px; border: 1px solid rgba(227, 196, 107, .6); border-radius: 6px; background: rgba(227, 196, 107, .14);
+  color: var(--gold); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.jf-stop:hover { background: rgba(227, 196, 107, .28); }
+.jf-stop[hidden] { display: none; }
+.jf-segments[aria-label="What the frog does"] button { font-size: 12px; }
 .jf-check { display: flex; align-items: center; gap: 8px; color: #dce9d8; font-size: 13px; cursor: pointer; }
 .jf-check input { width: 16px; height: 16px; margin: 0; accent-color: #91d77d; }
 
@@ -85,5 +89,6 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-done { justify-self: end; padding: 6px 16px; border: 1px solid #75866a; border-radius: 8px; background: #24412a; color: inherit; font: inherit; cursor: pointer; }
 
 .jf-shell :focus-visible { outline: 2px solid #c7ec88; outline-offset: 1px; }
+.jf-shell .jf-knob:focus-visible { outline: none; } /* no ring around the knob */
 .jf-shell button, .jf-shell input, .jf-shell select, .jf-shell label { -webkit-app-region: no-drag; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }

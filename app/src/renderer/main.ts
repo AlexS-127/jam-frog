@@ -6,7 +6,7 @@ import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord, FrogMood, NoteEvent, Suggestion } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { loadModels } from './models';
-import { createOverlay, type UiState } from './ui/overlay';
+import { createOverlay, type FrogMode, type UiState } from './ui/overlay';
 
 // The app: notes in from Live (Frog Ear, Max for Live, over OSC) -> chord detection -> suggestions in the
 // frog's speech bubble; the AnswerEngine answers each 2/4/8-bar phrase on the frog track (Frog Voice).
@@ -17,7 +17,7 @@ const settings = {
   model: 'gru',
   genre: 'all',
   weirdness: 0.2,
-  answersOn: true,
+  frogMode: 'answer' as FrogMode,
   phraseBars: 4 as 2 | 4 | 8,
   bpm: 120,
   rhythm: false,
@@ -50,7 +50,7 @@ let status = '';
 const answers = new AnswerEngine({
   model,
   sink: () => sink,
-  settings: () => ({ ...settings }),
+  settings: () => ({ ...settings, answersOn: settings.frogMode !== 'off', continuous: settings.frogMode === 'jam' }),
   onPlan: (p, pr) => {
     if (pr.status === 'playing' && progress.status !== 'playing') {
       const sinceBar = performance.now() - lastBarAt;
@@ -104,9 +104,13 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
     settings.genre = g;
     refreshSuggestions();
   },
-  onAnswersToggle(on) {
-    settings.answersOn = on;
-    if (!on) answers.cancel();
+  onFrogMode(mode) {
+    settings.frogMode = mode;
+    answers.cancel(); // switching mode stops whatever the frog was doing
+    render();
+  },
+  onStop() {
+    answers.cancel();
     render();
   },
   onPhraseBars(bars) {
@@ -147,7 +151,7 @@ function uiState(): UiState {
     weirdness: settings.weirdness,
     genre: settings.genre,
     phraseBars: settings.phraseBars,
-    answersOn: settings.answersOn,
+    frogMode: settings.frogMode,
     rhythm: settings.rhythm,
     model: settings.model,
     bpm: settings.bpm,
