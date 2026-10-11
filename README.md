@@ -16,8 +16,8 @@ You play chords in Ableton. A frog overlay floats above Live and:
 
 The frog sits on a guitar amp: the head holds the controls, and the cabinet is the screen. The screen shows the chords
 bar by bar, each as wide as it lasts, so you can see when the changes come; the key centre sits above them and lights
-up when it changes. The frog dances in time with Live's tempo and dresses for the genre you pick (Kevin's outfits:
-jazz, rock, country and electronic; pop and all styles keep the classic frog with its keyboard).
+up when it changes. The frog dances in time with Live's tempo and dresses for the genre you pick (Kevin's animated
+outfits, each with its own instrument poses; all styles keeps the classic frog with its keyboard).
 
 A weirdness knob and a genre picker reshape both. The picker has six genres: jazz, rock, electronic, country, pop
 (which also draws on pop rock songs) and punk (also metal and alternative). The genre also changes the frog's sound in Live: each genre can

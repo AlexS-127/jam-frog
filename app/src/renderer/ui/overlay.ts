@@ -121,6 +121,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   shell.innerHTML = `
     <section class="jf-scene">
       <div class="jf-bubble" data-ref="bubble" role="status"></div>
+      <svg class="jf-bubble-tail" data-ref="bubble-tail" aria-hidden="true"><path></path></svg>
       <div class="jf-pet-stage" data-ref="pet-stage"></div>
     </section>
     <div class="jf-rig">
@@ -205,6 +206,28 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
 
   const q = <T extends HTMLElement>(selector: string) => shell.querySelector<T>(selector)!;
   const pet = createFrogPet(q('[data-ref="pet-stage"]'), { scale: 0.8, interactive: false, initialPosition: { x: 24, y: 9999 } });
+  const scene = q<HTMLElement>('.jf-scene');
+  const bubble = q<HTMLElement>('[data-ref="bubble"]');
+  const tail = shell.querySelector<SVGSVGElement>('[data-ref="bubble-tail"]')!;
+  const tailPath = tail.querySelector('path')!;
+  let mouth = { x: 105, y: 95 };
+  const placeBubble = () => {
+    const height = bubble.offsetHeight;
+    const top = Math.max(8, Math.min(scene.clientHeight - height - 8, mouth.y - height / 2));
+    bubble.style.top = `${top}px`;
+    const joinY = Math.max(top + 14, Math.min(top + height - 14, mouth.y));
+    const edgeX = bubble.offsetLeft + 2;
+    tail.setAttribute('viewBox', `0 0 ${scene.clientWidth} ${scene.clientHeight}`);
+    tailPath.setAttribute('d', `M ${mouth.x} ${mouth.y} L ${edgeX} ${joinY - 9} L ${edgeX} ${joinY + 9} Z`);
+  };
+  pet.subscribe((snapshot) => {
+    if (Math.abs(snapshot.mouth.x - mouth.x) < .5 && Math.abs(snapshot.mouth.y - mouth.y) < .5) return;
+    mouth = snapshot.mouth;
+    placeBubble();
+  });
+  const bubbleSize = new ResizeObserver(placeBubble);
+  bubbleSize.observe(bubble);
+  bubbleSize.observe(scene);
   const knob = q<HTMLElement>('[data-control="weirdness"]');
   const genre = q<HTMLSelectElement>('[data-control="genre"]');
   const rhythm = q<HTMLInputElement>('[data-control="rhythm"]');
@@ -364,7 +387,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       key.classList.toggle('is-changed', !!state.keyChange);
 
       // The frog's speech bubble: the jam report, a key change, or what to play next.
-      const bubble = q('[data-ref="bubble"]');
       const reportTalk = state.reportBubble && state.report && state.phase === 'idle';
       // redraw only when it changes (update() runs often, and a rebuilt button would lose its click)
       const said = JSON.stringify([reportTalk && state.report!.summary, reportTalk && state.reportPending, state.keyChange, state.phase, state.frogMode, state.suggestions]);
@@ -383,6 +405,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       else if (state.phase === 'playing') bubble.replaceChildren(state.frogMode === 'jam' ? 'Jamming! Play along, or press Stop.' : 'Listen… then your turn!');
       else if (state.suggestions.length) bubble.replaceChildren(...suggestionText(state.suggestions));
       else bubble.replaceChildren('Play me a chord!');
+      placeBubble();
       }
 
       q('[data-action="report"]').hidden = !state.report;
@@ -415,6 +438,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     },
     destroy(): void {
       abort.abort();
+      bubbleSize.disconnect();
       pet.destroy();
       shell.remove();
     },

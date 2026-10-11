@@ -15,7 +15,7 @@ The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from
 
 The overlay (440×640) has no background of its own: the frog sits on a guitar amp whose head holds the controls
 (logo plate, ⚙, ×, then the control panel) and whose cabinet front is the screen, set in grille cloth. The frog wears
-the genre's outfit (`frog/looks.ts`, Kevin's `genre-outfits.png` from the showcase site). Before that, it was laid
+the genre's outfit (`frog/looks.ts`, with eight-frame idle and eight-frame performance sheets in `site/assets/genre-animations/`). Before that, it was laid
 out as Alex asked on Saturday night: a big display that shows **your chords** while you play
 and **the frog's** while it plays, bar by bar (a box per bar, each chord as wide as it lasts, a dotted stretch where a
 chord is held over; the sounding chord lit; in Jam mode the next block underneath in blue, so you can get ready), the
@@ -33,6 +33,7 @@ fallback BPM are in the ⚙ settings panel. No mini keyboards.
 - `frog/motion.ts`: the available clip definitions, frame selection, bounds, and fling calculations.
 - `frog/atlas.ts`: source rectangles and jump lift; fixed scale and resting foot anchor.
 - `frog/green-frog.png` and `frog/keyboard-frog.png`: original generated prototype artwork.
+- `shared/genre-animations.ts` and `site/assets/genre-animations/`: measured crops and complete genre sprites used by both the app and showcase.
 - `frog/artwork.md`: generation prompt, provenance, and references.
 - `frog/*.test.ts`: controller events/lifecycle and pure frame/movement tests using the existing Vitest setup.
 

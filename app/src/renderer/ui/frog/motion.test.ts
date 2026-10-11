@@ -4,7 +4,8 @@ import {
   ACTIONS, ART_SCALE, PET_SIZE, beatsPerLoop, centeredPosition, clampPosition, frameAt,
   movementBounds, releaseVelocity, restingAction, stepFling, syncedFrame, type Action,
 } from './motion';
-import { lookFor, OUTFIT_MOVES, OUTFIT_SHEET, OUTFITS, outfitScale } from './looks';
+import { lookFor, OUTFIT_MOVES, OUTFIT_SHEETS, outfitScale } from './looks';
+import { GENRE_ANIMATIONS, GENRE_FRAME_COUNT, GENRE_LOOKS, genreFrame } from '../../../../../shared/genre-animations';
 
 describe('frog sprite frames', () => {
   for (const action of Object.keys(ACTIONS) as Action[]) {
@@ -89,18 +90,26 @@ describe('dancing in time', () => {
 
 describe('genre outfits', () => {
   it('dresses the frog for its genre, the classic frog otherwise', () => {
-    expect(['jazz', 'rock', 'punk', 'country', 'electronic', 'pop', 'all'].map(lookFor))
-      .toEqual(['jazz', 'rock', 'rock', 'country', 'electronic', 'classic', 'classic']);
+    expect(['jazz', 'soul', 'rock', 'alternative', 'punk', 'metal', 'country', 'electronic', 'rap', 'pop', 'all'].map(lookFor))
+      .toEqual(['jazz', 'jazz', 'rock', 'alternative', 'punk', 'punk', 'country', 'electronic', 'rap', 'pop', 'classic']);
   });
-  it('has a movement for every frame of every action, and every outfit fits the canvas mid-jump', () => {
-    for (const [action, clip] of Object.entries(ACTIONS)) expect(OUTFIT_MOVES[action as Action]).toHaveLength(clip.frames);
-    for (const look of Object.keys(OUTFITS) as (keyof typeof OUTFITS)[]) {
-      const o = OUTFITS[look];
+  it('maps every idle and instrument-playing frame into its own sheet and fits the canvas', () => {
+    for (const action of ['waving', 'jumping', 'failed', 'review'] as const) {
+      expect(OUTFIT_MOVES[action]).toHaveLength(ACTIONS[action].frames);
+    }
+    for (const look of GENRE_LOOKS) {
+      const sheet = OUTFIT_SHEETS[look];
       const s = outfitScale(look);
-      expect(o.width * s * 1.03 + 4).toBeLessThanOrEqual(PET_SIZE.width);
-      expect(o.height * s * 1.03 + 17 + 12).toBeLessThanOrEqual(PET_SIZE.height);
-      expect(o.x + o.width).toBeLessThanOrEqual(OUTFIT_SHEET.width);
-      expect(o.y + o.height).toBeLessThanOrEqual(OUTFIT_SHEET.height);
+      expect(sheet).toEqual(GENRE_ANIMATIONS[look]);
+      for (let index = 0; index < GENRE_FRAME_COUNT * 2; index += 1) {
+        const frame = genreFrame(look, index);
+        expect(frame.x).toBeGreaterThanOrEqual(0);
+        expect(frame.y).toBeGreaterThanOrEqual(0);
+        expect(frame.x + frame.width).toBeLessThanOrEqual(sheet.width);
+        expect(frame.y + frame.height).toBeLessThanOrEqual(sheet.height);
+        expect(frame.width * s * 1.03 + 4).toBeLessThanOrEqual(PET_SIZE.width);
+        expect(frame.height * s * 1.03 + 30).toBeLessThanOrEqual(PET_SIZE.height + 0.001);
+      }
     }
   });
 });
