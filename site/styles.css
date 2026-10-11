@@ -148,6 +148,31 @@ h2 { margin: 0; color: var(--cream); font-size: clamp(36px, 5.2vw, 64px); font-w
 .response-points small { margin-top: 5px; color: #91a087; font-size: 10px; line-height: 1.6; }
 .inline-code-link { margin-top: 27px; }
 
+.looks-section { padding-block: 112px 104px; }
+.looks-heading { display: flex; align-items: end; justify-content: space-between; gap: 45px; }
+.looks-heading .section-intro { max-width: 630px; }
+.looks-note { max-width: 290px; padding: 16px 18px; border: 1px solid var(--line); background: #0b1b11; box-shadow: 4px 4px 0 #030904; }
+.looks-star { color: var(--gold); font-size: 20px; }
+.looks-note p { margin: 8px 0 13px; color: #9eae96; font-size: 10px; line-height: 1.7; }
+.looks-note strong { color: var(--cream); }
+.looks-note a { color: var(--lime); font-size: 9px; text-decoration: none; }
+.looks-note a span { color: var(--gold); }
+.look-picker { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 46px; }
+.look-card { position: relative; display: flex; min-width: 0; flex-direction: column; padding: 8px; border: 1px solid #31563a; background: #0a190f; box-shadow: 4px 4px 0 #030904; cursor: pointer; text-align: left; transition: transform .14s steps(2), border-color .14s steps(2), box-shadow .14s steps(2); }
+.look-card:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #030904; }
+.look-card.is-selected { border-color: var(--lime); box-shadow: 4px 4px 0 #030904, inset 0 0 0 2px rgba(164, 229, 109, .12); }
+.look-art { display: block; width: 100%; aspect-ratio: 1.094 / 1; border-bottom: 1px solid rgba(164, 229, 109, .2); background-color: #0d2415; background-image: url("./assets/frog-genre-outfits.png"); background-repeat: no-repeat; background-size: 200% 200%; image-rendering: pixelated; }
+.look-jazz { background-position: left top; }
+.look-rock { background-position: right top; }
+.look-country { background-position: left bottom; }
+.look-electronic { background-position: right bottom; }
+.look-caption { display: flex; min-height: 52px; flex-direction: column; justify-content: center; gap: 5px; padding: 4px 8px 0; }
+.look-caption strong { color: var(--cream); font-size: 14px; }
+.look-caption small { color: #93a48b; font-size: 9px; line-height: 1.4; }
+.look-status { position: absolute; top: 17px; right: 16px; padding: 5px 6px; background: #07120b; color: #82937a; font-size: 7px; letter-spacing: .07em; }
+.look-card.is-selected .look-status { color: var(--lime); }
+.look-announcement { min-height: 15px; margin: 22px 0 0; color: var(--gold); font-size: 10px; }
+
 .models-section { display: grid; grid-template-columns: .7fr 1.3fr; gap: clamp(38px, 8vw, 104px); align-items: center; padding-block: 128px 90px; }
 .model-intro>p:last-child { font-size: 13px; }
 .model-intro code { padding: 2px 5px; border: 1px solid var(--line); color: var(--lime); font-size: .9em; }
@@ -221,6 +246,8 @@ h2 { margin: 0; color: var(--cream); font-size: clamp(36px, 5.2vw, 64px); font-w
   .model-note { grid-column: 1; margin-top: 0; }
   .jam-facts { grid-template-columns: 1fr; gap: 36px; }
   .response-section { gap: 50px; }
+  .look-picker { gap: 11px; }
+  .look-caption { padding-inline: 5px; }
 }
 @media (max-width: 640px) {
   .site-header { min-height: 66px; gap: 10px; padding-inline: 17px; }
@@ -267,6 +294,14 @@ h2 { margin: 0; color: var(--cream); font-size: clamp(36px, 5.2vw, 64px); font-w
   .frog-keyboard { transform: translateX(-58%) scale(.78); }
   .amp-stack { right: 6%; bottom: 17%; transform: scale(.82); transform-origin: bottom right; }
   .response-copy>p:not(.section-index) { font-size: 13px; }
+  .looks-section { padding-block: 76px 68px; }
+  .looks-heading { align-items: stretch; flex-direction: column; gap: 25px; }
+  .looks-note { max-width: none; }
+  .look-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 31px; }
+  .look-caption strong { font-size: 12px; }
+  .look-caption small { font-size: 8px; }
+  .look-status { top: 13px; right: 13px; font-size: 6px; }
+  .look-announcement { font-size: 9px; line-height: 1.6; }
   .models-section { gap: 34px; padding-block: 79px 64px; }
   .model-board-head { align-items: flex-start; flex-direction: column; gap: 6px; font-size: 8px; }
   .model-columns { grid-template-columns: 1fr 25px 1fr; padding: 16px 10px 13px; }

@@ -47,6 +47,27 @@ buttons.forEach((button) => {
   button.addEventListener('click', () => selectStep(Number(button.dataset.step)));
 });
 
+const lookButtons = [...document.querySelectorAll('[data-look]')];
+const lookAnnouncement = document.querySelector('[data-look-announcement]');
+const lookMessages = {
+  jazz: 'Jazz frog is ready to sit in. Try another look.',
+  rock: 'Rock frog is ready to turn up the amp.',
+  country: 'Country frog is ready to ride the changes.',
+  electronic: 'Electronic frog is ready to find the pulse.',
+};
+
+lookButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    lookButtons.forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle('is-selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
+      item.querySelector('.look-status').textContent = selected ? 'SELECTED' : 'SELECT';
+    });
+    lookAnnouncement.textContent = lookMessages[button.dataset.look];
+  });
+});
+
 document.addEventListener('keydown', (event) => {
   if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
   if (!buttons.includes(document.activeElement)) return;

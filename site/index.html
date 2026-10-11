@@ -111,9 +111,35 @@
         </div>
       </section>
 
+      <section class="looks-section section-wrap" id="looks" aria-labelledby="looks-title">
+        <div class="looks-heading">
+          <div class="section-intro">
+            <p class="section-index">03 / PICK A GENRE</p>
+            <h2 id="looks-title">Same frog.<br />New stage look.</h2>
+            <p>Four pixel-art outfits for four of Jam Frog’s supported styles. Pick a card to give the little player a different gig-day look.</p>
+          </div>
+          <div class="looks-note"><span class="looks-star" aria-hidden="true">✦</span><p><strong>Just for the showcase.</strong> The app’s genre setting guides its chord model; these outfit changes are a website illustration.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/vocab.ts" target="_blank" rel="noreferrer">See supported genres <span aria-hidden="true">↗</span></a></div>
+        </div>
+        <div class="look-picker" role="group" aria-label="Choose a frog genre outfit">
+          <button class="look-card is-selected" type="button" data-look="jazz" aria-pressed="true" aria-label="Jazz outfit: beret and gold scarf">
+            <span class="look-art look-jazz" aria-hidden="true"></span><span class="look-caption"><strong>Jazz</strong><small>Beret · gold scarf</small></span><span class="look-status" aria-hidden="true">SELECTED</span>
+          </button>
+          <button class="look-card" type="button" data-look="rock" aria-pressed="false" aria-label="Rock outfit: studded vest and red bandana">
+            <span class="look-art look-rock" aria-hidden="true"></span><span class="look-caption"><strong>Rock</strong><small>Studded vest · bandana</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+          <button class="look-card" type="button" data-look="country" aria-pressed="false" aria-label="Country outfit: cowboy hat and orange neckerchief">
+            <span class="look-art look-country" aria-hidden="true"></span><span class="look-caption"><strong>Country</strong><small>Cowboy hat · neckerchief</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+          <button class="look-card" type="button" data-look="electronic" aria-pressed="false" aria-label="Electronic outfit: oversized headphones">
+            <span class="look-art look-electronic" aria-hidden="true"></span><span class="look-caption"><strong>Electronic</strong><small>Headphones · cyan pixels</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+        </div>
+        <p class="look-announcement" data-look-announcement aria-live="polite">Jazz frog is ready to sit in. Try another look.</p>
+      </section>
+
       <section class="models-section section-wrap" id="models" aria-labelledby="models-title">
         <div class="section-intro model-intro">
-          <p class="section-index">03 / TWO LOCAL MODELS</p>
+          <p class="section-index">04 / TWO LOCAL MODELS</p>
           <h2 id="models-title">Same jam.<br />Different instincts.</h2>
           <p>Both models implement the same <code>ChordModel</code> interface and run on your Mac. A blind listening test lets the team compare their musical continuations.</p>
         </div>
@@ -140,7 +166,7 @@
       </section>
 
       <section class="jam-facts section-wrap" aria-labelledby="facts-title">
-        <div class="facts-heading"><p class="section-index">04 / BUILT FOR THE JAM</p><h2 id="facts-title">Small frog.<br />Full-stack rhythm section.</h2></div>
+        <div class="facts-heading"><p class="section-index">05 / BUILT FOR THE JAM</p><h2 id="facts-title">Small frog.<br />Full-stack rhythm section.</h2></div>
         <div class="fact-list">
           <article class="fact-row"><span class="fact-icon" aria-hidden="true">⌂</span><h3>Runs on your Mac</h3><p>Bundled models, no account, no analytics, no cookies, and no persistent note storage.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/README.md" target="_blank" rel="noreferrer">Project README <span aria-hidden="true">↗</span></a></article>
           <article class="fact-row"><span class="fact-icon" aria-hidden="true">⌁</span><h3>Two ways into Live</h3><p>Max for Live over localhost OSC is the primary bridge. IAC virtual MIDI ports are the fallback.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Bridge setup <span aria-hidden="true">↗</span></a></article>
@@ -151,7 +177,7 @@
       <section class="setup-section" id="setup" aria-labelledby="setup-title">
         <div class="setup-inner">
           <div class="setup-copy">
-            <p class="section-index">05 / GET IN THE ROOM</p>
+            <p class="section-index">06 / GET IN THE ROOM</p>
             <h2 id="setup-title">Bring a Mac.<br />Bring a progression.</h2>
             <p>Jam Frog is a desktop overlay for Ableton Live 12 Suite. The Max for Live devices carry notes and Live’s bar clock between the set and the app.</p>
             <a class="pixel-button pixel-button-bright" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Open the project <span aria-hidden="true">↗</span></a>
