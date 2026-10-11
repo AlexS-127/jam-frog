@@ -25,8 +25,10 @@ const MOVEMENT_LABELS = {
 };
 
 const image = new Image();
+// Mouth centers in the source sheet stay accurate even when the instrument
+// changes the character's crop width. The tongue shares the sprite transform.
 const TONGUE_ANCHORS = {
-  jazz: [0.5, 0.35], rock: [0.5, 0.4], country: [0.5, 0.36], electronic: [0.5, 0.43],
+  jazz: [362, 337], rock: [947, 337], country: [362, 887], electronic: [947, 887],
 };
 const frogs = [...document.querySelectorAll('[data-frog-look]')].map((canvas, index) => ({
   canvas,
@@ -82,25 +84,53 @@ function poseFor(action, elapsed, loop) {
   return MOVEMENTS[action][index];
 }
 
-function tongueIsOut(elapsed, index) {
-  const interval = 8200;
-  const phase = (elapsed + index * 1700) % interval;
-  return phase >= 5700 && phase < 6500;
+function tonguePose(elapsed, index) {
+  const interval = 8600 + index * 730;
+  const phase = (elapsed + index * 1700) % interval - 5700;
+  if (phase < 0 || phase >= 380) return null;
+
+  // Open, flick outward quickly, then draw the tongue back into the mouth.
+  const smooth = (value) => value * value * (3 - 2 * value);
+  const reach = phase < 40 ? 0
+    : phase < 130 ? 1 - (1 - (phase - 40) / 90) ** 3
+      : phase < 160 ? 1
+        : phase < 340 ? 1 - smooth((phase - 160) / 180) : 0;
+  const open = phase < 40 ? smooth(phase / 40)
+    : phase < 340 ? 1 : 1 - smooth((phase - 340) / 40);
+  return { reach, open };
 }
 
-function drawTongue(context, look, x, y, width, height) {
+function drawTongue(context, look, sprite, scale, x, y, pose) {
   const [mouthX, mouthY] = TONGUE_ANCHORS[look];
-  const pixel = Math.max(2, Math.round(width / 60));
-  const left = x + width * mouthX - pixel * 2;
-  const top = y + height * mouthY;
+  const pixel = Math.max(2, Math.round(10 * scale));
+  const left = Math.round(x + (mouthX - sprite.x) * scale);
+  const top = Math.round(y + (mouthY - sprite.y) * scale);
+  const opening = Math.round(pixel * pose.open);
+  if (!opening) return;
   context.fillStyle = '#191b13';
-  context.fillRect(Math.round(left - pixel), Math.round(top), pixel * 6, pixel * 3);
+  context.fillRect(left - pixel * 2, top - opening, pixel * 4, opening * 2);
+  if (pose.reach <= 0) return;
+
+  // A shallow arc keeps the flick clear of the instruments. Sample it on a
+  // pixel grid, with a narrow shaft and one rounded, unforked sticky tip.
+  const length = Math.round(150 * scale * pose.reach / pixel);
+  if (!length) return;
+  const points = Array.from({ length: length + 1 }, (_, step) => {
+    const progress = step / length;
+    return [
+      left - step * pixel,
+      top + Math.round((26 * scale * pose.reach * progress ** 2) / pixel) * pixel,
+    ];
+  });
+  const [tipX, tipY] = points[points.length - 1];
+  context.fillStyle = '#812e46';
+  points.forEach(([px, py]) => context.fillRect(px - 1, py - 1, pixel + 2, pixel + 2));
+  context.fillRect(tipX - 1, Math.round(tipY - pixel / 2) - 1, pixel * 2 + 2, pixel * 2 + 2);
   context.fillStyle = '#e94e68';
-  context.fillRect(Math.round(left), Math.round(top + pixel), pixel * 4, pixel * 3);
+  points.forEach(([px, py]) => context.fillRect(px, py, pixel, pixel));
+  context.fillRect(tipX, Math.round(tipY - pixel / 2), pixel * 2, pixel * 2);
   context.fillStyle = '#ff8c9c';
-  context.fillRect(Math.round(left + pixel), Math.round(top + pixel), pixel * 2, pixel);
-  context.fillStyle = '#b82f55';
-  context.fillRect(Math.round(left + pixel), Math.round(top + pixel * 4), pixel * 2, pixel * 2);
+  context.fillRect(tipX, Math.round(tipY - pixel / 2), pixel, 1);
 }
 
 function paint(frog, now) {
@@ -131,8 +161,10 @@ function paint(frog, now) {
     sprite.x, sprite.y, sprite.width, sprite.height,
     -width / 2, -height / 2, width, height,
   );
-  if ((action === 'idle' || action === 'waiting') && tongueIsOut(elapsed, frog.index)) {
-    drawTongue(context, frog.look, -width / 2, -height / 2, width, height);
+  const tongue = !reducedMotion.matches && (action === 'idle' || action === 'waiting')
+    ? tonguePose(elapsed, frog.index) : null;
+  if (tongue) {
+    drawTongue(context, frog.look, sprite, scale, -width / 2, -height / 2, tongue);
   }
   context.restore();
 }
