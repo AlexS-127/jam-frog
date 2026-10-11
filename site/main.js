@@ -61,9 +61,12 @@ lookButtons.forEach((button) => {
     lookButtons.forEach((item) => {
       const selected = item === button;
       item.classList.toggle('is-selected', selected);
+      item.classList.remove('is-changing');
       item.setAttribute('aria-pressed', String(selected));
       item.querySelector('.look-status').textContent = selected ? 'SELECTED' : 'SELECT';
     });
+    window.setTimeout(() => button.classList.add('is-changing'), 0);
+    window.setTimeout(() => button.classList.remove('is-changing'), 420);
     lookAnnouncement.textContent = lookMessages[button.dataset.look];
   });
 });

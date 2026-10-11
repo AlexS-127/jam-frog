@@ -161,11 +161,18 @@ h2 { margin: 0; color: var(--cream); font-size: clamp(36px, 5.2vw, 64px); font-w
 .look-card { position: relative; display: flex; min-width: 0; flex-direction: column; padding: 8px; border: 1px solid #31563a; background: #0a190f; box-shadow: 4px 4px 0 #030904; cursor: pointer; text-align: left; transition: transform .14s steps(2), border-color .14s steps(2), box-shadow .14s steps(2); }
 .look-card:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #030904; }
 .look-card.is-selected { border-color: var(--lime); box-shadow: 4px 4px 0 #030904, inset 0 0 0 2px rgba(164, 229, 109, .12); }
-.look-art { display: block; width: 100%; aspect-ratio: 1.094 / 1; border-bottom: 1px solid rgba(164, 229, 109, .2); background-color: #0d2415; background-image: url("./assets/frog-genre-outfits.png"); background-repeat: no-repeat; background-size: 200% 200%; image-rendering: pixelated; }
-.look-jazz { background-position: left top; }
-.look-rock { background-position: right top; }
-.look-country { background-position: left bottom; }
-.look-electronic { background-position: right bottom; }
+.look-art { position: relative; display: block; width: 100%; aspect-ratio: 1.094 / 1; overflow: hidden; border-bottom: 1px solid rgba(164, 229, 109, .2); background-color: #0d2415; }
+.look-art::before { position: absolute; inset: 0 0 1px; background-image: url("./assets/frog-genre-outfits.png"); background-repeat: no-repeat; background-size: 200% 200%; image-rendering: pixelated; content: ""; animation-duration: 1.2s; animation-timing-function: steps(2, end); animation-iteration-count: infinite; }
+.look-jazz::before { background-position: left top; animation-name: look-jazz-sway; }
+.look-rock::before { background-position: right top; animation-name: look-rock-bob; animation-duration: .82s; }
+.look-country::before { background-position: left bottom; animation-name: look-country-strum; animation-duration: 1.05s; }
+.look-electronic::before { background-position: right bottom; animation-name: look-edm-bounce; animation-duration: .66s; }
+.look-card.is-changing .look-art::before { animation-name: look-select-pop; animation-duration: 360ms; animation-timing-function: steps(4, end); animation-iteration-count: 1; }
+@keyframes look-jazz-sway { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1px, -1px); } 50% { transform: translate(0, -2px); } 75% { transform: translate(-1px, -1px); } }
+@keyframes look-rock-bob { 0%, 100% { transform: translate(0, 0); } 36% { transform: translate(0, -3px); } 52% { transform: translate(1px, -3px); } 68% { transform: translate(0, 1px); } }
+@keyframes look-country-strum { 0%, 100% { transform: translate(0, 0); } 35% { transform: translate(-1px, -1px); } 70% { transform: translate(1px, -1px); } }
+@keyframes look-edm-bounce { 0%, 100% { transform: translate(0, 0); } 38% { transform: translate(0, -4px); } 68% { transform: translate(0, -1px); } }
+@keyframes look-select-pop { 0%, 100% { transform: translateY(0); } 42% { transform: translateY(-7px); } 72% { transform: translateY(1px); } }
 .look-caption { display: flex; min-height: 52px; flex-direction: column; justify-content: center; gap: 5px; padding: 4px 8px 0; }
 .look-caption strong { color: var(--cream); font-size: 14px; }
 .look-caption small { color: #93a48b; font-size: 9px; line-height: 1.4; }
@@ -341,4 +348,5 @@ h2 { margin: 0; color: var(--cream); font-size: clamp(36px, 5.2vw, 64px); font-w
 @media (prefers-reduced-motion: reduce) {
   :root { scroll-behavior: auto; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  .look-art::before { animation: none !important; }
 }
