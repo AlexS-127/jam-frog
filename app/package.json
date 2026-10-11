@@ -8,6 +8,7 @@
     "dev": "tsc -p tsconfig.electron.json && node scripts/dev.mjs",
     "build": "tsc -p tsconfig.electron.json && vite build",
     "site": "vite --config vite.site.config.mts",
+    "site:build": "vite build --config vite.site.config.mts",
     "start": "npm run build && electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.electron.json"
@@ -20,6 +21,7 @@
     "vitest": "5.0.3"
   },
   "dependencies": {
+    "@fontsource-variable/nunito": "5.2.6",
     "node-osc": "11.7.1"
   }
 }

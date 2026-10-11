@@ -1,6 +1,8 @@
 node_modules/
 app/dist/
 app/dist-electron/
+site/dist/
+site/.vite/
 .DS_Store
 __pycache__/
 *.pyc

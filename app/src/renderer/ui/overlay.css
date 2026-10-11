@@ -1,40 +1,53 @@
 /* Jam Frog overlay: 440x640, frameless and transparent (Electron). No panel behind it: just the frog, sitting
    on a guitar amp whose head holds the controls and whose cabinet is the screen. */
+/* Nunito, bundled with the app (no font is fetched from the network) */
+@import '@fontsource-variable/nunito';
 .jf-shell, .jf-shell *, .jf-shell *::before, .jf-shell *::after { box-sizing: border-box; }
 html, body, #overlay-root { width: 100%; height: 100%; margin: 0; }
-html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e8f3e6; }
+html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e8f3e6; }
 #overlay-root { width: 440px; height: 640px; margin: 0 auto; }
 
 .jf-shell {
+  font-family: "Nunito Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --accent: #a4e58e; --muted: #91a894; --line: rgba(164, 229, 142, .18); --gold: #e3c46b;
-  --tolex: #1c1d1b; --piping: #b9a46a;
+  --amp-border: #080a08; --amp-face: #1c1d1b; --amp-panel: #2c392c; --amp-panel-line: rgba(255, 255, 255, .08);
+  --amp-grille: #2c271f; --amp-grille-line: #65583f; --amp-trim: #b9a46a; --amp-accent: #e3c46b;
+  --amp-badge: #f1e3b1; --amp-screen: #07120b; --amp-screen-hi: #0b1a10; --amp-shadow: rgba(0, 0, 0, .52);
+  --piping: var(--amp-trim);
   position: relative; width: 440px; height: 640px; overflow: hidden; padding: 6px 10px 4px;
   display: flex; flex-direction: column; background: transparent; color: #edf6e9;
 }
+.jf-shell[data-amp-look="jazz"] { --amp-face: #6f572f; --amp-panel: #8c713b; --amp-grille: #b99555; --amp-grille-line: #70512a; --amp-trim: #ead08d; --amp-accent: #f6df93; --amp-badge: #2d2113; --amp-screen: #102516; --amp-screen-hi: #17351f; }
+.jf-shell[data-amp-look="rock"] { --amp-face: #121312; --amp-panel: #252320; --amp-grille: #171717; --amp-grille-line: #534b39; --amp-trim: #d0a64f; --amp-accent: #f0c45e; --amp-badge: #f7e1a2; --amp-screen: #08130c; --amp-screen-hi: #0d2111; }
+.jf-shell[data-amp-look="punk"] { --amp-face: #181816; --amp-panel: #2b2a25; --amp-grille: #211c1d; --amp-grille-line: #6a3433; --amp-trim: #d7d2bd; --amp-accent: #ff524c; --amp-badge: #fff4cf; --amp-screen: #120d0e; --amp-screen-hi: #241314; }
+.jf-shell[data-amp-look="alternative"] { --amp-face: #28393c; --amp-panel: #385156; --amp-grille: #9aa7a0; --amp-grille-line: #4c6560; --amp-trim: #d6d3bd; --amp-accent: #9fd0bd; --amp-badge: #edf2dd; --amp-screen: #091719; --amp-screen-hi: #10292c; }
+.jf-shell[data-amp-look="pop"] { --amp-face: #eee1c5; --amp-panel: #d897a0; --amp-grille: #f2d4d0; --amp-grille-line: #b86e7a; --amp-trim: #b28743; --amp-accent: #f5d86a; --amp-badge: #3d2b1f; --amp-screen: #152019; --amp-screen-hi: #243225; }
+.jf-shell[data-amp-look="country"] { --amp-face: #8b6431; --amp-panel: #b08445; --amp-grille: #d0b57c; --amp-grille-line: #7c5a2e; --amp-trim: #f0d79a; --amp-accent: #f9e6a5; --amp-badge: #2f2112; --amp-screen: #111d11; --amp-screen-hi: #1e321c; }
+.jf-shell[data-amp-look="electronic"] { --amp-face: #131925; --amp-panel: #1b2839; --amp-grille: #182230; --amp-grille-line: #2d6d77; --amp-trim: #7ad8df; --amp-accent: #8cc8f0; --amp-badge: #d7fbff; --amp-screen: #061219; --amp-screen-hi: #0b2230; }
 
 /* the amp: head (controls) on top of the cabinet (the screen), on little rubber feet */
-.jf-rig { position: relative; z-index: 1; flex: 0 0 auto; display: flex; flex-direction: column; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .45)); }
-.jf-head { padding: 6px 8px 8px; border-radius: 12px 12px 6px 6px; background: var(--tolex);
-  background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 3px 3px;
-  box-shadow: inset 0 0 0 2px #0e0f0d, inset 0 2px 0 3px rgba(255, 255, 255, .06); }
-.jf-cab { position: relative; margin-top: 3px; padding: 10px; border-radius: 6px 6px 10px 10px; background: var(--tolex);
-  background-image: radial-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 3px 3px;
-  box-shadow: inset 0 0 0 2px #0e0f0d; }
+.jf-rig { position: relative; z-index: 1; flex: 0 0 auto; display: flex; flex-direction: column; filter: drop-shadow(7px 9px 0 var(--amp-shadow)); image-rendering: pixelated; }
+.jf-head { position: relative; padding: 7px 9px 9px; border: 3px solid var(--amp-border); border-radius: 0; background: var(--amp-face);
+  background-image: repeating-linear-gradient(90deg, transparent 0 7px, var(--amp-panel-line) 7px 8px), repeating-linear-gradient(0deg, rgba(0, 0, 0, .12) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 2px var(--amp-trim), inset 0 -5px 0 rgba(0, 0, 0, .24); }
+.jf-head::before { content: ""; position: absolute; top: -7px; left: 48px; width: 88px; height: 8px; border: 3px solid var(--amp-border); border-bottom: 0; background: var(--amp-face); box-shadow: inset 0 0 0 2px var(--amp-trim); }
+.jf-cab { position: relative; margin-top: 3px; padding: 11px; border: 3px solid var(--amp-border); border-radius: 0; background: var(--amp-face);
+  background-image: repeating-linear-gradient(90deg, transparent 0 8px, var(--amp-panel-line) 8px 9px), repeating-linear-gradient(0deg, rgba(0, 0, 0, .18) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 2px var(--amp-trim); }
 /* metal corner protectors */
-.jf-cab::before, .jf-cab::after { content: ""; position: absolute; bottom: 3px; width: 14px; height: 14px; border-radius: 3px;
-  background: linear-gradient(135deg, #d9d6cc, #8d8a80); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35); }
-.jf-cab::before { left: 3px; }
-.jf-cab::after { right: 3px; }
+.jf-cab::before, .jf-cab::after { content: ""; position: absolute; bottom: 4px; width: 15px; height: 15px; border: 2px solid var(--amp-border); background: var(--amp-trim); box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .28); }
+.jf-cab::before { left: 4px; }
+.jf-cab::after { right: 4px; }
 .jf-feet { display: flex; justify-content: space-between; padding: 0 22px; }
-.jf-feet i { width: 34px; height: 7px; border-radius: 0 0 6px 6px; background: #0b0c0b; }
+.jf-feet i { width: 34px; height: 7px; border-radius: 0; background: #0b0c0b; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .08); }
 
 /* header: drag the window from here */
 .jf-header { display: flex; flex: 0 0 30px; align-items: center; gap: 6px; padding: 0 2px 4px 8px; -webkit-app-region: drag; }
 .jf-brand { display: flex; flex: 1; align-items: baseline; gap: 10px; }
 /* the amp's logo plate */
-.jf-brand strong { padding: 1px 8px; border: 1px solid var(--piping); border-radius: 4px; color: #f1e3b1; font: italic 800 14px/1.4 Georgia, "Times New Roman", serif; letter-spacing: .12em; text-shadow: 0 1px 0 #000; }
-.jf-brand span { color: var(--accent); font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
-.jf-icon { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: #b9cbb6; font-size: 18px; cursor: pointer; }
+.jf-brand strong { padding: 1px 8px; border: 2px solid var(--amp-trim); border-radius: 0; background: var(--amp-badge); color: var(--amp-border); font: italic 800 14px/1.4 Georgia, "Times New Roman", serif; letter-spacing: .12em; text-shadow: none; box-shadow: 2px 2px 0 var(--amp-border); }
+.jf-brand span { color: var(--accent); font-size: 11px; border: 1px solid var(--line); border-radius: 0; padding: 2px 8px; background: rgba(0, 0, 0, .18); }
+.jf-icon { width: 30px; height: 30px; border: 1px solid transparent; border-radius: 0; background: transparent; color: #b9cbb6; font-size: 18px; cursor: pointer; }
 .jf-icon:hover { background: rgba(255, 255, 255, .08); color: #f2ffe7; }
 .jf-icon[hidden] { display: none; }
 .jf-icon[data-action="report"] { font-size: 15px; }
@@ -42,13 +55,12 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 /* the display: your chords while you play, the frog's while it plays */
 /* the cabinet's front is a screen, set in grille cloth */
 .jf-display { min-height: 200px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 8px;
-  border: 9px solid transparent; border-radius: 8px;
+  border: 9px solid transparent; border-radius: 0;
   background:
-    linear-gradient(170deg, rgba(255, 255, 255, .05), transparent 40%) padding-box,
-    linear-gradient(#0b1a10, #07120b) padding-box,
-    repeating-linear-gradient(45deg, #5a5040 0 1px, #2a251c 1px 3px) border-box,
-    repeating-linear-gradient(-45deg, #5a5040 0 1px, #2a251c 1px 3px) border-box;
-  box-shadow: inset 0 0 0 1px rgba(164, 229, 142, .25), inset 0 0 18px rgba(0, 0, 0, .8); }
+    linear-gradient(var(--amp-screen-hi), var(--amp-screen)) padding-box,
+    repeating-linear-gradient(45deg, var(--amp-grille-line) 0 1px, var(--amp-grille) 1px 4px) border-box,
+    repeating-linear-gradient(-45deg, var(--amp-grille-line) 0 1px, var(--amp-grille) 1px 4px) border-box;
+  box-shadow: inset 0 0 0 2px rgba(164, 229, 142, .22), inset 0 0 0 5px rgba(0, 0, 0, .18), 0 3px 0 rgba(0, 0, 0, .35); }
 .jf-display-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .jf-key { margin-right: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; color: #cfe3c8; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
 .jf-key[hidden] { display: none; }
@@ -66,8 +78,8 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-bar { display: flex; gap: 2px; height: 42px; padding: 2px; border-left: 2px solid rgba(220, 235, 214, .35); border-radius: 2px 8px 8px 2px; background: rgba(164, 229, 142, .05); }
 .jf-bar.is-current { border-left-color: var(--accent); background: rgba(164, 229, 142, .12); }
 .jf-shell[data-phase="playing"] .jf-bar.is-current { border-left-color: var(--gold); background: rgba(227, 196, 107, .1); }
-.jf-seg { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 6px;
-  background: rgba(164, 229, 142, .1); color: #dcebd6; font-size: 20px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.jf-seg { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 4px; border-radius: 6px;
+  background: rgba(164, 229, 142, .1); color: #dcebd6; font-size: 20px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; }
 .jf-bar.is-split .jf-seg { font-size: 14px; }
 .jf-seg + .jf-seg:not(.is-hold) { box-shadow: -2px 0 0 rgba(220, 235, 214, .25); } /* a change inside the bar */
 .jf-seg.is-hold { background: repeating-linear-gradient(90deg, rgba(220, 235, 214, .18) 0 3px, transparent 3px 7px) center / 100% 2px no-repeat; }
@@ -91,9 +103,14 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-pet canvas { display: block; image-rendering: pixelated; }
 .jf-pet-notice { position: absolute; left: 0; right: 0; bottom: 40px; color: #a8bda7; font-size: 11px; text-align: center; }
 /* The bubble stays clear of the sprite; its tail follows the rendered mouth. */
-.jf-bubble { position: absolute; z-index: 3; top: 8px; left: 186px; right: 6px; padding: 12px 14px; border-radius: 16px;
-  background: #f4f1df; color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
-.jf-bubble-tail { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; fill: #f4f1df; }
+.jf-bubble { position: absolute; z-index: 3; bottom: 64px; left: 186px; right: 6px; max-height: calc(100% - 72px); overflow: auto;
+  padding: 12px 14px; border: 1px solid rgba(255, 255, 255, .45); border-radius: 10px; background: rgba(244, 241, 223, .78);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+/* the tail: its own element (the bubble scrolls, which would clip it), under the bubble's bottom-left corner,
+   pointing down and left at the frog */
+.jf-bubble-tail { position: absolute; z-index: 3; bottom: 51px; left: 196px; width: 20px; height: 14px; pointer-events: none;
+  background: rgba(244, 241, 223, .78); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  clip-path: polygon(0 0, 100% 0, 0 100%); }
 .jf-bubble b { color: #1f6b2c; font-size: 18px; }
 .jf-bubble.is-report { display: grid; gap: 8px; font-size: 14px; }
 .jf-more { justify-self: start; padding: 4px 10px; border: 0; border-radius: 8px; background: #1f6b2c; color: #f4f1df; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -103,20 +120,26 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 /* the amp: the controls */
 /* the head's control panel */
 .jf-amp { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
-  padding: 10px 14px; border: 1px solid var(--piping); border-radius: 6px;
-  background: linear-gradient(180deg, #3b4a3c, #243126 70%, #1d281f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15); }
-.jf-knob-control { display: grid; justify-items: center; gap: 6px; color: #aebda9; font-size: 10px; letter-spacing: .1em; }
+  padding: 10px 14px; border: 2px solid var(--amp-trim); border-radius: 0;
+  background: var(--amp-panel);
+  background-image: repeating-linear-gradient(90deg, transparent 0 9px, rgba(255, 255, 255, .08) 9px 10px), repeating-linear-gradient(0deg, rgba(0, 0, 0, .18) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .22), 0 2px 0 var(--amp-border); }
+.jf-amp::after { content: ""; position: absolute; z-index: 0; top: 7px; right: 10px; width: 74px; height: 7px; background: repeating-linear-gradient(90deg, var(--amp-accent) 0 6px, transparent 6px 12px); opacity: .72; pointer-events: none; }
+.jf-shell[data-amp-look="punk"] .jf-amp::before { content: ""; position: absolute; z-index: 0; right: 18px; bottom: 12px; width: 34px; height: 18px; border: 2px solid var(--amp-border); background: #fff4cf; box-shadow: -44px 8px 0 #ff524c; transform: rotate(-3deg); pointer-events: none; }
+.jf-shell[data-amp-look="electronic"] .jf-amp::after { width: 96px; height: 10px; background: repeating-linear-gradient(90deg, #8cc8f0 0 4px, transparent 4px 8px), repeating-linear-gradient(0deg, #7ad8df 0 2px, transparent 2px 5px); }
+.jf-knob-control { position: relative; z-index: 1; display: grid; justify-items: center; gap: 6px; color: #aebda9; font-size: 10px; letter-spacing: .1em; }
 .jf-knob { position: relative; display: block; width: 74px; height: 74px; cursor: ns-resize; touch-action: none; outline: none; }
-.jf-knob-visual { position: absolute; inset: 3px; border: 3px solid #687b63; border-radius: 50%;
-  background: radial-gradient(circle at 35% 28%, #63735b, #263529 64%, #141e16); box-shadow: 0 3px 5px #0c130e, inset 0 1px 2px rgba(255, 255, 255, .18); }
-.jf-knob-visual::before { content: ""; position: absolute; width: 4px; height: 22px; top: 4px; left: calc(50% - 2px); border-radius: 2px;
+.jf-knob-visual { position: absolute; inset: 3px; border: 4px solid var(--amp-border); border-radius: 0;
+  background: var(--amp-face); box-shadow: inset 0 0 0 5px #3c4b38, inset 0 0 0 10px #18251b, 4px 4px 0 rgba(0, 0, 0, .36); }
+.jf-knob-visual::before { content: ""; position: absolute; width: 4px; height: 22px; top: 6px; left: calc(50% - 2px); border-radius: 0;
   background: #d7e2ba; transform-origin: 2px 30px; transform: rotate(var(--knob-angle, -72deg)); }
 .jf-knob-control output { color: #d4ebc6; font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.jf-amp-right { display: grid; gap: 8px; }
+.jf-amp-right { position: relative; z-index: 1; display: grid; gap: 8px; }
 .jf-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #aebda9; font-size: 10px; letter-spacing: .1em; }
-.jf-field select, .jf-field input { width: 150px; height: 28px; padding: 2px 8px; border: 1px solid #75866a; border-radius: 6px;
+.jf-field[hidden] { display: none; }
+.jf-field select, .jf-field input { width: 150px; height: 28px; padding: 2px 8px; border: 2px solid #75866a; border-radius: 0;
   background: #18251b; color: #edf6e9; font: inherit; font-size: 13px; letter-spacing: 0; }
-.jf-segments { display: flex; width: 150px; border: 1px solid #75866a; border-radius: 6px; overflow: hidden; }
+.jf-segments { display: flex; width: 150px; border: 2px solid #75866a; border-radius: 0; overflow: hidden; }
 .jf-segments button { flex: 1; height: 28px; border: 0; background: #18251b; color: #cfe0ca; font: inherit; font-size: 13px; cursor: pointer; }
 .jf-segments button + button { border-left: 1px solid #75866a; }
 .jf-segments button[aria-checked="true"] { background: var(--accent); color: #0d1a10; font-weight: 700; }

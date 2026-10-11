@@ -67,16 +67,38 @@ One-time setup on the `Frog` track:
 
 1. Put an **Instrument Rack** after Frog Voice (Cmd+G on an instrument, or drag one in from the browser).
 2. Add one chain per genre and name each chain (Cmd+R) exactly like a genre in the overlay, in any order:
-   `jazz`, `rock`, `electronic`, `country`, `pop`, `punk`. Add a chain named `all` for **All styles**; without one,
-   All styles uses the first chain. You can leave genres out: picking a genre with no chain keeps the current sound.
+   `jazz`, `rock`, `electronic`, `country`, `pop`, `punk`. Add a chain named `user` for **All styles** (the
+   default; a chain named `all` works too); without one, All styles uses the first chain. You can leave genres out: picking a genre with no chain keeps the current sound.
 3. Fill each chain with its instrument and effects (e.g. jazz: Electric piano + Chorus; punk: Operator lead +
    Pedal; country: keys + Reverb).
 4. **Sends per genre:** show the rack's return chains, add e.g. a Reverb and a Delay return, and set each chain's send knobs in the chain list. They switch along with the chain.
 5. Show the Chain Select editor (**Chain** button above the chain list), right-click the zones and choose
    **Distribute Ranges Equally**. Every chain must keep an equal slice. Redo this after adding or removing a chain.
 
-**Test:** with the app running, pick a genre. The Max Console prints e.g. `FrogGenre: jazz -> chain 1 of 7, selector 9`. A `no chain named …` or `no Instrument Rack on this track` line tells you what to fix. Notes the frog is holding
+**Test:** with the app running, pick a genre. The Max Console prints e.g. `FrogGenre: jazz -> jazz, chain 3 of 7, selector 45` (and for All styles,
+`FrogGenre: all -> user, chain 1 of 7, selector 9`). A `no chain named …` or `no Instrument Rack on this track` line tells you what to fix. Notes the frog is holding
 are released before the switch so none hang on the old chain; the next chord plays on the new sound.
+
+## Strummed guitar (Ample Guitar) for the guitar genres
+
+For every genre except **electronic** and **pop** (so jazz, rock, country, punk, and All styles unless you turn off
+**⚙ Settings → All styles: user chain is Ample Guitar**), the frog doesn't send its chord voicings. It sends MIDI for **Ample Guitar's Strummer in Detect mode** instead:
+
+- the chord, in root position from **C1** (root in C1–B1, the rest up to B2), which Detect mode reads, and
+- a strum key at the same moment: **C4** strums down. When the frog re-strikes the same chord (with **Copy my
+  rhythm** on), it strums up (**E4**), then down again, alternating. Strum keys go out at velocity 120, Ample's top
+  layer, which strums all six strings.
+
+Note names are Live's and Ample's (C3 = MIDI 60). Electronic and pop get the normal voicings, for keys and synths.
+
+Set up each guitar-genre chain in the Frog Sounds rack:
+
+1. Put an Ample Guitar (e.g. AGM, AGT) in the chain.
+2. Turn on **Strum Mode** (the Strummer panel's toggle, or keyswitch C#6).
+3. Set **Chord Mode** to **Detect** (the Strummer panel, or D5 at high velocity).
+
+If a guitar chain plays low single notes plus a high C4/E4, that chain's Ample isn't in Strummer + Detect mode. If a
+keys or synth chain does, give it the genre electronic or pop, or put a guitar in it.
 
 ## Recording a jam
 

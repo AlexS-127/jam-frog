@@ -1,16 +1,28 @@
 import type { FrogMood } from '../../../core/types';
 
 export const ACTIONS = {
-  idle: { label: 'Idle', row: 0, frames: 6, duration: 1100 },
-  waving: { label: 'Wave', row: 3, frames: 4, duration: 700 },
-  jumping: { label: 'Jump', row: 4, frames: 5, duration: 840 },
-  failed: { label: 'Sad', row: 5, frames: 8, duration: 1220 },
-  waiting: { label: 'Waiting', row: 6, frames: 6, duration: 1010 },
-  review: { label: 'Thinking', row: 8, frames: 6, duration: 1030 },
-  playing: { label: 'Playing keyboard', row: -1, frames: 6, duration: 1100 },
+  idle: { label: 'Idle', row: 0, frames: 4, duration: 3200 },
+  blink: { label: 'Blink', row: 0, frames: 1, duration: 170 },
+  tongue: { label: 'Tongue', row: 0, frames: 3, duration: 900 },
+  waving: { label: 'Wave', row: 3, frames: 4, duration: 1200 },
+  jumping: { label: 'Jump', row: 4, frames: 5, duration: 1300 },
+  failed: { label: 'Sad', row: 5, frames: 8, duration: 2000 },
+  waiting: { label: 'Look around', row: 6, frames: 6, duration: 2600 },
+  review: { label: 'Thinking', row: 8, frames: 6, duration: 2600 },
+  playing: { label: 'Playing keyboard', row: -1, frames: 6, duration: 2000 },
 } as const;
 
 export type Action = keyof typeof ACTIONS;
+
+/**
+ * Atlas cells (in the action's row) per frame, where they aren't simply 0, 1, 2…: idle breathes with its eyes
+ * open, and the row's eyes-shut cell is the blink, which the frog does now and then instead of every loop.
+ */
+const CELLS: Partial<Record<Action, readonly number[]>> = { idle: [0, 2, 4, 2], blink: [1], tongue: [0, 0, 0] };
+
+export function atlasCell(action: Action, frame: number): number {
+  return CELLS[action]?.[frame] ?? frame;
+}
 export interface Point { x: number; y: number }
 export interface Size { width: number; height: number }
 export interface Bounds { minX: number; maxX: number; minY: number; maxY: number }
@@ -30,10 +42,10 @@ export function frameAt(action: Action, elapsed: number, loop = true, frames: nu
   return loop ? frame % frames : Math.min(frame, frames - 1);
 }
 
-/** How many beats one loop of an action lasts at this tempo: 1, 2 or 4, whichever is nearest its natural length. */
+/** How many beats one loop of an action lasts at this tempo: 1, 2, 4 or 8, whichever is nearest its natural length. */
 export function beatsPerLoop(action: Action, beatMs: number): number {
   const natural = ACTIONS[action].duration;
-  return [1, 2, 4].reduce((best, n) => (Math.abs(Math.log((n * beatMs) / natural)) < Math.abs(Math.log((best * beatMs) / natural)) ? n : best));
+  return [1, 2, 4, 8].reduce((best, n) => (Math.abs(Math.log((n * beatMs) / natural)) < Math.abs(Math.log((best * beatMs) / natural)) ? n : best));
 }
 
 /** The frame of a looping action in time with the music: loops last whole beats and restart on the beat grid. */

@@ -86,6 +86,26 @@ describe('AnswerEngine (phrase call and response)', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('strum mode: sends Ample chord keys from C1 and a strum key instead of the voicing; re-strikes go up, then down', () => {
+    const { sink, play, until } = setup({ strum: true, rhythm: true });
+    play('C', 0);
+    play('C', 1000); // a re-strike of the same chord
+    play('Am', 2000);
+    play('F', 4000);
+    play('G', 6000);
+    until(8000);
+    const held = [...sink.held].sort((a, b) => a - b);
+    expect(held.slice(0, -1).every((p) => p >= 36 && p <= 59)).toBe(true);
+    expect(held[0]).toBeLessThanOrEqual(47);
+    expect(held.at(-1)).toBe(72); // C4: down
+    until(9000);
+    expect([...sink.held]).toContain(76); // E4: the re-strike strums up
+    until(16000);
+    const strumKeys = sink.log.filter((e) => e.velocity > 0 && e.pitch >= 60).map((e) => e.pitch);
+    expect(new Set(strumKeys)).toEqual(new Set([72, 76]));
+    expect(sink.held.size).toBe(0);
+  });
+
   it('without Live transport: answers on the downbeat right after a 4-bar phrase, for 4 bars', () => {
     const { sink, play, until } = setup();
     play('C', 0);
@@ -492,6 +512,28 @@ describe('AnswerEngine jam mode', () => {
     const now = sink.log.filter((e) => e.t === 16000 && e.velocity > 0).map((e) => e.pitch);
     expect(detectChord(now)!.name).toBe('Bb');
     engine.cancel();
+    expect(engine.upcoming()).toBeNull();
+  });
+
+  it('re-plans the next block when the weirdness changes mid-block, and plays the new plan', () => {
+    const { engine, sink, settings, play } = jamRig();
+    play(V.C, 0);
+    play(V.G, 4000);
+    vi.advanceTimersByTime(8500 - Date.now());
+    const before = engine.upcoming();
+    expect(before).not.toBeNull();
+    vi.advanceTimersByTime(10000 - Date.now());
+    settings.weirdness = 0.9;
+    engine.settingsChanged();
+    expect(engine.upcoming()).toBeNull(); // planning again, with the new weirdness
+    vi.advanceTimersByTime(500);
+    const after = engine.upcoming()!;
+    expect(after).not.toBe(before);
+    vi.advanceTimersByTime(16000 - Date.now());
+    const now = sink.log.filter((e) => e.t === 16000 && e.velocity > 0).map((e) => e.pitch);
+    expect(detectChord(now)!.name).toBe(after.chords[0].name);
+    engine.cancel();
+    engine.settingsChanged(); // not jamming: nothing to re-plan
     expect(engine.upcoming()).toBeNull();
   });
 

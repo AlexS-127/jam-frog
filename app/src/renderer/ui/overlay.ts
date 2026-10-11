@@ -49,7 +49,13 @@ export interface UiState {
   reportBubble: boolean;
   reportMode: ReportMode;
   geminiAvailable: boolean;
+  /** chords shown by name (C, Am, G7), or as Roman numerals in the key (I, vi, V7); the app converts them */
+  chordNames: ChordNames;
+  /** All styles plays the rack's user chain: true if that is an Ample Guitar (the frog sends strums), else chords */
+  userAmple: boolean;
 }
+
+export type ChordNames = 'letters' | 'roman';
 
 export type FrogMode = 'off' | 'answer' | 'jam';
 export type ReportMode = 'gemini' | 'local';
@@ -65,6 +71,8 @@ export interface Handlers {
   onModel(model: string): void;
   onBpm(bpm: number): void;
   onReportMode(mode: ReportMode): void;
+  onChordNames(names: ChordNames): void;
+  onUserAmple(on: boolean): void;
 }
 
 /** "Try F", "Try F or Am", "Try F, Am or G", with the chord names in bold. */
@@ -121,7 +129,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   shell.innerHTML = `
     <section class="jf-scene">
       <div class="jf-bubble" data-ref="bubble" role="status"></div>
-      <svg class="jf-bubble-tail" data-ref="bubble-tail" aria-hidden="true"><path></path></svg>
+      <span class="jf-bubble-tail" aria-hidden="true"></span>
       <div class="jf-pet-stage" data-ref="pet-stage"></div>
     </section>
     <div class="jf-rig">
@@ -154,7 +162,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
                 <button type="button" data-mode="jam" role="radio" title="After your phrase the frog keeps playing until you stop it">Jam</button>
               </div>
             </div>
-            <label class="jf-check" title="The frog answers in the rhythm and dynamics you played"><input data-control="rhythm" type="checkbox" /><span>Copy my rhythm</span></label>
           </div>
         </section>
       </div>
@@ -179,6 +186,11 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     <div class="jf-settings" data-ref="settings" hidden>
       <div class="jf-settings-card" role="dialog" aria-label="Settings">
         <h2>Settings</h2>
+        <label class="jf-field"><span>CHORD NAMES</span>
+          <select data-control="chord-names"><option value="letters">Letters (C, Am, G7)</option><option value="roman">Roman numerals (I, vi, V7)</option></select>
+        </label>
+        <label class="jf-check" title="The frog answers in the rhythm and dynamics you played"><input data-control="rhythm" type="checkbox" /><span>Copy my rhythm</span></label>
+        <label class="jf-check" title="All styles plays the user chain of the Frog Sounds rack. On: it is an Ample Guitar in Strummer mode, so the frog sends strums. Off: the frog sends normal chords."><input data-control="user-ample" type="checkbox" /><span>All styles: user chain is Ample Guitar (strum)</span></label>
         <label class="jf-field"><span>MODEL</span>
           <select data-control="model"><option value="gru">GRU (neural network)</option><option value="ngram">n-gram</option></select>
         </label>
@@ -206,28 +218,8 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
 
   const q = <T extends HTMLElement>(selector: string) => shell.querySelector<T>(selector)!;
   const pet = createFrogPet(q('[data-ref="pet-stage"]'), { scale: 0.8, interactive: false, initialPosition: { x: 24, y: 9999 } });
-  const scene = q<HTMLElement>('.jf-scene');
+  // what the frog says: a translucent box beside it with a tail at its bottom left, growing upwards
   const bubble = q<HTMLElement>('[data-ref="bubble"]');
-  const tail = shell.querySelector<SVGSVGElement>('[data-ref="bubble-tail"]')!;
-  const tailPath = tail.querySelector('path')!;
-  let mouth = { x: 105, y: 95 };
-  const placeBubble = () => {
-    const height = bubble.offsetHeight;
-    const top = Math.max(8, Math.min(scene.clientHeight - height - 8, mouth.y - height / 2));
-    bubble.style.top = `${top}px`;
-    const joinY = Math.max(top + 14, Math.min(top + height - 14, mouth.y));
-    const edgeX = bubble.offsetLeft + 2;
-    tail.setAttribute('viewBox', `0 0 ${scene.clientWidth} ${scene.clientHeight}`);
-    tailPath.setAttribute('d', `M ${mouth.x} ${mouth.y} L ${edgeX} ${joinY - 9} L ${edgeX} ${joinY + 9} Z`);
-  };
-  pet.subscribe((snapshot) => {
-    if (Math.abs(snapshot.mouth.x - mouth.x) < .5 && Math.abs(snapshot.mouth.y - mouth.y) < .5) return;
-    mouth = snapshot.mouth;
-    placeBubble();
-  });
-  const bubbleSize = new ResizeObserver(placeBubble);
-  bubbleSize.observe(bubble);
-  bubbleSize.observe(scene);
   const knob = q<HTMLElement>('[data-control="weirdness"]');
   const genre = q<HTMLSelectElement>('[data-control="genre"]');
   const rhythm = q<HTMLInputElement>('[data-control="rhythm"]');
@@ -278,8 +270,12 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   }
   genre.addEventListener('change', () => handlers.onGenre(genre.value), { signal });
   rhythm.addEventListener('change', () => handlers.onRhythm(rhythm.checked), { signal });
+  const userAmple = q<HTMLInputElement>('[data-control="user-ample"]');
+  userAmple.addEventListener('change', () => handlers.onUserAmple(userAmple.checked), { signal });
   model.addEventListener('change', () => handlers.onModel(model.value), { signal });
   reportMode.addEventListener('change', () => handlers.onReportMode(reportMode.value as ReportMode), { signal });
+  const chordNames = q<HTMLSelectElement>('[data-control="chord-names"]');
+  chordNames.addEventListener('change', () => handlers.onChordNames(chordNames.value as ChordNames), { signal });
   bpm.addEventListener('change', () => {
     const value = Math.max(40, Math.min(240, Math.round(Number(bpm.value) || 120)));
     bpm.value = String(value);
@@ -324,6 +320,14 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       }
       return bar;
     }));
+    for (const span of grid.querySelectorAll<HTMLElement>('.jf-seg:not(.is-hold)')) fitName(span);
+  }
+
+  /** Shrink a chord name that doesn't fit its stretch of the bar, rather than cutting it off at the bar line. */
+  function fitName(span: HTMLElement): void {
+    if (!span.clientWidth) return; // not laid out (hidden): drawn again on the next update
+    let size = parseFloat(getComputedStyle(span).fontSize);
+    while (span.scrollWidth > span.clientWidth && size > 9) span.style.fontSize = `${--size}px`;
   }
 
   function drawReport(r: JamReport, pending: boolean): void {
@@ -355,12 +359,14 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     update(state: UiState): void {
       const weird = state.weirdness > 0.7 || state.borrowed;
       const mood: FrogMood = weird && state.phase !== 'playing' ? 'weird' : state.mood;
+      const look = lookFor(state.genre);
       shell.dataset.mood = mood;
       shell.dataset.phase = state.phase;
+      shell.dataset.ampLook = look;
       q('[data-ref="mood"]').textContent = state.phase === 'playing' ? 'Playing' : MOOD_LABELS[mood];
       pet.setMood(mood);
       pet.setMusicPlaying(state.phase === 'playing');
-      pet.setLook(lookFor(state.genre));
+      pet.setLook(look);
       pet.setTempo(state.beat.barMs > 0 ? { anchor: state.beat.barAt, beatMs: state.beat.barMs / BEATS_PER_BAR } : null);
 
       // The display: your chords while you play, the frog's while it plays, bar by bar.
@@ -405,7 +411,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       else if (state.phase === 'playing') bubble.replaceChildren(state.frogMode === 'jam' ? 'Jamming! Play along, or press Stop.' : 'Listen… then your turn!');
       else if (state.suggestions.length) bubble.replaceChildren(...suggestionText(state.suggestions));
       else bubble.replaceChildren('Play me a chord!');
-      placeBubble();
       }
 
       q('[data-action="report"]').hidden = !state.report;
@@ -420,7 +425,9 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       for (const b of modes) b.setAttribute('aria-checked', String(b.dataset.mode === state.frogMode));
       stop.hidden = !(state.frogMode === 'jam' && state.phase === 'playing');
       setChecked(rhythm, state.rhythm);
+      setChecked(userAmple, state.userAmple);
       setValue(model, state.model);
+      setValue(chordNames, state.chordNames);
       setValue(bpm, String(state.bpm));
       const geminiOption = reportMode.options[0];
       geminiOption.disabled = !state.geminiAvailable;
@@ -438,7 +445,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     },
     destroy(): void {
       abort.abort();
-      bubbleSize.disconnect();
       pet.destroy();
       shell.remove();
     },

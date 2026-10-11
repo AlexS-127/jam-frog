@@ -1,5 +1,5 @@
 import type { JamLog, LogChord } from './answer';
-import { chordName } from './chords';
+import { chordName, parseChordName } from './chords';
 import { isBorrowed, isDiatonic, keyName, type Key } from './key';
 import type { ChordSymbol } from './types';
 
@@ -61,6 +61,15 @@ function secondaryTarget(c: ChordSymbol, key: Key): ChordSymbol | null {
   const root = mod12(c.root + 5);
   for (const quality of ['maj', 'min'] as const) if (isDiatonic({ root, quality }, key)) return { root, quality };
   return null;
+}
+
+/** A chord name ("Am7") as its Roman numeral in the key ("vi7"); a name it can't read stays as it is. */
+export function romanName(name: string, key: Key): string {
+  try {
+    return label(parseChordName(name), key);
+  } catch {
+    return name;
+  }
 }
 
 /** The chord's name in the analysis: its numeral, or V/x for a secondary dominant ("V7/ii"). */

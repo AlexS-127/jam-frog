@@ -1,15 +1,16 @@
-import { AnswerEngine, type AnswerProgress, type JamLog } from '../core/answer';
+import { AnswerEngine, type AnswerProgress, type Cell, type JamLog } from '../core/answer';
 import { detectChord } from '../core/chords';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
 import { keyName } from '../core/key';
 import type { ChordModel } from '../core/model';
-import { analyseJam, geminiRequest, localReport, parseGeminiReport, type JamReport } from '../core/report';
+import { analyseJam, geminiRequest, localReport, parseGeminiReport, romanName, type JamReport } from '../core/report';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord, FrogMood, NoteEvent, Suggestion } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc, sendGenre } from './bridges/osc';
 import { loadModels } from './models';
+import { strumsFor } from '../core/strum';
 import { styled } from '../core/styles';
-import { createOverlay, type FrogMode, type ReportMode, type UiState } from './ui/overlay';
+import { createOverlay, type ChordNames, type FrogMode, type ReportMode, type UiState } from './ui/overlay';
 
 // The app: notes in from Live (Frog Ear, Max for Live, over OSC) -> chord detection -> suggestions in the
 // frog's speech bubble; the AnswerEngine answers each 2/4/8-bar phrase on the frog track (Frog Voice).
@@ -26,6 +27,10 @@ const settings = {
   rhythm: false,
   /** the jam report: written by Gemini (if there is an API key), or on this Mac only */
   reportMode: 'gemini' as ReportMode,
+  /** chords on screen as names, or as Roman numerals in the session key */
+  chordNames: 'letters' as ChordNames,
+  /** All styles plays the rack's user chain: is it an Ample Guitar (strums) or another instrument (chords)? */
+  userAmple: true,
 };
 
 // ---- models: both behind ChordModel ----
@@ -72,7 +77,13 @@ window.jamFrog.gemini.available().then((ok) => {
 const answers = new AnswerEngine({
   model,
   sink: () => sink,
-  settings: () => ({ ...settings, answersOn: settings.frogMode !== 'off', continuous: settings.frogMode === 'jam' }),
+  settings: () => ({
+    ...settings,
+    answersOn: settings.frogMode !== 'off',
+    continuous: settings.frogMode === 'jam',
+    // guitar genres strum Ample Guitar (ableton/SETUP.md); electronic and pop don't; All styles as set in ⚙
+    strum: strumsFor(settings.genre, settings.userAmple),
+  }),
   onPlan: (p, pr) => {
     if (pr.status === 'playing' && progress.status !== 'playing') {
       const sinceBar = performance.now() - lastBarAt;
@@ -121,6 +132,7 @@ source.onNote(onNote);
 const overlay = createOverlay(document.getElementById('overlay-root')!, {
   onWeirdness(v) {
     settings.weirdness = v;
+    answers.settingsChanged(); // jamming: the next block follows the new weirdness
     refreshSuggestions();
   },
   onGenre(g) {
@@ -144,6 +156,10 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
     answers.cancel();
     render();
   },
+  onUserAmple(on) {
+    settings.userAmple = on;
+    render();
+  },
   onRhythm(on) {
     settings.rhythm = on;
     render();
@@ -158,6 +174,10 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
   },
   onReportMode(mode) {
     settings.reportMode = mode;
+    render();
+  },
+  onChordNames(names) {
+    settings.chordNames = names;
     render();
   },
 });
@@ -201,19 +221,23 @@ function mood(): FrogMood {
 }
 
 function uiState(): UiState {
+  // Roman numerals once there is a key to count from; letters until then
+  const key = answers.keyCentre().key;
+  const shown = (name: string) => (settings.chordNames === 'roman' && key ? romanName(name, key) : name);
+  const cells = (cs: Cell[]) => cs.map((c) => ({ ...c, name: shown(c.name) }));
   return {
     mood: mood(),
     phase: progress.status,
     bar: progress.bar,
     bars: progress.bars,
-    yourChords: answers.phraseCells(),
-    frogChords: plan && progress.status !== 'listening' ? answers.frogCells() : [],
+    yourChords: cells(answers.phraseCells()),
+    frogChords: plan && progress.status !== 'listening' ? cells(answers.frogCells()) : [],
     frogIndex: progress.chord,
-    nextChords: answers.upcomingCells(),
+    nextChords: cells(answers.upcomingCells()),
     key: answers.keyCentre().key ? keyName(answers.keyCentre().key!) : null,
     keyChange: recentKeyChange(),
     beat: { barAt: answers.barClock().at, barMs: answers.barClock().ms },
-    suggestions: suggestions.map((s) => s.name),
+    suggestions: suggestions.map((s) => shown(s.name)),
     borrowed: suggestions.some((s) => s.borrowed),
     weirdness: settings.weirdness,
     genre: settings.genre,
@@ -230,6 +254,8 @@ function uiState(): UiState {
     reportBubble,
     reportMode: settings.reportMode,
     geminiAvailable,
+    chordNames: settings.chordNames,
+    userAmple: settings.userAmple,
   };
 }
 

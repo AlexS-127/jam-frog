@@ -65,11 +65,11 @@ for (const [action, details] of Object.entries(ACTIONS) as [Action, (typeof ACTI
 
 const state: UiState = {
   mood: 'idle', phase: 'listening', bar: 2, bars: 4,
-  yourChords: [{ name: 'Cmaj7', beat: 0 }, { name: 'Am7', beat: 4 }, { name: 'Fmaj7', beat: 8 }],
+  yourChords: [{ name: 'Cmaj7', beat: 0 }, { name: 'Am7', beat: 4 }, { name: 'F#m7b5', beat: 8 }, { name: 'B7', beat: 10 }, { name: 'C#maj7', beat: 12 }],
   frogChords: [{ name: 'Dm7', beat: 0 }, { name: 'G7', beat: 4 }, { name: 'Cmaj7', beat: 8 }, { name: 'A7', beat: 14 }], frogIndex: 1,
   nextChords: [{ name: 'Dm7', beat: 0 }, { name: 'Db7', beat: 6 }, { name: 'Cmaj7', beat: 8 }],
   key: 'C major', keyChange: null, beat: { barAt: 0, barMs: 2000 },
-  report: null, reportPending: false, reportBubble: false, reportMode: 'local', geminiAvailable: false,
+  report: null, reportPending: false, reportBubble: false, reportMode: 'local', geminiAvailable: false, chordNames: 'letters', userAmple: true,
   suggestions: ['G7', 'Dm7', 'Ab'], borrowed: false,
   weirdness: 0.24, genre: 'jazz', phraseBars: 4, frogMode: 'answer', rhythm: false, model: 'gru', bpm: 120,
   liveTempo: 120, liveBar: 18, status: '',
@@ -85,9 +85,11 @@ const handlers: Handlers = {
   onStop() { state.phase = 'idle'; overlay.update(state); },
   onPhraseBars(value) { state.phraseBars = value; state.bars = value; overlay.update(state); },
   onRhythm(value) { state.rhythm = value; overlay.update(state); },
+  onUserAmple(value) { state.userAmple = value; overlay.update(state); },
   onModel(value) { state.model = value; overlay.update(state); },
   onBpm(value) { state.bpm = value; overlay.update(state); },
   onReportMode(value) { state.reportMode = value; overlay.update(state); },
+  onChordNames(value) { state.chordNames = value; overlay.update(state); },
 };
 overlay = createOverlay(stage, handlers);
 const pet = overlay.pet;

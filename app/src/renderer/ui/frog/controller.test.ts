@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFrogPet, type PetController, type PetSnapshot } from './controller';
-import { OUTFIT_SHEETS } from './looks';
+import { OUTFIT_FRAMES, OUTFIT_SHEETS } from './looks';
+import { ACTIONS } from './motion';
 
 // Minimal browser boundary: exercise real controller scheduling and event listeners.
 class ElementStub extends EventTarget {
   children: ElementStub[] = [];
   draws: unknown[][] = [];
+  fills = 0;
   style: Record<string, string> = {};
   dataset: Record<string, string> = {};
   clientWidth = 360;
@@ -20,6 +22,7 @@ class ElementStub extends EventTarget {
   releasePointerCapture(id: number) { this.captured.delete(id); }
   getContext() { return {
     clearRect() {}, drawImage: (...args: unknown[]) => { this.draws.push(args); },
+    fillRect: () => { this.fills++; }, fillStyle: '',
     save() {}, restore() {}, translate() {}, scale() {}, imageSmoothingEnabled: true,
   }; }
 }
@@ -68,7 +71,7 @@ describe('frog controller', () => {
       naturalWidth = 0;
       naturalHeight = 0;
       set src(value: string) {
-        const genre = value.match(/genre-animations\/(\w+)\.png/)?.[1] as keyof typeof OUTFIT_SHEETS | undefined;
+        const genre = value.match(/genres\/(\w+)\.png/)?.[1] as keyof typeof OUTFIT_SHEETS | undefined;
         this.naturalWidth = genre ? OUTFIT_SHEETS[genre].width : value.includes('keyboard-frog') ? 2172 : 1182;
         this.naturalHeight = genre ? OUTFIT_SHEETS[genre].height : value.includes('keyboard-frog') ? 724 : 1330;
         queueMicrotask(() => this.dispatchEvent(new Event('load')));
@@ -89,11 +92,11 @@ describe('frog controller', () => {
     event('pointerup');
     event('click', { detail: 1 });
     expect(state.action).toBe('waving');
-    advance(720);
+    advance(ACTIONS.waving.duration + 20);
     expect(state.action).toBe('idle');
     event('click', { detail: 0 });
     expect(state.action).toBe('jumping');
-    advance(850);
+    advance(ACTIONS.jumping.duration + 20);
     expect(state.interaction).toBe('resting');
   });
   it('distinguishes four pixels from a drag while keeping the frog in its resting pose', () => {
@@ -152,7 +155,7 @@ describe('frog controller', () => {
     event('pointercancel');
     advance(16);
     expect(state.action).toBe('jumping');
-    advance(900);
+    advance(ACTIONS.jumping.duration + 20);
     pet.setMood('weird');
     advance(16);
     expect(state.action).toBe('idle');
@@ -189,12 +192,12 @@ describe('frog controller', () => {
     event('pointerdown');
     event('pointerup');
     expect(state.action).toBe('waving');
-    advance(720);
+    advance(ACTIONS.waving.duration + 20);
     expect(state.action).toBe('playing');
     pet.setMusicPlaying(false);
     expect(state.action).toBe('idle');
   });
-  it('uses all eight complete idle and playing frames for a genre instrument', () => {
+  it('breathes with open eyes and plays all eight instrument frames for a genre outfit', () => {
     const canvas = button.children[0];
     const idleFrames = new Set<number>();
     const playingFrames = new Set<number>();
@@ -203,16 +206,40 @@ describe('frog controller', () => {
       if (snapshot.action === 'playing') playingFrames.add(snapshot.frame);
     });
     pet.setLook('rock');
-    advance(1100);
-    expect([...idleFrames].sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    const idleStart = canvas.draws.length;
+    advance(ACTIONS.idle.duration);
+    expect([...idleFrames].sort()).toEqual([0, 1, 2, 3]);
+    const sheet = OUTFIT_SHEETS.rock;
+    const eyesShut = (draw: unknown[]) => draw[1] === sheet.x[0] + 8 && draw[2] === sheet.y[1] + 8; // frame 4
+    expect(canvas.draws.slice(idleStart).some(eyesShut)).toBe(false);
+    expect(OUTFIT_FRAMES.blink).toEqual([4]);
 
     const start = canvas.draws.length;
     pet.setMusicPlaying(true);
-    advance(1100);
+    advance(ACTIONS.playing.duration);
     expect([...playingFrames].sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     const playingDraws = canvas.draws.slice(start);
     expect(playingDraws.length).toBeGreaterThanOrEqual(8);
-    expect(playingDraws.every((draw) => Number(draw[2]) >= OUTFIT_SHEETS.rock.y[2])).toBe(true);
+    expect(playingDraws.every((draw) => Number(draw[2]) >= sheet.y[2])).toBe(true);
+  });
+  it('at rest, blinks now and then and does something cute every few seconds', () => {
+    const canvas = button.children[0];
+    const starts: string[] = [];
+    pet.subscribe((snapshot) => {
+      if (snapshot.action !== starts[starts.length - 1]) starts.push(snapshot.action);
+    });
+    pet.setAmbientEnabled(true);
+    advance(60000);
+    const count = (action: string) => starts.filter((a) => a === action).length;
+    for (const moment of ['jumping', 'waiting', 'review', 'tongue']) expect(count(moment)).toBeGreaterThanOrEqual(2);
+    // a cute moment every 2.5-5 s after the last one, so roughly 8-12 a minute
+    const moments = ['jumping', 'waiting', 'review', 'tongue', 'waving'].reduce((n, a) => n + count(a), 0);
+    expect(moments).toBeGreaterThanOrEqual(7);
+    expect(moments).toBeLessThanOrEqual(14);
+    // blinks: a few seconds apart, not every loop
+    expect(count('blink')).toBeGreaterThanOrEqual(3);
+    expect(count('blink')).toBeLessThanOrEqual(25);
+    expect(canvas.fills).toBeGreaterThan(0); // the tongue was drawn
   });
   it('pauses hidden time and removes listeners and animation scheduling on disposal', () => {
     pet.preview('review');

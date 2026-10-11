@@ -2,6 +2,7 @@ import { chordName } from './chords';
 import { estimateKey, isBorrowed, isDiatonic, KeyTracker, type Key } from './key';
 import type { ChordModel } from './model';
 import { isSecondaryDominant, reshape, sampleToken } from './sampler';
+import { strumNotes } from './strum';
 import { CONTEXT_CHORDS, priorFor } from './suggest';
 import type { AnswerPlan, Chord, ChordSymbol, NoteEvent, NoteSink } from './types';
 import { decode, encode } from './vocab';
@@ -25,6 +26,11 @@ export interface AnswerSettings {
    * player's rhythm) until stopped. Off: answer once, then wait for the next phrase.
    */
   continuous?: boolean;
+  /**
+   * Send each chord as an Ample Guitar strum (Strummer, Detect mode; see strum.ts) instead of its voicing: the
+   * chord keys from C1, then a strum key. Re-strikes of a chord alternate up and down.
+   */
+  strum?: boolean;
 }
 
 export type AnswerStatus = 'idle' | 'listening' | 'playing';
@@ -281,6 +287,8 @@ export class AnswerEngine {
   /** the answer locked in for this phrase: its chords and its timed events (from the player's phrase) */
   private prepared: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null = null;
   private currentChord = -1;
+  /** the last strum went down (re-strikes of the same chord alternate) */
+  private strummedDown = false;
   /**
    * jam mode: the progression so far (the player's + the frog's), the next block planned ahead, and the key,
    * fixed to the player's when the jam starts (taking it from the frog's own chords lets it drift away)
@@ -405,6 +413,20 @@ export class AnswerEngine {
   /** The chords of the phrase in progress (or the last one), for the overlay's trail. */
   phraseChords(): string[] {
     return this.phrase.map((c) => c.name);
+  }
+
+  /**
+   * A setting that shapes the frog's chords (weirdness) changed. Jamming, the next block was planned with the old
+   * one: plan it again in the background, so the change is heard from the next block on (unless that block has
+   * already started early, on an anticipation). The block playing now stays as it is.
+   */
+  settingsChanged(): void {
+    const jam = this.jam;
+    if (!jam || this.status !== 'playing' || jam.committed) return;
+    if (this.jamTimer) clearTimeout(this.jamTimer);
+    this.jamTimer = null;
+    this.planNextBlock(this.d.settings());
+    this.emit();
   }
 
   /** Jam mode: the block the frog plays after this one, once it is planned (null otherwise). */
@@ -809,11 +831,19 @@ export class AnswerEngine {
     if (ev.chord !== this.currentChord || plan !== this.loggedPlan) this.logChord('frog', plan.chords[ev.chord].chord);
     this.loggedPlan = plan;
     for (const p of [...this.sounding]) this.send(p, 0); // the previous chord ends where this one starts
-    voicing.forEach((p, i) => this.send(p, this.humanize(ev.velocity, i, voicing.length)));
+    let notes: { pitch: number; velocity: number }[];
+    if (this.d.settings().strum) {
+      const up = ev.chord === this.currentChord && this.strummedDown; // a re-strike answers a down-strum with an up
+      this.strummedDown = !up;
+      notes = strumNotes(plan.chords[ev.chord].chord, up);
+    } else {
+      notes = voicing.map((pitch, i) => ({ pitch, velocity: this.humanize(ev.velocity, i, voicing.length) }));
+    }
+    for (const n of notes) this.send(n.pitch, n.velocity);
     this.currentChord = ev.chord;
     this.emit();
     this.noteTimers.push(setTimeout(() => {
-      for (const p of voicing) this.send(p, 0);
+      for (const n of notes) this.send(n.pitch, 0);
     }, (ev.end - ev.start) * this.beatLen()));
   }
 

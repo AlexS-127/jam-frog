@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { JamLog, LogChord } from './answer';
 import { parseChordName } from './chords';
-import { analyseJam, geminiRequest, label, localReport, numeral, parseGeminiReport } from './report';
+import { analyseJam, geminiRequest, label, localReport, numeral, parseGeminiReport, romanName } from './report';
 
 const C = { tonic: 0, minor: false };
 const Am = { tonic: 9, minor: true };
@@ -29,6 +29,9 @@ describe('Roman numerals', () => {
   });
   it('labels secondary dominants as V/x', () => {
     expect(['A7', 'D', 'E7', 'C7', 'G7'].map((n) => label(sym(n), C))).toEqual(['V7/ii', 'V/V', 'V7/vi', 'V7/IV', 'V7']);
+  });
+  it('shows chord names on screen as numerals, leaving names it cannot read as they are', () => {
+    expect(['Am7', 'G7', 'A7', 'F#m7b5'].map((n) => romanName(n, C))).toEqual(['vi7', 'V7', 'V7/ii', 'F#m7b5']);
   });
 });
 

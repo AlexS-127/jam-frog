@@ -1,182 +1,242 @@
-import { genreFrame } from '../shared/genre-animations.ts';
+import { loadFrog, paintFrog } from './frog-looks.js';
 
-const openButton = document.querySelector('[data-render-demo]');
+const profiles = {
+  all: { title: 'All styles', description: 'Your own sound, beyond the genre labels. Use the user Instrument Rack chain for a custom synth, piano, or ambient texture.' },
+  jazz: { title: 'Jazz', description: 'Hollow-body guitar, close voicings, and room for harmonic color. Pick the sound and effects on your Jazz rack chain in Live.' },
+  rock: { title: 'Rock', description: 'A guitar bandmate for your next progression. Your Live instrument and effects give the frog its tone.' },
+  punk: { title: 'Punk', description: 'A rhythm-guitar companion for punk, metal, and alternative influences. Keep your playing and steer the next phrase.' },
+  pop: { title: 'Pop', description: 'Piano-friendly ideas for a new hook or the next section of a song. Pop also draws on pop-rock patterns.' },
+  country: { title: 'Country', description: 'Acoustic-guitar inspiration with optional Ample Guitar strums. Your instrument chain supplies the actual sound.' },
+  electronic: { title: 'Electronic', description: 'Harmonic starting points for your synths and textures. Route the frog to any MIDI instrument on its Live track.' },
+};
+const recordings = import.meta.glob('./demo-videos/*.{mp4,webm}', { eager: true, query: '?url', import: 'default' });
+const subtitles = import.meta.glob('./demo-videos/*.vtt', { eager: true, query: '?url', import: 'default' });
 const dialog = document.querySelector('[data-demo-dialog]');
-const closeButton = document.querySelector('[data-demo-close]');
 const canvas = document.querySelector('[data-demo-canvas]');
+const context = canvas.getContext('2d');
 const video = document.querySelector('[data-demo-video]');
 const status = document.querySelector('[data-demo-status]');
+const playButton = document.querySelector('[data-demo-play]');
 const download = document.querySelector('[data-demo-download]');
-const context = canvas.getContext('2d');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const cache = new Map();
 const DURATION = 12;
-const looks = ['jazz', 'rock', 'pop', 'electronic'];
-const images = Object.fromEntries(looks.map((look) => [look, new Image()]));
-let rendering = false;
-let videoUrl = null;
+let look = 'all';
+let animation = null;
+let recorder = null;
+let stream = null;
+let generation = 0;
+let recordedSource = null;
+let opener = null;
 
-function loadImage(look) {
-  return new Promise((resolve, reject) => {
-    const image = images[look];
-    image.onload = resolve;
-    image.onerror = reject;
-    image.src = new URL(`./assets/genre-animations/${look}.png`, import.meta.url).href;
-  });
+function recordingFor(name) {
+  return recordings['./demo-videos/' + name + '.mp4'] || recordings['./demo-videos/' + name + '.webm'];
 }
-
-function label(text, x, y, color = '#c6e572') {
-  context.fillStyle = color;
-  context.font = 'bold 18px Courier New, monospace';
-  context.fillText(text, x, y);
+function stopPreview() {
+  generation += 1;
+  if (animation !== null) cancelAnimationFrame(animation);
+  animation = null;
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
+  recorder = null;
+  stream?.getTracks().forEach((track) => track.stop());
+  stream = null;
+  video.pause();
 }
-
-function headline(text, x, y, size = 54) {
-  context.fillStyle = '#10281a';
-  context.font = `bold ${size}px Georgia, serif`;
-  context.fillText(text, x, y);
-}
-
-function chip(text, x, y, width, active = false) {
-  context.fillStyle = active ? '#c6e572' : '#203b28';
-  context.fillRect(x, y, width, 47);
-  context.strokeStyle = active ? '#c6e572' : '#668965';
-  context.lineWidth = 2;
-  context.strokeRect(x, y, width, 47);
-  context.fillStyle = active ? '#10281a' : '#eee9d8';
-  context.font = 'bold 19px Courier New, monospace';
-  context.fillText(text, x + 14, y + 30);
-}
-
-function drawFrog(look, frame, x, y, width, height) {
-  const source = genreFrame(look, frame);
-  const scale = Math.min(width / source.width, height / source.height);
-  const drawWidth = source.width * scale;
-  const drawHeight = source.height * scale;
-  context.drawImage(images[look], source.x, source.y, source.width, source.height,
-    x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
-}
-
 function drawFrame(seconds) {
+  seconds = Math.max(0, Math.min(DURATION, seconds));
   const scene = Math.min(3, Math.floor(seconds / 3));
-  const phase = seconds % 3;
-  context.imageSmoothingEnabled = false;
-  context.fillStyle = '#eee9d8';
+  context.fillStyle = '#ffffff';
   context.fillRect(0, 0, 960, 540);
-  context.fillStyle = '#10281a';
-  context.fillRect(0, 0, 960, 54);
-  label('JAM FROG / DEMO TAPE', 30, 35);
-  label(`${String(scene + 1).padStart(2, '0')} / 04`, 837, 35, '#eee9d8');
-  context.fillStyle = '#d8e5b9';
-  context.fillRect(0, 54, 960, 5);
-  context.fillStyle = '#668f47';
-  context.fillRect(0, 54, Math.round(960 * seconds / DURATION), 5);
-  context.fillStyle = '#10281a';
-  context.fillRect(515, 86, 407, 399);
-  context.strokeStyle = '#10281a';
-  context.lineWidth = 3;
-  context.strokeRect(30, 86, 455, 399);
-
-  const titles = ['You play.', 'Frog listens.', 'Frog answers.', 'Find your sound.'];
-  const subtitles = [
-    ['A few notes become', 'a chord in Live.'],
-    ['Local models suggest', 'three ways forward.'],
-    ['A new phrase lands', 'on the next bar.'],
-    ['Eight genre frogs,', 'each with a part.'],
-  ];
-  label(['01 / PLAY', '02 / LISTEN', '03 / ANSWER', '04 / PICK A GENRE'][scene], 55, 125, '#315b3a');
-  headline(titles[scene], 55, 193, scene === 3 ? 45 : 54);
-  context.fillStyle = '#274833';
-  context.font = '25px Georgia, serif';
-  context.fillText(subtitles[scene][0], 55, 238);
-  context.fillText(subtitles[scene][1], 55, 271);
-
-  if (scene === 0) {
-    chip('Cmaj7', 55, 322, 120, true);
-    chip('Am7', 188, 322, 100, phase > .8);
-    chip('Fmaj7', 301, 322, 120, phase > 1.6);
-    label('LIVE NOTES  →  ONSET GROUPER', 55, 411, '#315b3a');
-  } else if (scene === 1) {
-    chip('Fmaj7', 55, 312, 126, true);
-    chip('G7', 194, 312, 95);
-    chip('Ab', 302, 312, 95);
-    label('N-GRAM + GRU / LOCAL', 55, 411, '#315b3a');
-  } else if (scene === 2) {
-    chip('Dm7', 55, 312, 105, true);
-    chip('G7', 173, 312, 85, true);
-    chip('Cmaj7', 271, 312, 126, true);
-    label('ANSWER ENGINE / MIDI OUT', 55, 411, '#315b3a');
-  } else {
-    chip('JAZZ', 55, 312, 96, phase < .75);
-    chip('ROCK', 162, 312, 96, phase >= .75 && phase < 1.5);
-    chip('POP', 269, 312, 84, phase >= 1.5 && phase < 2.25);
-    label('IDLE + PERFORMANCE POSES', 55, 411, '#315b3a');
-  }
-
-  const look = scene === 3 ? looks[Math.min(3, Math.floor(phase / .75))] : 'jazz';
-  const playing = scene === 2 || scene === 3;
-  const frame = Math.floor(seconds * (playing ? 7 : 4)) % 8 + (playing ? 8 : 0);
-  context.fillStyle = '#30583a';
-  context.fillRect(535, 106, 367, 305);
-  drawFrog(look, frame, 554, 113, 329, 288);
-  context.fillStyle = '#c6e572';
-  context.fillRect(535, 421, 367, 45);
-  context.fillStyle = '#10281a';
+  context.fillStyle = '#f8ed6c';
+  context.fillRect(0, 0, 960, 58);
+  context.fillStyle = '#222820';
   context.font = 'bold 17px Courier New, monospace';
-  context.fillText(`${look.toUpperCase()}  /  ${playing ? 'PLAYING' : 'LISTENING'}`, 550, 450);
-  label('ILLUSTRATIVE · NOT CONNECTED TO ABLETON', 30, 516, '#315b3a');
+  context.fillText('JAM FROG / ' + profiles[look].title.toUpperCase(), 30, 37);
+  context.fillText('0' + (scene + 1) + ' / 04', 822, 37);
+  context.fillStyle = '#5d8432';
+  context.fillRect(0, 58, Math.round(960 * seconds / DURATION), 5);
+  context.font = 'bold 45px Trebuchet MS, sans-serif';
+  context.fillStyle = '#222820';
+  context.fillText(['You play.', 'A next move.', 'The frog answers.', 'Your own sound.'][scene], 42, 180);
+  context.font = '22px Trebuchet MS, sans-serif';
+  const lines = [
+    ['Start with a phrase', 'on your MIDI instrument.'],
+    ['Three possible chords.', 'You choose where to go.'],
+    ['A reply on the next bar.', 'Keep the conversation going.'],
+    ['Your instruments and effects.', 'Your Ableton session.'],
+  ][scene];
+  context.fillText(lines[0], 42, 235);
+  context.fillText(lines[1], 42, 271);
+  const chords = scene === 0 ? ['Cmaj7', 'Am7', 'Fmaj7'] : scene === 1 ? ['Am7', 'Fmaj7', 'Dm7'] : ['Dm7', 'G7', 'Cmaj7'];
+  chords.forEach((name, i) => {
+    context.fillStyle = i === Math.floor(seconds) % 3 ? '#d5f394' : '#f1f4ed';
+    context.fillRect(42 + i * 139, 324, 126, 60);
+    context.fillStyle = '#222820';
+    context.font = 'bold 20px Trebuchet MS, sans-serif';
+    context.fillText(name, 55 + i * 139, 362);
+  });
+  context.fillStyle = '#f0f3ed';
+  context.fillRect(510, 93, 416, 374);
+  const frame = scene >= 2 ? 8 + Math.floor(seconds * 5) % 8 : 0;
+  paintFrog(context, look, frame, { x: 545, y: 111, width: 346, height: 325 });
+  context.fillStyle = '#62695e';
+  context.font = '14px Courier New, monospace';
+  context.fillText('ILLUSTRATED PREVIEW / SILENT / NOT LIVE MIDI', 30, 513);
 }
-
-async function renderDemo() {
-  if (rendering || videoUrl) return;
-  rendering = true;
-  canvas.hidden = false;
-  video.hidden = true;
+function showVideo(url, generated = false) {
+  canvas.hidden = true;
+  video.hidden = false;
+  video.src = url;
+  download.href = url;
+  download.download = 'jam-frog-' + look + (generated ? '-preview.webm' : '-demo');
+  download.hidden = false;
+  playButton.textContent = 'Play again';
+  playButton.disabled = false;
+}
+function captionTrack(name) {
+  video.querySelectorAll('track').forEach((track) => track.remove());
+  const url = subtitles['./demo-videos/' + name + '.vtt'];
+  if (!url) return;
+  const track = document.createElement('track');
+  track.kind = 'captions';
+  track.label = 'English';
+  track.srclang = 'en';
+  track.src = url;
+  track.default = true;
+  video.append(track);
+}
+async function openDemo(name, button) {
+  stopPreview();
+  look = name;
+  opener = button;
+  const current = generation;
+  document.querySelector('[data-demo-title]').textContent = profiles[name].title;
+  document.querySelector('[data-demo-description]').textContent = profiles[name].description;
   download.hidden = true;
-  status.textContent = 'Loading the illustrated demo…';
+  playButton.disabled = true;
+  playButton.textContent = 'Loading...';
+  video.hidden = true;
+  canvas.hidden = false;
+  recordedSource = null;
+  status.textContent = 'Loading the ' + profiles[name].title + ' preview...';
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  dialog.showModal();
   try {
-    await Promise.all(looks.map(loadImage));
-    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
-      .find((type) => window.MediaRecorder?.isTypeSupported(type));
-    if (!mimeType || !canvas.captureStream) throw new Error('Video rendering is unavailable in this browser.');
-    const stream = canvas.captureStream(30);
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4000000 });
-    const chunks = [];
-    recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
-    recorder.onerror = () => { status.textContent = 'Video recording stopped unexpectedly. Try again.'; rendering = false; };
-    recorder.onstop = () => {
-      stream.getTracks().forEach((track) => track.stop());
-      videoUrl = URL.createObjectURL(new Blob(chunks, { type: mimeType }));
-      video.src = videoUrl;
-      video.hidden = false;
-      canvas.hidden = true;
-      download.href = videoUrl;
-      download.download = `jam-frog-demo.${mimeType === 'video/mp4' ? 'mp4' : 'webm'}`;
-      download.hidden = false;
-      status.textContent = 'Your 12-second illustrated demo is ready to play or download. No live MIDI was recorded.';
-      rendering = false;
-      video.play().catch(() => {});
-    };
+    await loadFrog(name);
+    if (current !== generation || !dialog.open) return;
     drawFrame(0);
-    recorder.start();
-    const started = performance.now();
-    function paint() {
-      const seconds = Math.max(0, Math.min(DURATION, (performance.now() - started) / 1000));
-      drawFrame(seconds);
-      status.textContent = `Rendering demo tape… ${Math.min(100, Math.round(seconds / DURATION * 100))}%`;
-      if (seconds < DURATION) requestAnimationFrame(paint);
-      else recorder.stop();
+    video.poster = canvas.toDataURL('image/png');
+    captionTrack(name);
+    const source = recordingFor(name);
+    if (source) {
+      recordedSource = source;
+      document.querySelector('[data-demo-kind]').textContent = 'Recorded genre demo';
+      showVideo(source);
+      playButton.textContent = 'Play demo';
+      status.textContent = 'Recorded ' + profiles[name].title + ' demo.';
+    } else {
+      document.querySelector('[data-demo-kind]').textContent = 'Animated preview';
+      status.textContent = 'A silent illustration. A recorded Ableton demo has not been added for this style yet.';
+      playButton.disabled = false;
+      playButton.textContent = 'Play preview';
+      if (cache.has(name)) showVideo(cache.get(name), true);
+      else if (!reducedMotion.matches) playPreview();
     }
-    requestAnimationFrame(paint);
   } catch (error) {
-    status.textContent = error instanceof Error ? error.message : 'Could not render the demo video.';
-    rendering = false;
+    if (current !== generation) return;
+    status.textContent = error.message;
+    playButton.textContent = 'Retry';
+    playButton.disabled = false;
   }
 }
-
-openButton.addEventListener('click', () => {
-  dialog.showModal();
-  if (!videoUrl) renderDemo();
-  else video.play().catch(() => {});
+function playPreview() {
+  if (animation !== null) return;
+  if (!video.hidden) {
+    video.play().catch(() => { status.textContent = 'Press play in the video player to start.'; });
+    return;
+  }
+  playButton.disabled = true;
+  playButton.textContent = 'Playing...';
+  const current = generation;
+  const selected = look;
+  const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    .find((type) => window.MediaRecorder?.isTypeSupported(type));
+  if (mimeType && canvas.captureStream) {
+    try {
+      stream = canvas.captureStream(24);
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+      const chunks = [];
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        if (current !== generation) return;
+        stream?.getTracks().forEach((track) => track.stop());
+        stream = null;
+        recorder = null;
+        if (!chunks.length) return;
+        const url = URL.createObjectURL(new Blob(chunks, { type: mimeType }));
+        cache.set(selected, url);
+        showVideo(url, true);
+        status.textContent = '12-second silent illustrated preview. No Live session or MIDI was recorded.';
+      };
+      recorder.onerror = () => {
+        stream?.getTracks().forEach((track) => track.stop());
+        recorder = null;
+        stream = null;
+      };
+      recorder.start();
+    } catch {
+      stream?.getTracks().forEach((track) => track.stop());
+      recorder = null;
+      stream = null;
+    }
+  }
+  const started = performance.now();
+  function animate(now) {
+    if (current !== generation || !dialog.open) return;
+    const seconds = Math.max(0, Math.min(DURATION, (now - started) / 1000));
+    drawFrame(seconds);
+    if (seconds < DURATION) animation = requestAnimationFrame(animate);
+    else {
+      animation = null;
+      if (recorder && recorder.state === 'recording') recorder.stop();
+      else {
+        playButton.disabled = false;
+        playButton.textContent = 'Play again';
+      }
+    }
+  }
+  animation = requestAnimationFrame(animate);
+}
+document.querySelectorAll('[data-look]').forEach((button) => {
+  button.addEventListener('click', () => openDemo(button.dataset.look, button));
 });
-closeButton.addEventListener('click', () => dialog.close());
-dialog.addEventListener('close', () => video.pause());
-window.addEventListener('pagehide', () => { if (videoUrl) URL.revokeObjectURL(videoUrl); });
+playButton.addEventListener('click', () => {
+  if (playButton.textContent === 'Retry') openDemo(look, opener);
+  else playPreview();
+});
+video.addEventListener('error', () => {
+  if (!recordedSource || !dialog.open) return;
+  recordedSource = null;
+  video.pause();
+  video.hidden = true;
+  canvas.hidden = false;
+  download.hidden = true;
+  drawFrame(0);
+  document.querySelector('[data-demo-kind]').textContent = 'Animated preview';
+  status.textContent = 'The recording could not play. You can still watch the illustrated preview.';
+  playButton.textContent = 'Play preview';
+  playButton.disabled = false;
+});
+document.querySelector('[data-demo-close]').addEventListener('click', () => dialog.close());
+document.querySelector('[data-demo-learn]').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', (event) => {
+  if (event.target !== dialog) return;
+  const box = dialog.getBoundingClientRect();
+  if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close();
+});
+dialog.addEventListener('close', () => { stopPreview(); opener?.focus(); });
+window.addEventListener('pagehide', () => {
+  stopPreview();
+  cache.forEach((url) => URL.revokeObjectURL(url));
+  cache.clear();
+});

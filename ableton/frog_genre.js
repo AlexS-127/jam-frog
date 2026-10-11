@@ -1,9 +1,9 @@
 // Frog Voice's genre switch, in a [js frog_genre.js] fed by [route /note /genre].
 // The app sends /genre <i>: an index into GENRES (the overlay's genres), or -1 for all styles. This finds the
-// first Instrument Rack on this track, picks the chain named after the genre (a chain named "all" for all styles,
-// else the first chain), and moves the rack's Chain Selector to it. The chain zones must be spread evenly over the
-// selector (Chain Select editor -> right-click -> Distribute Ranges Equally): chain k of n then sits in the k-th
-// equal slice, and this sets the middle of that slice.
+// first Instrument Rack on this track, picks the chain named after the genre (for all styles: the chain named
+// "user", else one named "all", else the first chain), and moves the rack's Chain Selector to it. The chain zones
+// must be spread evenly over the selector (Chain Select editor -> right-click -> Distribute Ranges Equally):
+// chain k of n then sits in the k-th equal slice, and this sets the middle of that slice.
 
 autowatch = 1;
 inlets = 1;
@@ -12,6 +12,8 @@ outlets = 1; // status lines, to [print FrogGenre]
 // Must match STYLES in app/src/core/styles.ts, in order (styles.test.ts checks it).
 var GENRES = ['jazz', 'rock', 'electronic', 'country', 'pop', 'punk'];
 var ALL = 'all';
+// the chains All styles plays, in order of preference
+var ALL_CHAINS = ['user', 'all'];
 
 function msg_int(i) {
   var genre = i >= 0 && i < GENRES.length ? GENRES[i] : ALL;
@@ -30,10 +32,11 @@ function select(genre) {
   var rack = findRack();
   if (!rack) return say('no Instrument Rack on this track');
   var n = rack.getcount('chains');
+  var names = [];
+  for (var c = 0; c < n; c++) names.push(nameOf(new LiveAPI(rack.unquotedpath + ' chains ' + c)));
+  var wanted = genre === ALL ? ALL_CHAINS : [genre];
   var k = -1;
-  for (var c = 0; c < n && k < 0; c++) {
-    if (nameOf(new LiveAPI(rack.unquotedpath + ' chains ' + c)) === genre) k = c;
-  }
+  for (var w = 0; w < wanted.length && k < 0; w++) k = names.indexOf(wanted[w]);
   if (k < 0 && genre === ALL && n > 0) k = 0;
   if (k < 0) return say('no chain named ' + genre + ' (keeping the current sound)');
   var sel = findParam(rack, 'chain selector');
@@ -42,7 +45,7 @@ function select(genre) {
   var max = Number(sel.get('max'));
   var v = Math.floor(min + ((k + 0.5) * (max - min + 1)) / n);
   if (Number(sel.get('value')) !== v) sel.set('value', v); // skip no-op sets: each set is an undo step in Live
-  say(genre + ' -> chain ' + (k + 1) + ' of ' + n + ', selector ' + v);
+  say(genre + ' -> ' + names[k] + ', chain ' + (k + 1) + ' of ' + n + ', selector ' + v);
 }
 
 function findRack() {

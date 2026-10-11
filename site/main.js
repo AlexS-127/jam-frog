@@ -1,84 +1,48 @@
-const steps = [
-  {
-    kicker: 'PLAYER INPUT',
-    title: 'Start with the chords you play.',
-    copy: 'Frog Ear sends note-on and note-off events from your Live instrument track to Jam Frog over localhost OSC. The IAC virtual MIDI ports are a fallback.',
-    link: 'Read the Ableton routing guide',
-    href: 'https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md',
-  },
-  {
-    kicker: 'LOCAL PREDICTION',
-    title: 'See three ways forward.',
-    copy: 'The app groups the note-ons into a chord, estimates the session key, then ranks three model suggestions. Genre and the weirdness control reshape that distribution.',
-    link: 'Read suggestion ranking',
-    href: 'https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/suggest.ts',
-  },
-  {
-    kicker: 'CALL AND RESPONSE',
-    title: 'The frog takes a turn.',
-    copy: 'At the next bar line, AnswerEngine plays a 2–4 chord continuation in your register. With Copy my rhythm on, it can use up to 8 chords and mirror note timing, lengths, and dynamics.',
-    link: 'Read the answer engine',
-    href: 'https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/answer.ts',
-  },
-];
+import './frog-looks.js';
+import './demo-video.js';
 
-const buttons = [...document.querySelectorAll('[data-step]')];
-const kicker = document.querySelector('[data-signal-kicker]');
-const title = document.querySelector('[data-signal-title]');
-const copy = document.querySelector('[data-signal-copy]');
-const link = document.querySelector('[data-signal-link]');
-
-function selectStep(index) {
-  const step = steps[index];
-  if (!step) return;
-  buttons.forEach((button, buttonIndex) => {
-    const active = buttonIndex === index;
-    button.classList.toggle('is-active', active);
-    button.setAttribute('aria-pressed', String(active));
-  });
-  kicker.textContent = step.kicker;
-  title.textContent = step.title;
-  copy.textContent = step.copy;
-  link.textContent = `${step.link} ↗`;
-  link.href = step.href;
-}
-
-buttons.forEach((button) => {
-  button.addEventListener('click', () => selectStep(Number(button.dataset.step)));
-});
-
-const lookButtons = [...document.querySelectorAll('[data-look]')];
-const lookAnnouncement = document.querySelector('[data-look-announcement]');
-const lookMessages = {
-  jazz: 'Jazz frog is ready to sit in. Try another look.',
-  rock: 'Rock frog is ready to turn up the amp.',
-  punk: 'Punk frog is ready to play fast rhythm guitar.',
-  alternative: 'Alternative frog is ready to find a new texture.',
-  pop: 'Pop frog is ready at the piano.',
-  country: 'Country frog is ready to ride the changes.',
-  electronic: 'Electronic frog is ready to find the pulse.',
-  rap: 'Rap frog is ready on the mic.',
+const modes = {
+  suggest: { number: '01', title: 'A little nudge forward.', copy: 'Get three possible next chords based on your playing, key, genre, and weirdness setting. Choose the one that sounds like you.', label: 'THREE NEXT MOVES', note: 'FROG SUGGESTS', familiar: ['Am7', 'Fmaj7', 'Dm7'], adventurous: ['Abmaj7', 'E7', 'Fm'] },
+  answer: { number: '02', title: 'Your phrase. A new reply.', copy: 'Play 2, 4, or 8 bars. The frog answers on the next downbeat, with voicings near your hands and optional rhythm copying.', label: 'FROG RESPONSE', note: 'NEXT DOWNBEAT', familiar: ['Dm7', 'G7', 'Cmaj7', 'Cmaj7'], adventurous: ['Dm7', 'Abmaj7', 'G7', 'Cmaj7'] },
+  jam: { number: '03', title: 'A bandmate that keeps going.', copy: 'Keep improvising over new phrases. The frog previews its next block and follows your key changes. Turning weirdness can reshape the next planned block.', label: 'NEXT JAM PHRASE', note: 'PLAY ALONG', familiar: ['Cmaj7', 'Am7', 'Dm7', 'G7'], adventurous: ['Cmaj7', 'E7', 'Am7', 'Abmaj7'] },
 };
+const modeButtons = [...document.querySelectorAll('[data-mode]')];
+const weirdness = document.querySelector('#weirdness');
+const chords = document.querySelector('[data-frog-chords]');
+let selectedMode = 'suggest';
 
-lookButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    lookButtons.forEach((item) => {
-      const selected = item === button;
-      item.classList.toggle('is-selected', selected);
-      item.setAttribute('aria-pressed', String(selected));
-      item.querySelector('.look-status').textContent = selected ? 'SELECTED' : 'SELECT';
-    });
-    window.dispatchEvent(new CustomEvent('frog-look-selected', { detail: button.dataset.look }));
-    lookAnnouncement.textContent = lookMessages[button.dataset.look];
-  });
-});
+function updateExample() {
+  const mode = modes[selectedMode];
+  document.querySelector('[data-mode-number]').textContent = mode.number;
+  document.querySelector('[data-mode-title]').textContent = mode.title;
+  document.querySelector('[data-mode-copy]').textContent = mode.copy;
+  const note = document.createElement('span');
+  note.textContent = mode.note;
+  document.querySelector('[data-phrase-label]').replaceChildren(mode.label, note);
+  const choices = Number(weirdness.value) >= 60 ? mode.adventurous : mode.familiar;
+  chords.style.gridTemplateColumns = 'repeat(' + choices.length + ', minmax(0, 1fr))';
+  chords.replaceChildren(...choices.map((name) => {
+    const cell = document.createElement('span');
+    cell.textContent = name;
+    return cell;
+  }));
+  document.querySelector('#weirdness-value').textContent = weirdness.value + '%';
+  modeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mode === selectedMode)));
+}
+modeButtons.forEach((button) => button.addEventListener('click', () => {
+  selectedMode = button.dataset.mode;
+  updateExample();
+}));
+weirdness.addEventListener('input', updateExample);
+updateExample();
 
-document.addEventListener('keydown', (event) => {
-  if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-  if (!buttons.includes(document.activeElement)) return;
-  const activeIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
-  if (activeIndex < 0) return;
-  const next = (activeIndex + (event.key === 'ArrowRight' ? 1 : -1) + steps.length) % steps.length;
-  buttons[next].focus();
-  selectStep(next);
+const artwork = import.meta.glob('../docs/art/**/*.{png,jpg,jpeg,webp,avif,svg}', { eager: true, query: '?url', import: 'default' });
+const artFiles = Object.keys(artwork).sort((a, b) => {
+  const preferred = (path) => /\/jam-frog\./i.test(path) ? 0 : 1;
+  return preferred(a) - preferred(b) || a.localeCompare(b);
 });
+if (artFiles.length) {
+  const image = document.querySelector('[data-project-art]');
+  image.addEventListener('load', () => { document.querySelector('[data-closing-art]').hidden = false; });
+  image.src = artwork[artFiles[0]];
+}

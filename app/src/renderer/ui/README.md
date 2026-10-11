@@ -7,7 +7,7 @@ From `app/`, run `npm exec vite -- --host 127.0.0.1`, then open:
 
 The demo mounts the same `createOverlay(root, handlers)` component intended for later integration. It retains `UiState`, `Handlers`, and `update(state)`; `pet` and `destroy()` are additive. Call `destroy()` when unmounting. The root must have a defined size, normally 360×480. Import `overlay.css` for the transparent stage (the app does this in `src/renderer/index.html`). Demo background and development controls live outside the stage.
 
-Select any action to preview its loop, including **Playing keyboard**. **Ambient / auto** follows the music mood and occasional resting gestures. Changing the mood returns to automatic mode. Click or press Enter/Space on the frog to alternate wave and jump; drag more than four pixels to move, then release to toss. **Center frog** stops motion and resets its position. The **Play a frog answer** toggle shows the dedicated keyboard performance loop; clicks briefly play a greeting before it resumes.
+Select any action to preview its loop, including **Playing keyboard**. **Ambient / auto** follows the music mood; at rest the frog breathes with its eyes open, blinks every few seconds, and every 2.5–5 s does something cute (jumps, looks around, touches its chin, sticks its tongue out, or waves). Changing the mood returns to automatic mode. Click or press Enter/Space on the frog to alternate wave and jump; drag more than four pixels to move, then release to toss. **Center frog** stops motion and resets its position. The **Play a frog answer** toggle shows the dedicated keyboard performance loop; clicks briefly play a greeting before it resumes.
 
 Reduced motion freezes the displayed pose and disables ambient gestures and fling physics. Direct dragging and explicit reactions remain available. Hidden pages pause animation time; returning resumes the previous frame without catching up.
 
@@ -15,7 +15,7 @@ The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from
 
 The overlay (440×640) has no background of its own: the frog sits on a guitar amp whose head holds the controls
 (logo plate, ⚙, ×, then the control panel) and whose cabinet front is the screen, set in grille cloth. The frog wears
-the genre's outfit (`frog/looks.ts`, with eight-frame idle and eight-frame performance sheets in `site/assets/genre-animations/`). Before that, it was laid
+the genre's outfit (`frog/looks.ts`, with eight-frame idle and eight-frame performance sheets in `frog/sprites/a/genres/`). Before that, it was laid
 out as Alex asked on Saturday night: a big display that shows **your chords** while you play
 and **the frog's** while it plays, bar by bar (a box per bar, each chord as wide as it lasts, a dotted stretch where a
 chord is held over; the sounding chord lit; in Jam mode the next block underneath in blue, so you can get ready), the
@@ -32,8 +32,9 @@ fallback BPM are in the ⚙ settings panel. No mini keyboards.
 - `frog/controller.ts`: canvas animation, gesture scheduling, pointer capture, visibility, reduced motion, and cleanup.
 - `frog/motion.ts`: the available clip definitions, frame selection, bounds, and fling calculations.
 - `frog/atlas.ts`: source rectangles and jump lift; fixed scale and resting foot anchor.
-- `frog/green-frog.png` and `frog/keyboard-frog.png`: original generated prototype artwork.
-- `shared/genre-animations.ts` and `site/assets/genre-animations/`: measured crops and complete genre sprites used by both the app and showcase.
+- `frog/sprites/`: all the frog artwork, one folder per version (the app shows `a/`). See `frog/sprites/README.md`.
+- `frog/sprites/a/green-frog.png` and `keyboard-frog.png`: original generated prototype artwork.
+- `shared/genre-animations.ts` and `frog/sprites/a/genres/`: measured crops and complete genre sprites used by both the app and showcase.
 - `frog/artwork.md`: generation prompt, provenance, and references.
 - `frog/*.test.ts`: controller events/lifecycle and pure frame/movement tests using the existing Vitest setup.
 

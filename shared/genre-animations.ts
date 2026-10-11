@@ -8,7 +8,6 @@ export const GENRE_ANIMATIONS = {
   pop: { width: 1312, height: 1199, x: [0, 338, 667, 995, 1312], y: [0, 317, 606, 891, 1199], mouth: [0.50, 0.40] },
   country: { width: 1312, height: 1199, x: [0, 359, 668, 983, 1312], y: [0, 321, 613, 892, 1199], mouth: [0.50, 0.39] },
   electronic: { width: 1312, height: 1199, x: [0, 339, 655, 973, 1312], y: [0, 322, 592, 859, 1199], mouth: [0.50, 0.40] },
-  rap: { width: 1312, height: 1199, x: [0, 330, 658, 982, 1312], y: [0, 308, 606, 897, 1199], mouth: [0.50, 0.40] },
 } as const;
 
 export type GenreLook = keyof typeof GENRE_ANIMATIONS;
