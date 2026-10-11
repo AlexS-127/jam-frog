@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFrogPet, type PetController, type PetSnapshot } from './controller';
+import { OUTFIT_SHEETS } from './looks';
 
 // Minimal browser boundary: exercise real controller scheduling and event listeners.
 class ElementStub extends EventTarget {
   children: ElementStub[] = [];
+  draws: unknown[][] = [];
   style: Record<string, string> = {};
   dataset: Record<string, string> = {};
   clientWidth = 360;
@@ -16,7 +18,10 @@ class ElementStub extends EventTarget {
   setPointerCapture(id: number) { this.captured.add(id); }
   hasPointerCapture(id: number) { return this.captured.has(id); }
   releasePointerCapture(id: number) { this.captured.delete(id); }
-  getContext() { return { clearRect() {}, drawImage() {}, imageSmoothingEnabled: true }; }
+  getContext() { return {
+    clearRect() {}, drawImage: (...args: unknown[]) => { this.draws.push(args); },
+    save() {}, restore() {}, translate() {}, scale() {}, imageSmoothingEnabled: true,
+  }; }
 }
 
 describe('frog controller', () => {
@@ -63,8 +68,9 @@ describe('frog controller', () => {
       naturalWidth = 0;
       naturalHeight = 0;
       set src(value: string) {
-        this.naturalWidth = value.includes('keyboard-frog') ? 2172 : 1182;
-        this.naturalHeight = value.includes('keyboard-frog') ? 724 : 1330;
+        const genre = value.match(/genre-animations\/(\w+)\.png/)?.[1] as keyof typeof OUTFIT_SHEETS | undefined;
+        this.naturalWidth = genre ? OUTFIT_SHEETS[genre].width : value.includes('keyboard-frog') ? 2172 : 1182;
+        this.naturalHeight = genre ? OUTFIT_SHEETS[genre].height : value.includes('keyboard-frog') ? 724 : 1330;
         queueMicrotask(() => this.dispatchEvent(new Event('load')));
       }
     });
@@ -187,6 +193,26 @@ describe('frog controller', () => {
     expect(state.action).toBe('playing');
     pet.setMusicPlaying(false);
     expect(state.action).toBe('idle');
+  });
+  it('uses all eight complete idle and playing frames for a genre instrument', () => {
+    const canvas = button.children[0];
+    const idleFrames = new Set<number>();
+    const playingFrames = new Set<number>();
+    pet.subscribe((snapshot) => {
+      if (snapshot.action === 'idle') idleFrames.add(snapshot.frame);
+      if (snapshot.action === 'playing') playingFrames.add(snapshot.frame);
+    });
+    pet.setLook('rock');
+    advance(1100);
+    expect([...idleFrames].sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+
+    const start = canvas.draws.length;
+    pet.setMusicPlaying(true);
+    advance(1100);
+    expect([...playingFrames].sort()).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    const playingDraws = canvas.draws.slice(start);
+    expect(playingDraws.length).toBeGreaterThanOrEqual(8);
+    expect(playingDraws.every((draw) => Number(draw[2]) >= OUTFIT_SHEETS.rock.y[2])).toBe(true);
   });
   it('pauses hidden time and removes listeners and animation scheduling on disposal', () => {
     pet.preview('review');

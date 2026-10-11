@@ -1,65 +1,61 @@
 import { PET_SIZE, type Action } from './motion';
+import {
+  GENRE_ANIMATIONS, GENRE_FRAME_COUNT, GENRE_LOOKS, genreFrame, genreFrameSize,
+  type GenreLook,
+} from '../../../../../shared/genre-animations';
 
-// Genre outfits (Kevin's sprite sheet, genre-outfits.png, also on the showcase site): the frog dresses for the
-// genre you pick. Each outfit is one baked-in sprite (frog, clothes and instrument together), animated by
-// nudging, lifting and squashing the whole sprite per frame, as on the site.
+export type Look = 'classic' | GenreLook;
+export { GENRE_LOOKS, GENRE_FRAME_COUNT };
 
-export type Look = 'classic' | 'jazz' | 'rock' | 'country' | 'electronic';
+/** The app and showcase share the same complete sprite frames. */
+export const OUTFIT_SHEETS = GENRE_ANIMATIONS;
 
-export const OUTFIT_SHEET = { width: 1312, height: 1199 };
-
-/** Where each outfit is in the sheet (its visible pixels; measured once from the sheet). */
-export const OUTFITS: Record<Exclude<Look, 'classic'>, { x: number; y: number; width: number; height: number }> = {
-  jazz: { x: 182, y: 144, width: 410, height: 445 },
-  rock: { x: 754, y: 77, width: 495, height: 542 },
-  country: { x: 174, y: 673, width: 480, height: 469 },
-  electronic: { x: 687, y: 683, width: 534, height: 430 },
-};
-
-/** Which outfit each genre wears; pop and "all styles" keep the classic frog (with its keyboard). */
-const GENRE_LOOKS: Record<string, Look> = {
+const GENRE_LOOKS_BY_MODEL: Record<string, Look> = {
   jazz: 'jazz', soul: 'jazz',
-  rock: 'rock', 'pop rock': 'rock', alternative: 'rock', punk: 'rock', metal: 'rock',
+  rock: 'rock', 'pop rock': 'rock',
+  punk: 'punk', metal: 'punk',
+  alternative: 'alternative',
+  pop: 'pop',
   country: 'country',
-  electronic: 'electronic', rap: 'electronic', reggae: 'electronic',
+  electronic: 'electronic', reggae: 'electronic',
+  rap: 'rap',
 };
 
 export function lookFor(genre: string): Look {
-  return GENRE_LOOKS[genre] ?? 'classic';
+  return GENRE_LOOKS_BY_MODEL[genre] ?? 'classic';
 }
 
-/** Per frame of each action: [dx, dy, scaleX, scaleY] (canvas pixels), from the showcase site. */
-export const OUTFIT_MOVES: Record<Action, readonly (readonly [number, number, number, number])[]> = {
-  idle: [[0, 0, 1, 1], [-1, -2, 1, 1], [0, -3, 1, 1], [1, -2, 1, 1], [0, -1, 1, 1], [0, 0, 1, 1]],
+/** Existing actions beyond idle and playing still move the complete character. */
+export const OUTFIT_MOVES: Record<Exclude<Action, 'idle' | 'waiting' | 'playing'>, readonly (readonly [number, number, number, number])[]> = {
   waving: [[0, 0, 1, 1], [-2, -2, 0.99, 1.01], [2, -3, 1.01, 1], [-1, -1, 0.99, 1.01]],
   jumping: [[0, 0, 1, 1], [0, -5, 0.99, 1.02], [0, -13, 1.01, 0.98], [0, -17, 0.98, 1.02], [0, -3, 1.03, 0.96]],
   failed: [[0, 0, 1, 1], [0, 1, 1.01, 0.99], [0, 3, 1.02, 0.97], [0, 4, 1.03, 0.96], [0, 4, 1.03, 0.96], [0, 3, 1.02, 0.97], [0, 1, 1.01, 0.99], [0, 0, 1, 1]],
-  waiting: [[0, 0, 1, 1], [-1, -2, 1, 1], [0, -3, 1, 1], [1, -2, 1, 1], [0, -1, 1, 1], [0, 0, 1, 1]],
   review: [[0, 0, 1, 1], [1, -1, 1, 1], [2, -2, 1, 1], [1, -2, 1, 1], [-1, -1, 1, 1], [0, 0, 1, 1]],
-  playing: [[0, 0, 1, 1], [0, -2, 1.01, 0.99], [1, -3, 1, 1.01], [0, -2, 1.01, 0.99], [-1, 0, 1, 1.01], [0, 0, 1, 1]],
 };
 
-/** Room left above the outfit for the highest jump frame. */
-const JUMP_ROOM = 18;
-const FEET = 12;
-
-/** How big an outfit is drawn: as big as the classic frog, or smaller if its instrument wouldn't fit. */
-export function outfitScale(look: Exclude<Look, 'classic'>): number {
-  const o = OUTFITS[look];
-  return Math.min(0.42, (PET_SIZE.width - 6) / (o.width * 1.03), (PET_SIZE.height - FEET - JUMP_ROOM) / (o.height * 1.03));
+/** Leave room for the tallest hat or mohawk and the highest jump pose. */
+export function outfitScale(look: GenreLook): number {
+  const { width, height } = genreFrameSize(look);
+  return Math.min(0.56, (PET_SIZE.width - 6) / (width * 1.03), (PET_SIZE.height - 30) / (height * 1.03));
 }
 
-/** Draw one frame of an outfit, standing on the canvas floor (squashes keep the feet down). */
-export function drawOutfit(context: CanvasRenderingContext2D, sheet: CanvasImageSource, look: Exclude<Look, 'classic'>, action: Action, frame: number): void {
-  const o = OUTFITS[look];
-  const [dx, dy, sx, sy] = OUTFIT_MOVES[action][frame % OUTFIT_MOVES[action].length];
+export function drawOutfit(
+  context: CanvasRenderingContext2D, sheet: CanvasImageSource,
+  look: GenreLook, action: Action, frame: number,
+): void {
+  const index = action === 'playing' ? GENRE_FRAME_COUNT + frame % GENRE_FRAME_COUNT
+    : frame % GENRE_FRAME_COUNT;
+  const source = genreFrame(look, index);
+  const movement = action === 'idle' || action === 'waiting' || action === 'playing'
+    ? [0, 0, 1, 1] : OUTFIT_MOVES[action][frame % OUTFIT_MOVES[action].length];
+  const [dx, dy, sx, sy] = movement;
   const scale = outfitScale(look);
-  const width = Math.round(o.width * scale);
-  const height = Math.round(o.height * scale);
+  const width = Math.round(source.width * scale);
+  const height = Math.round(source.height * scale);
   context.clearRect(0, 0, PET_SIZE.width, PET_SIZE.height);
   context.save();
-  context.translate(PET_SIZE.width / 2 + dx, PET_SIZE.height - FEET + dy);
+  context.translate(PET_SIZE.width / 2 + dx, PET_SIZE.height - 12 + dy);
   context.scale(sx, sy);
-  context.drawImage(sheet, o.x, o.y, o.width, o.height, -width / 2, -height, width, height);
+  context.drawImage(sheet, source.x, source.y, source.width, source.height, -width / 2, -height, width, height);
   context.restore();
 }
