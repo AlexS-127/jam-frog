@@ -73,6 +73,10 @@ button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visibl
 dt { font-weight: 800; font-size: 14px; }
 dd { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
 .workflow { background: #f0f3ed; }
+.workflow-introduction { max-width: 480px; }
+.ableton-brand { display: inline-flex; margin-bottom: 24px; }
+.ableton-brand img { display: block; width: 160px; max-width: 100%; height: auto; }
+.workflow-introduction p { margin-bottom: 0; color: var(--muted); }
 .workflow-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 45px; }
 .index { display: block; font-family: var(--mono); font-size: 11px; color: var(--green); margin-bottom: 15px; }
 .workflow-columns h3 { margin-bottom: 15px; }
