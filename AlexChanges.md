@@ -138,3 +138,166 @@ walkthroughs. Most of the work went straight to `main`, as agreed in `TEAMWORK.m
 
 - **Frog modes:** Off, Answer and Jam, all bar-accurate with Live's transport.
 - **Tests:** 151 of 152 unit tests pass on `main`. The one failure is the GRU's 5 ms speed check: it passes when run alone, and fails only when all test files run in parallel on a busy machine.
+
+## October 11 session: Claude Code and Codex
+
+Changes made with Alex on October 11, 2026. Parts 1–7 record the Claude Code session; parts 8–9 record the
+Codex sessions. Alex chose what to build and tested in Live. Work from other sessions is attributed below.
+
+**Status:** all of it is committed on `main` (commit `e722377`, then merged with `origin/main`). At commit time the typecheck passed and all 164 tests passed.
+
+### 1. The frog's sound follows the genre (Ableton, chain selector)
+
+Picking a genre in the overlay now switches the Frog track's sound in Live.
+
+- **App:** sends `/genre <index>` to Frog Voice over OSC. Frog Voice is told the current genre again whenever it
+  (re)loads.
+  - While Live plays, the switch waits for the next bar line. Otherwise it switches at once.
+  - Notes the frog is holding are released first, so none hang on the old chain.
+  - Files: `app/src/renderer/main.ts`, `app/src/renderer/bridges/osc.ts`, `app/src/main/osc.ts`.
+- **Frog Voice** (`ableton/Frog Voice.amxd` and `.maxpat.json`): `route /note` became `route /note /genre`, feeding a
+  new `[js frog_genre.js]` and `[print FrogGenre]`.
+- **`ableton/frog_genre.js`:** finds the first Instrument Rack on the Frog track and the chain named after the genre.
+  It moves the rack's **Chain Selector** to the middle of that chain's zone, so the zones must be spread evenly.
+  - All styles plays the chain named `user`. If there isn't one, it plays a chain named `all`, then the first chain.
+  - A genre without a chain keeps the current sound.
+  - Each chain carries its own instrument, effects and send levels, using the rack's return chains.
+- **Docs:** `ableton/SETUP.md` gained "A frog sound per genre", covering rack setup, zones and testing in the Max
+  Console.
+
+### 2. Six genres instead of twelve
+
+- **Picker:** jazz, rock, electronic, country, pop and punk, plus All styles. Pop includes pop rock. Punk includes
+  metal and alternative. Rap, soul and reggae are gone.
+- **Models:** the models still know the 12 trained genres. A picker choice averages the predictions of its genres
+  (`app/src/core/styles.ts`, `styled()`).
+- **Sync check:** a test keeps the genre list in `frog_genre.js` in sync with the app's.
+
+### Merging with Kevin's work
+
+`origin/main` (Kevin's animated genre frogs, demo tape and site refresh, and the restored `KevinChanges.md`) was
+merged in twice before the push.
+
+- **Conflicts:** two, in `frog/looks.ts` and `frog/motion.test.ts`. Both were resolved with Kevin's versions.
+- **Check:** before pushing, the merged branch was compared with `origin/main`. None of Kevin's files were deleted
+  or changed.
+
+### 3. Frog animation: slower, calmer, cuter
+
+The frog no longer blinks constantly. Every idle frame used to play about once a second, including the eyes-shut
+ones.
+
+- **Idle:** he breathes with his eyes open and blinks for real every 2.5–5.5 s, with the odd double blink.
+- **Cute moments:** every 2.5–5 s at rest he jumps, looks around, touches his chin, sticks his tongue out, or waves.
+  - Outfits ponder with a side-eye instead of touching the chin, because their hands hold instruments.
+  - The tongue reuses Kevin's pixel tongue from the site. It was later reworked to be frame-based (`tongue.ts`).
+- **Speed:** every action is slower, for example wave 0.7 → 1.2 s, look around 1.0 → 2.6 s, and playing 1.1 → 2.0 s.
+  Loops can now stretch over 8 beats when synced to Live.
+- **Files:** `frog/motion.ts`, `frog/controller.ts`, `frog/looks.ts` (`OUTFIT_FRAMES`) and `frog/tongue.ts`.
+
+### 4. Frog artwork in one folder
+
+- **New location:** all frog art now lives in `app/src/renderer/ui/frog/sprites/a/`:
+  - the classic frog's two sheets
+  - Kevin's genre sheets, in `genres/`, moved from `site/assets/genre-animations/` with their history kept
+- **Site:** the showcase site reads from the same folder. Its duplicate copies of the classic frog sheets were removed.
+- **Versions:** `frog/sprites.ts` can load other versions of the art (`b/`, …) for A/B tests. A file missing from a
+  version falls back to `a/`.
+- **Scaling:** frame maps scale to sheets of another resolution, such as pixel-snapped art at about 1/5 size.
+- **The A/B test:** a pixel-snapped version B was tested, and A won. B was deleted and the Frog art picker removed,
+  but the loading code stays for future tests (`sprites/README.md`).
+
+### 5. Ample Guitar strums for guitar genres
+
+- **What gets strummed:** for jazz, rock, country and punk, the frog's answers go out as MIDI for **Ample Guitar's
+  Strummer in Detect mode** instead of chord voicings. Electronic and pop keep normal voicings.
+- **The MIDI:**
+  - the chord in root position from C1, with root in C1–B1 and the rest up to B2
+  - a strum key: C4 strums down. With Copy my rhythm, re-strikes alternate up (E4) and down.
+  - strum keys at velocity 120, so all six strings are strummed
+- **Source:** the key map comes from Ample's Strummer manual.
+- **All styles setting:** All styles strums only when ⚙ Settings says the `user` chain is an Ample Guitar.
+- **Files:** `app/src/core/strum.ts`, used by `answer.ts`. Setup is in `ableton/SETUP.md` ("Strummed guitar").
+
+### 6. Overlay changes
+
+- **Font:** Nunito, bundled with the app (`@fontsource-variable/nunito`, pinned to 5.2.6), so nothing is fetched
+  from the network.
+- **Speech bubble:** a translucent, slightly blurred box beside the frog, with a small tail at its bottom left. It
+  replaced the mouth-tracking bubble.
+- **Chord names:** a name that doesn't fit its stretch of the bar now shrinks to fit, instead of being cut off at the
+  bar line.
+- **Rap removed:** gone from the showcase site's outfit picker ("Seven pixel-art players") and from the app's outfit
+  list. Kevin's `rap.png` file was kept.
+- **⚙ Settings:**
+  - **Chord names:** letters (C, Am, G7) or **Roman numerals** in the session key (I, vi, V7, V7/ii).
+  - **Copy my rhythm:** moved here from the main panel.
+  - **All styles: user chain is Ample Guitar (strum):** on by default.
+
+### 7. Jam mode follows the weirdness knob
+
+While jamming, turning the weirdness knob now re-plans the next block in the background, so the change is heard
+from the next block on. Before, the next block was already planned with the old weirdness. The block playing keeps
+its chords, as does a block that has already started early on an anticipation (`AnswerEngine.settingsChanged()`).
+
+### 8. Pixel-art amps and three-frame tongues (Codex)
+
+- **Amp artwork:** the overlay amp now uses square pixel-style edges, hard grille patterns, corner protectors,
+  feet, trim, a handle, a logo plate and pixel-style controls.
+- **Genre-inspired amps:** the selected genre sets the amp's look: jazz gets a tweed-style combo, rock a
+  black-and-gold stack, punk a battered amp with stickers, alternative a teal-and-silver combo, pop a
+  cream-and-pink amp, country a tweed-and-wood look, and electronic a dark rack-style amp with blue accents
+  and indicator lights. The classic look uses a dark amp.
+- **Site amp:** the small amp in the showcase site's response artwork also has a pixel-art cabinet, grille,
+  controls and shadow.
+- **Tongue animation:** the classic frog and every outfit use exactly three frames: default idle, tongue half
+  out, tongue fully out. The tongue is centered at the mouth and extends toward the front like a human
+  tongue. The sequence lasts 900 ms and uses the default idle artwork underneath all three frames.
+- **Shared rendering:** the app, animation frame review and site use the same frame-based tongue renderer.
+  The site's movement picker now includes **Tongue**; the site's previous random tongue pulses were removed.
+- **Files:** `app/src/renderer/ui/overlay.ts`, `overlay.css`, `frog/motion.ts`, `frog/tongue.ts`,
+  `frog/looks.ts`, `frog/controller.ts`, `frog/review.ts`, plus `site/frog-looks.js`, `site/index.html`
+  and `site/styles.css`.
+- **Verification:** app typecheck passed, all 163 tests across 20 test files passed, and the production build
+  passed. Vite reported a large model-bundle warning. The showcase loaded at `http://127.0.0.1:5173/`;
+  visual review of the animation and genre amps was not completed in this session.
+
+### 9. Musician-first website and hosting (Codex)
+
+- Rebuilt the showcase around a white seven-frog selector: Jazz, Rock, and Punk
+  on the left, a larger classic All styles frog in the center, then Pop, Country,
+  and Electronic. The sprites stay still at rest and show neutral, half-out,
+  and full-out tongue frames on hover or keyboard focus.
+- Each selection opens its genre's recording, or a labeled silent illustrated
+  preview if a recording is missing. Preview videos can be rendered and downloaded
+  in the browser. Added optional VTT caption support and playback-error fallback.
+- Created site/demo-videos/ with documented recording names, plus docs/art/ for
+  the automatically loaded closing drawing. No recordings or drawing were present
+  when the site was built.
+- Added the musician-first philosophy, working beyond genre labels without
+  claiming automatic ambient classification, Suggest/Answer/Jam examples and
+  weirdness controls, Ableton workflow benefits, and an example custom ambient
+  user-rack recipe.
+- Added six clearly marked Ableton possibilities, the combined team build journey,
+  model results, technical challenges, requirements and setup links, and precise
+  explanations of local processing and optional Gemini report data.
+- Added the site:build command and fixed preview access to the shared sprite,
+  font, and artwork folders. Build output and the Vite cache are ignored by Git.
+- Verification: production site build, JavaScript syntax checks, and app typecheck
+  passed. Browser checks covered the desktop lineup, three tongue frames and reset,
+  390 px and 320 px layouts without horizontal overflow, mode/weirdness controls,
+  and an illustrated preview completing as a playable, downloadable video.
+- Deployed a private Sites preview at
+  https://jam-frog-bandmate.ampletapir9.chatgpt.site. Registered jamfrog.us and
+  www.jamfrog.us with the host; both await DNS validation. Public access was not
+  authorized. The exact GoDaddy DNS records and launch steps are in
+  docs/website-hosting.md. Nothing was changed in the user's GoDaddy account.
+
+### Not done or still open
+
+- **Untested in Live:** nothing was run in Live from this session. That includes the Max device change, the Chain
+  Selector and Ample Detect mode, which Alex is testing in Live.
+- **Genre changes mid-jam:** the chords still change from the block after next. Only weirdness was made to re-plan.
+- **The site's idle frogs:** still blink every loop. Only the app got the new idle behaviour.
+- **Left out of git:** an empty root `package-lock.json` (left over from an `npm` run outside `app/`). `site/.vite/`,
+  Vite's cache, is already in `.gitignore`.
