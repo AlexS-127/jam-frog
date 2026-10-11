@@ -2,36 +2,99 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
-    <meta name="color-scheme" content="dark" />
-    <title>Jam Frog listening test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self'; img-src 'self' data:"
+    />
+    <title>Jam Frog · Listening test</title>
     <link rel="stylesheet" href="./listening.css" />
   </head>
   <body>
-    <header>
-      <h1>Listening test</h1>
-      <p>
-        Each row plays a progression (the call), then a frog answer. Answers <b>A</b> and <b>B</b> come from the
-        n-gram and the GRU in a hidden, shuffled order. Vote for the better answer; <b>Reveal</b> shows which was which.
-      </p>
-      <div class="bar">
-        <label>Bridge
-          <select id="bridge"><option value="osc">Max for Live (Frog Voice)</option><option value="ports">Ports (JamFrog Out)</option></select>
-        </label>
-        <label>BPM <input id="bpm" type="number" min="60" max="200" value="110" /></label>
-        <button id="stop" type="button">Stop</button>
-        <span id="status" role="status"></span>
-      </div>
-    </header>
-    <table>
-      <thead><tr><th>Progression</th><th>Weird</th><th>Listen</th><th>Vote</th><th class="reveal-col">Answers</th></tr></thead>
-      <tbody id="cases"></tbody>
-    </table>
-    <footer>
-      <button id="reveal" type="button">Reveal</button>
-      <button id="copy" type="button">Copy results</button>
-      <div id="tally"></div>
-    </footer>
+    <main class="page">
+      <header class="topbar">
+        <span class="brand"><span aria-hidden="true">🐸</span> Jam Frog</span>
+        <span class="eyebrow">MODEL LISTENING TEST</span>
+      </header>
+
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">20 CONTINUATIONS</p>
+          <h1 id="page-title">Which frog would you jam with?</h1>
+          <p class="intro-copy">Hear each progression, then two anonymous frog answers. Pick the one that feels better.</p>
+        </div>
+        <div class="connection" aria-label="MIDI output connection">
+          <label for="bridge">MIDI bridge</label>
+          <select id="bridge"><option value="ports">MIDI ports / IAC</option><option value="osc">Max for Live / OSC</option></select>
+          <label for="midi-output">Play through</label>
+          <div class="connection-row">
+            <select id="midi-output" aria-label="MIDI output"><option value="">Connect MIDI first</option></select>
+            <button id="connect-midi" class="button button-secondary" type="button">Connect</button>
+          </div>
+          <label class="tempo-label" for="bpm">Tempo <select id="bpm"><option>80</option><option>100</option><option selected>120</option><option>140</option></select> BPM</label>
+          <p class="status">Changing tempo clears listening progress and votes. Votes stay in memory only.</p>
+          <p id="connection-status" class="status" role="status">Connect the JamFrog Out port routed to your instrument in Ableton.</p>
+        </div>
+      </section>
+
+      <section id="test-panel" class="test-panel" aria-labelledby="pair-title">
+        <div class="pair-heading">
+          <div>
+            <p id="pair-progress" class="eyebrow">PAIR 1 OF 10</p>
+            <h2 id="pair-title">Loading listening test…</h2>
+          </div>
+          <div class="pair-nav">
+            <button id="previous-pair" class="icon-button" type="button" aria-label="Previous pair">←</button>
+            <button id="stop-playback" class="icon-button stop-button" type="button" aria-label="Stop playback" disabled>■</button>
+            <button id="next-pair" class="icon-button" type="button" aria-label="Next pair">→</button>
+          </div>
+        </div>
+
+        <div class="context-strip">
+          <span class="eyebrow">YOU PLAYED</span>
+          <div id="progression" class="chord-row" aria-label="Progression context"></div>
+          <span class="context-note">Each chord plays for one bar, followed by the frog’s four-bar answer.</span>
+        </div>
+
+        <div class="clips">
+          <article class="clip-card" data-clip="a">
+            <div class="clip-top"><span class="clip-letter">A</span><span class="clip-state" data-state="a">Ready</span></div>
+            <p class="clip-answer" data-answer="a">Generate this pair to hear the answer.</p>
+            <button class="button play-button" data-play="a" type="button" disabled><span aria-hidden="true">▶</span> Play A</button>
+          </article>
+          <article class="clip-card" data-clip="b">
+            <div class="clip-top"><span class="clip-letter">B</span><span class="clip-state" data-state="b">Ready</span></div>
+            <p class="clip-answer" data-answer="b">Generate this pair to hear the answer.</p>
+            <button class="button play-button" data-play="b" type="button" disabled><span aria-hidden="true">▶</span> Play B</button>
+          </article>
+        </div>
+
+        <div class="vote-row">
+          <span id="vote-prompt" class="vote-prompt">Listen to both answers to vote.</span>
+          <div class="vote-buttons" role="group" aria-label="Choose the preferred continuation">
+            <button class="vote-button" data-vote="a" type="button" disabled>A is better</button>
+            <button class="vote-button" data-vote="tie" type="button" disabled>No preference</button>
+            <button class="vote-button" data-vote="b" type="button" disabled>B is better</button>
+          </div>
+        </div>
+        <button id="retry-pair" class="button button-secondary" type="button" hidden>Retry generation</button>
+        <p id="playback-status" class="playback-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="results" class="results" aria-labelledby="results-title" hidden>
+        <p class="eyebrow">THE LISTENERS HAVE SPOKEN</p>
+        <h2 id="results-title">Your model results</h2>
+        <p id="results-copy"></p>
+        <div id="results-table" class="results-table"></div>
+        <button id="back-to-test" class="button button-secondary" type="button">Review the pairs</button>
+      </section>
+
+      <footer class="footer">
+        <span id="session-progress" role="status">0/20 clips heard · 0/10 votes saved</span>
+        <span>Genre: all · Weirdness: hidden until reveal</span>
+        <button id="reveal-results" class="text-button" type="button" disabled>Reveal results</button>
+      </footer>
+    </main>
     <script type="module" src="./listening.ts"></script>
   </body>
 </html>
