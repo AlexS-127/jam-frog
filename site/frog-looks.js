@@ -87,50 +87,46 @@ function poseFor(action, elapsed, loop) {
 function tonguePose(elapsed, index) {
   const interval = 8600 + index * 730;
   const phase = (elapsed + index * 1700) % interval - 5700;
-  if (phase < 0 || phase >= 380) return null;
+  if (phase < 0 || phase >= 900) return null;
 
-  // Open, flick outward quickly, then draw the tongue back into the mouth.
+  // Ease the tongue down, hold the playful expression, then tuck it back in.
   const smooth = (value) => value * value * (3 - 2 * value);
-  const reach = phase < 40 ? 0
-    : phase < 130 ? 1 - (1 - (phase - 40) / 90) ** 3
-      : phase < 160 ? 1
-        : phase < 340 ? 1 - smooth((phase - 160) / 180) : 0;
-  const open = phase < 40 ? smooth(phase / 40)
-    : phase < 340 ? 1 : 1 - smooth((phase - 340) / 40);
+  const reach = phase < 50 ? 0
+    : phase < 210 ? smooth((phase - 50) / 160)
+      : phase < 550 ? 1
+        : phase < 850 ? 1 - smooth((phase - 550) / 300) : 0;
+  const open = phase < 50 ? smooth(phase / 50)
+    : phase < 850 ? 1 : 1 - smooth((phase - 850) / 50);
   return { reach, open };
 }
 
 function drawTongue(context, look, sprite, scale, x, y, pose) {
   const [mouthX, mouthY] = TONGUE_ANCHORS[look];
   const pixel = Math.max(2, Math.round(10 * scale));
-  const left = Math.round(x + (mouthX - sprite.x) * scale);
+  const center = Math.round(x + (mouthX - sprite.x) * scale);
   const top = Math.round(y + (mouthY - sprite.y) * scale);
   const opening = Math.round(pixel * pose.open);
   if (!opening) return;
-  context.fillStyle = '#191b13';
-  context.fillRect(left - pixel * 2, top - opening, pixel * 4, opening * 2);
-  if (pose.reach <= 0) return;
 
-  // A shallow arc keeps the flick clear of the instruments. Sample it on a
-  // pixel grid, with a narrow shaft and one rounded, unforked sticky tip.
-  const length = Math.round(150 * scale * pose.reach / pixel);
-  if (!length) return;
-  const points = Array.from({ length: length + 1 }, (_, step) => {
-    const progress = step / length;
-    return [
-      left - step * pixel,
-      top + Math.round((26 * scale * pose.reach * progress ** 2) / pixel) * pixel,
-    ];
-  });
-  const [tipX, tipY] = points[points.length - 1];
-  context.fillStyle = '#812e46';
-  points.forEach(([px, py]) => context.fillRect(px - 1, py - 1, pixel + 2, pixel + 2));
-  context.fillRect(tipX - 1, Math.round(tipY - pixel / 2) - 1, pixel * 2 + 2, pixel * 2 + 2);
-  context.fillStyle = '#e94e68';
-  points.forEach(([px, py]) => context.fillRect(px, py, pixel, pixel));
-  context.fillRect(tipX, Math.round(tipY - pixel / 2), pixel * 2, pixel * 2);
-  context.fillStyle = '#ff8c9c';
-  context.fillRect(tipX, Math.round(tipY - pixel / 2), pixel, 1);
+  // A broad downward tongue with a stepped, rounded bottom, matching the
+  // reference expression. Its short length keeps it above the neckwear.
+  const length = Math.round(pixel * 5 * pose.reach);
+  const left = center - pixel * 2;
+  const corner = Math.min(pixel, Math.floor(length / 2));
+  if (length > 1) {
+    context.fillStyle = '#663f36';
+    context.fillRect(left, top, pixel * 4, length - corner);
+    context.fillRect(left + corner, top + length - corner, pixel * 4 - corner * 2, corner);
+    context.fillStyle = '#d97980';
+    context.fillRect(left + 1, top, pixel * 4 - 2, Math.max(0, length - corner - 1));
+    context.fillRect(left + corner + 1, top, pixel * 4 - corner * 2 - 2, length - 1);
+    context.fillStyle = '#f39b9e';
+    context.fillRect(left + 1, top + 1, 1, Math.max(0, length - corner - 3));
+    context.fillStyle = '#99505a';
+    context.fillRect(center, top, 1, Math.round(length * 0.4));
+  }
+  context.fillStyle = '#191b13';
+  context.fillRect(center - pixel * 3, top - opening, pixel * 6, opening);
 }
 
 function paint(frog, now) {
