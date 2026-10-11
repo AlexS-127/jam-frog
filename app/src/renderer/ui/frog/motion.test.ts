@@ -4,6 +4,7 @@ import {
   ACTIONS, ART_SCALE, PET_SIZE, beatsPerLoop, centeredPosition, clampPosition, frameAt,
   movementBounds, releaseVelocity, restingAction, stepFling, syncedFrame, type Action,
 } from './motion';
+import { lookFor, OUTFIT_MOVES, OUTFIT_SHEET, OUTFITS, outfitScale } from './looks';
 
 describe('frog sprite frames', () => {
   for (const action of Object.keys(ACTIONS) as Action[]) {
@@ -83,5 +84,23 @@ describe('dancing in time', () => {
     expect(syncedFrame('idle', anchor + 2 * beat, anchor, beat)).toBe(0); // the next loop starts on beat 3
     expect(syncedFrame('idle', anchor + beat, anchor, beat)).toBe(3); // halfway through 6 frames
     expect(syncedFrame('idle', anchor - beat, anchor, beat)).toBe(3); // before the anchor too
+  });
+});
+
+describe('genre outfits', () => {
+  it('dresses the frog for its genre, the classic frog otherwise', () => {
+    expect(['jazz', 'soul', 'metal', 'punk', 'country', 'electronic', 'rap', 'pop', 'all'].map(lookFor))
+      .toEqual(['jazz', 'jazz', 'rock', 'rock', 'country', 'electronic', 'electronic', 'classic', 'classic']);
+  });
+  it('has a movement for every frame of every action, and every outfit fits the canvas mid-jump', () => {
+    for (const [action, clip] of Object.entries(ACTIONS)) expect(OUTFIT_MOVES[action as Action]).toHaveLength(clip.frames);
+    for (const look of Object.keys(OUTFITS) as (keyof typeof OUTFITS)[]) {
+      const o = OUTFITS[look];
+      const s = outfitScale(look);
+      expect(o.width * s * 1.03 + 4).toBeLessThanOrEqual(PET_SIZE.width);
+      expect(o.height * s * 1.03 + 17 + 12).toBeLessThanOrEqual(PET_SIZE.height);
+      expect(o.x + o.width).toBeLessThanOrEqual(OUTFIT_SHEET.width);
+      expect(o.y + o.height).toBeLessThanOrEqual(OUTFIT_SHEET.height);
+    }
   });
 });

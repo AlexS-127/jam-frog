@@ -8,6 +8,7 @@ import {
   centeredPosition, clampPosition, frameAt, movementBounds, releaseVelocity, restingAction, stepFling, syncedFrame,
   type Action, type DragSample, type Point,
 } from './motion';
+import { drawOutfit, OUTFIT_SHEET, type Look } from './looks';
 
 export interface PetSnapshot {
   action: Action;
@@ -23,6 +24,8 @@ export interface PetController {
   setMusicPlaying(playing: boolean): void;
   /** dance in time: looping actions follow this beat grid (anchor: a bar line, in performance.now ms) */
   setTempo(tempo: { anchor: number; beatMs: number } | null): void;
+  /** dress the frog: 'classic', or a genre outfit (see looks.ts) */
+  setLook(look: Look): void;
   preview(action: Action | null): void;
   setAmbientEnabled(enabled: boolean): void;
   resetPosition(): void;
@@ -77,6 +80,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   let mood: FrogMood = 'idle';
   let musicPlaying = false;
   let tempo: { anchor: number; beatMs: number } | null = null;
+  let look: Look = 'classic';
   let previewAction: Action | null = null;
   let currentAction: Action = 'idle';
   let actionStarted = 0;
@@ -97,8 +101,8 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   const listeners = new Set<(snapshot: PetSnapshot) => void>();
   const media = window.matchMedia('(prefers-reduced-motion: reduce)');
   let reducedMotion = media.matches;
-  const images = { main: new Image(), playing: new Image() };
-  const loadedAssets = { main: false, playing: false };
+  const images = { main: new Image(), playing: new Image(), outfits: new Image() };
+  const loadedAssets = { main: false, playing: false, outfits: false };
 
   const busy = () => drag !== null || fling || reaction !== null;
   const rescheduleAmbient = () => { nextAmbient = clock + 1700 + Math.random() * 1300; };
@@ -123,7 +127,10 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
     const frame = reducedMotion ? 0
       : looping && tempo ? syncedFrame(action, performance.now(), tempo.anchor, tempo.beatMs)
         : frameAt(action, clock - actionStarted, looping);
-    if (loaded && (action !== 'playing' || loadedAssets.playing) && frame !== lastFrame) {
+    if (loaded && look !== 'classic' && loadedAssets.outfits) {
+      // an outfit: the whole sprite moves (and plays its own instrument)
+      if (frame !== lastFrame) drawOutfit(context, images.outfits, look, action, frame);
+    } else if (loaded && (action !== 'playing' || loadedAssets.playing) && frame !== lastFrame) {
       const source = action === 'playing' ? KEYBOARD_FRAMES[frame] : SPRITE_FRAMES[ACTIONS[action].row][frame];
       const image = action === 'playing' ? images.playing : images.main;
       const artScale = action === 'playing' ? 0.43 : ART_SCALE;
@@ -200,7 +207,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
     image.addEventListener('load', () => {
       const dimensions = asset === 'playing'
         ? [KEYBOARD_ATLAS_WIDTH, KEYBOARD_ATLAS_HEIGHT]
-        : [ATLAS_WIDTH, ATLAS_HEIGHT];
+        : asset === 'outfits' ? [OUTFIT_SHEET.width, OUTFIT_SHEET.height] : [ATLAS_WIDTH, ATLAS_HEIGHT];
       if (image.naturalWidth !== dimensions[0] || image.naturalHeight !== dimensions[1]) {
         notice.textContent = 'Frog artwork dimensions do not match its frame map.';
         console.warn('[frog_sprite] Atlas dimensions do not match frame metadata.');
@@ -221,6 +228,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   }
   images.main.src = new URL('./green-frog.png', import.meta.url).href;
   images.playing.src = new URL('./keyboard-frog.png', import.meta.url).href;
+  images.outfits.src = new URL('./genre-outfits.png', import.meta.url).href;
 
   const interactive = options.interactive ?? true;
   if (!interactive) {
@@ -322,6 +330,12 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
     setMusicPlaying(playing) {
       if (disposed || playing === musicPlaying) return;
       musicPlaying = playing;
+      lastFrame = -1;
+      draw();
+    },
+    setLook(next) {
+      if (disposed || next === look) return;
+      look = next;
       lastFrame = -1;
       draw();
     },

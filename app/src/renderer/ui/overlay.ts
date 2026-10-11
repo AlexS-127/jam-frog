@@ -3,6 +3,7 @@ import type { JamReport } from '../../core/report';
 import type { FrogMood } from '../../core/types';
 import { GENRES } from '../../core/vocab';
 import { createFrogPet } from './frog/controller';
+import { lookFor } from './frog/looks';
 
 export type Phase = 'idle' | 'listening' | 'playing';
 
@@ -118,55 +119,62 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   const shell = document.createElement('div');
   shell.className = 'jf-shell';
   shell.innerHTML = `
-    <header class="jf-header">
-      <div class="jf-brand"><strong>JAM FROG</strong><span data-ref="mood">Ready</span></div>
-      <button class="jf-icon" type="button" data-action="report" aria-label="Last jam report" title="Last jam report" hidden>📋</button>
-      <button class="jf-icon" type="button" data-action="settings" aria-label="Settings" title="Settings">⚙</button>
-      <button class="jf-icon" type="button" data-action="close" aria-label="Close Jam Frog">×</button>
-    </header>
-    <section class="jf-display" aria-live="polite">
-      <div class="jf-display-top">
-        <span class="jf-who" data-ref="who">YOUR CHORDS</span>
-        <span class="jf-key" data-ref="key" hidden></span>
-        <span class="jf-display-right">
-          <button type="button" class="jf-stop" data-action="stop" hidden>■ Stop</button>
-          <span class="jf-bars" data-ref="bars" aria-label="Bar"></span>
-        </span>
-      </div>
-      <div class="jf-grid" data-ref="chords"></div>
-      <div class="jf-next" data-ref="next" hidden><span>NEXT</span><div class="jf-grid" data-ref="next-chords"></div></div>
-      <p class="jf-hint" data-ref="hint">Play some chords. The frog answers after your phrase (or jams on, in Jam mode).</p>
-    </section>
     <section class="jf-scene">
       <div class="jf-bubble" data-ref="bubble" role="status"></div>
       <div class="jf-pet-stage" data-ref="pet-stage"></div>
     </section>
-    <section class="jf-amp" aria-label="Controls">
-      <div class="jf-knob-control"><span>WEIRDNESS</span>
-        <span class="jf-knob" data-control="weirdness" role="slider" tabindex="0" aria-label="Weirdness"
-          aria-valuemin="0" aria-valuemax="100" title="Drag up or down"><span class="jf-knob-visual" data-ref="knob"></span></span>
-        <output data-ref="weirdness-value"></output>
-      </div>
-      <div class="jf-amp-right">
-        <label class="jf-field"><span>GENRE</span><select data-control="genre"></select></label>
-        <div class="jf-field"><span>PHRASE</span>
-          <div class="jf-segments" role="radiogroup" aria-label="Phrase length in bars">
-            <button type="button" data-bars="2" role="radio">2</button>
-            <button type="button" data-bars="4" role="radio">4</button>
-            <button type="button" data-bars="8" role="radio">8</button>
+    <div class="jf-rig">
+      <div class="jf-head">
+        <header class="jf-header">
+          <div class="jf-brand"><strong>JAM FROG</strong><span data-ref="mood">Ready</span></div>
+          <button class="jf-icon" type="button" data-action="report" aria-label="Last jam report" title="Last jam report" hidden>📋</button>
+          <button class="jf-icon" type="button" data-action="settings" aria-label="Settings" title="Settings">⚙</button>
+          <button class="jf-icon" type="button" data-action="close" aria-label="Close Jam Frog">×</button>
+        </header>
+        <section class="jf-amp" aria-label="Controls">
+          <div class="jf-knob-control"><span>WEIRDNESS</span>
+            <span class="jf-knob" data-control="weirdness" role="slider" tabindex="0" aria-label="Weirdness"
+              aria-valuemin="0" aria-valuemax="100" title="Drag up or down"><span class="jf-knob-visual" data-ref="knob"></span></span>
+            <output data-ref="weirdness-value"></output>
           </div>
-        </div>
-        <div class="jf-field"><span>FROG</span>
-          <div class="jf-segments" role="radiogroup" aria-label="What the frog does">
-            <button type="button" data-mode="off" role="radio" title="The frog only suggests">Off</button>
-            <button type="button" data-mode="answer" role="radio" title="The frog answers each phrase">Answer</button>
-            <button type="button" data-mode="jam" role="radio" title="After your phrase the frog keeps playing until you stop it">Jam</button>
+          <div class="jf-amp-right">
+            <label class="jf-field"><span>GENRE</span><select data-control="genre"></select></label>
+            <div class="jf-field"><span>PHRASE</span>
+              <div class="jf-segments" role="radiogroup" aria-label="Phrase length in bars">
+                <button type="button" data-bars="2" role="radio">2</button>
+                <button type="button" data-bars="4" role="radio">4</button>
+                <button type="button" data-bars="8" role="radio">8</button>
+              </div>
+            </div>
+            <div class="jf-field"><span>FROG</span>
+              <div class="jf-segments" role="radiogroup" aria-label="What the frog does">
+                <button type="button" data-mode="off" role="radio" title="The frog only suggests">Off</button>
+                <button type="button" data-mode="answer" role="radio" title="The frog answers each phrase">Answer</button>
+                <button type="button" data-mode="jam" role="radio" title="After your phrase the frog keeps playing until you stop it">Jam</button>
+              </div>
+            </div>
+            <label class="jf-check" title="The frog answers in the rhythm and dynamics you played"><input data-control="rhythm" type="checkbox" /><span>Copy my rhythm</span></label>
           </div>
-        </div>
-        <label class="jf-check" title="The frog answers in the rhythm and dynamics you played"><input data-control="rhythm" type="checkbox" /><span>Copy my rhythm</span></label>
+        </section>
       </div>
-    </section>
-    <footer class="jf-footer"><b data-ref="live">WAITING FOR LIVE</b><span data-ref="status" class="jf-status" role="status"></span></footer>
+      <div class="jf-cab">
+        <section class="jf-display" aria-live="polite">
+          <div class="jf-display-top">
+            <span class="jf-who" data-ref="who">YOUR CHORDS</span>
+            <span class="jf-key" data-ref="key" hidden></span>
+            <span class="jf-display-right">
+              <button type="button" class="jf-stop" data-action="stop" hidden>■ Stop</button>
+              <span class="jf-bars" data-ref="bars" aria-label="Bar"></span>
+            </span>
+          </div>
+          <div class="jf-grid" data-ref="chords"></div>
+          <div class="jf-next" data-ref="next" hidden><span>NEXT</span><div class="jf-grid" data-ref="next-chords"></div></div>
+          <p class="jf-hint" data-ref="hint">Play some chords. The frog answers after your phrase (or jams on, in Jam mode).</p>
+          <footer class="jf-footer"><b data-ref="live">WAITING FOR LIVE</b><span data-ref="status" class="jf-status" role="status"></span></footer>
+        </section>
+      </div>
+      <div class="jf-feet" aria-hidden="true"><i></i><i></i></div>
+    </div>
     <div class="jf-settings" data-ref="settings" hidden>
       <div class="jf-settings-card" role="dialog" aria-label="Settings">
         <h2>Settings</h2>
@@ -329,6 +337,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       q('[data-ref="mood"]').textContent = state.phase === 'playing' ? 'Playing' : MOOD_LABELS[mood];
       pet.setMood(mood);
       pet.setMusicPlaying(state.phase === 'playing');
+      pet.setLook(lookFor(state.genre));
       pet.setTempo(state.beat.barMs > 0 ? { anchor: state.beat.barAt, beatMs: state.beat.barMs / BEATS_PER_BAR } : null);
 
       // The display: your chords while you play, the frog's while it plays, bar by bar.
