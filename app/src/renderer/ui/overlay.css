@@ -18,27 +18,44 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-brand span { color: var(--accent); font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
 .jf-icon { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: #b9cbb6; font-size: 18px; cursor: pointer; }
 .jf-icon:hover { background: rgba(255, 255, 255, .08); color: #f2ffe7; }
+.jf-icon[hidden] { display: none; }
+.jf-icon[data-action="report"] { font-size: 15px; }
 
 /* the display: your chords while you play, the frog's while it plays */
-.jf-display { flex: 0 0 168px; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
+.jf-display { flex: 0 0 auto; min-height: 168px; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px;
   border: 1px solid var(--line); border-radius: 14px; background: rgba(5, 15, 9, .5); }
-.jf-display-top { display: flex; align-items: center; justify-content: space-between; }
+.jf-display-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.jf-key { margin-right: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; color: #cfe3c8; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+.jf-key[hidden] { display: none; }
+.jf-key.is-changed { border-color: #8cc8f0; background: rgba(140, 200, 240, .18); color: #d7eefc; animation: jf-key-flash .5s ease-out 3; }
+@keyframes jf-key-flash { 50% { background: rgba(140, 200, 240, .45); } }
 .jf-who { color: var(--muted); font-size: 11px; letter-spacing: .14em; }
 .jf-shell[data-phase="playing"] .jf-who { color: var(--gold); }
 .jf-bars { display: flex; gap: 5px; }
 .jf-bars i { width: 9px; height: 9px; border-radius: 50%; background: rgba(164, 229, 142, .16); }
 .jf-bars i.is-done { background: var(--accent); }
 .jf-shell[data-phase="playing"] .jf-bars i.is-done { background: var(--gold); }
-.jf-chords { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; margin: 0; padding: 0; list-style: none; min-height: 0; overflow: hidden; }
-.jf-chords li { padding: 6px 12px; border-radius: 10px; background: rgba(164, 229, 142, .09); color: #dcebd6; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
-.jf-chords li.is-now { background: var(--accent); color: #0d1a10; }
-.jf-shell[data-phase="playing"] .jf-chords li.is-now { background: var(--gold); }
+/* the chords bar by bar: a box per bar, each chord as wide as it lasts; a dotted stretch is the last chord held over */
+.jf-grid { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 4px; }
+.jf-grid:empty { display: none; }
+.jf-bar { display: flex; gap: 2px; height: 42px; padding: 2px; border-left: 2px solid rgba(220, 235, 214, .35); border-radius: 2px 8px 8px 2px; background: rgba(164, 229, 142, .05); }
+.jf-bar.is-current { border-left-color: var(--accent); background: rgba(164, 229, 142, .12); }
+.jf-shell[data-phase="playing"] .jf-bar.is-current { border-left-color: var(--gold); background: rgba(227, 196, 107, .1); }
+.jf-seg { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 6px;
+  background: rgba(164, 229, 142, .1); color: #dcebd6; font-size: 20px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.jf-bar.is-split .jf-seg { font-size: 14px; }
+.jf-seg + .jf-seg:not(.is-hold) { box-shadow: -2px 0 0 rgba(220, 235, 214, .25); } /* a change inside the bar */
+.jf-seg.is-hold { background: repeating-linear-gradient(90deg, rgba(220, 235, 214, .18) 0 3px, transparent 3px 7px) center / 100% 2px no-repeat; }
+.jf-seg.is-now { background: var(--accent); color: #0d1a10; }
+.jf-shell[data-phase="playing"] .jf-seg.is-now { background: var(--gold); }
 /* jam mode: the frog's next block, smaller and in blue, under the one playing now */
-.jf-next { display: flex; align-items: center; gap: 10px; }
+.jf-next { display: grid; gap: 4px; }
 .jf-next[hidden] { display: none; }
-.jf-next > span { color: #8cc8f0; font-size: 11px; letter-spacing: .14em; }
-.jf-next .jf-chords { flex-wrap: nowrap; }
-.jf-next .jf-chords li { padding: 3px 10px; border: 1px solid rgba(140, 200, 240, .45); background: rgba(140, 200, 240, .1); color: #b9e0fa; font-size: 17px; }
+.jf-next > span { color: #8cc8f0; font-size: 10px; letter-spacing: .14em; }
+.jf-next .jf-bar { height: 28px; border-left-color: rgba(140, 200, 240, .45); background: rgba(140, 200, 240, .05); }
+.jf-next .jf-seg { background: rgba(140, 200, 240, .12); color: #b9e0fa; font-size: 15px; }
+.jf-next .jf-bar.is-split .jf-seg { font-size: 12px; }
+.jf-next .jf-seg.is-hold { background: repeating-linear-gradient(90deg, rgba(140, 200, 240, .3) 0 3px, transparent 3px 7px) center / 100% 2px no-repeat; }
 .jf-hint { margin: auto 0; color: var(--muted); font-size: 13px; text-align: center; }
 
 /* the frog and its speech bubble, sitting on the amp */
@@ -53,6 +70,11 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
   background: #f4f1df; color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
 .jf-bubble::before { content: ""; position: absolute; left: 22px; bottom: -13px; border-top: 14px solid #f4f1df; border-right: 16px solid transparent; }
 .jf-bubble b { color: #1f6b2c; font-size: 18px; }
+/* the jam report: beside the frog's head (more room), the tail pointing left at it */
+.jf-bubble.is-report { left: 158px; right: 8px; bottom: 30px; max-width: none; display: grid; gap: 8px; font-size: 14px; }
+.jf-bubble.is-report::before { left: -13px; bottom: 26px; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 14px solid #f4f1df; }
+.jf-more { justify-self: start; padding: 4px 10px; border: 0; border-radius: 8px; background: #1f6b2c; color: #f4f1df; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.jf-more:hover { background: #2a8a3b; }
 .jf-shell[data-phase="playing"] .jf-bubble b { color: #7a5a00; }
 
 /* the amp: the controls */
@@ -86,6 +108,22 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-footer { display: flex; flex: 0 0 16px; align-items: center; gap: 10px; color: #77947c; font-size: 10px; letter-spacing: .08em; }
 .jf-footer b { color: #b8cbb8; font-weight: 600; }
 .jf-status { min-width: 0; overflow: hidden; color: #c1d2bf; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0; }
+
+/* the jam report panel */
+.jf-report { position: absolute; z-index: 11; inset: 0; display: grid; place-items: center; padding: 14px; background: rgba(6, 12, 8, .78); }
+.jf-report[hidden] { display: none; }
+.jf-report-card { width: 100%; max-height: 100%; overflow-y: auto; display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #152219; }
+.jf-report-card h2 { margin: 0; font-size: 17px; }
+.jf-report-meta { margin: 0; color: var(--muted); font-size: 11px; letter-spacing: .06em; }
+.jf-report-summary { margin: 0; font-size: 15px; line-height: 1.4; }
+.jf-moments { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.jf-moments li { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(164, 229, 142, .07); }
+.jf-moment-bar { grid-row: span 2; align-self: start; padding: 2px 6px; border-radius: 6px; background: rgba(140, 200, 240, .16); color: #b9e0fa; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.jf-moments b { font-size: 13px; }
+.jf-moments p { margin: 2px 0 0; color: #cfdecb; font-size: 12px; line-height: 1.4; }
+.jf-trivia h3 { margin: 0 0 4px; color: var(--gold); font-size: 12px; letter-spacing: .08em; }
+.jf-trivia p { margin: 0 0 4px; color: #e6dcb8; font-size: 12px; line-height: 1.4; }
+.jf-trivia[hidden] { display: none; }
 
 /* settings */
 .jf-settings { position: absolute; z-index: 10; inset: 0; display: grid; place-items: center; background: rgba(6, 12, 8, .72); }

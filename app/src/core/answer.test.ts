@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AnswerEngine, scoreAnswer, type AnswerProgress, type AnswerSettings } from './answer';
+import { AnswerEngine, jamBlockLength, jamRhythm, scoreAnswer, type AnswerProgress, type AnswerSettings } from './answer';
+import { cached } from './cached';
 import { detectChord } from './chords';
-import { isBorrowed, isDiatonic } from './key';
+import { GruModel } from './gru';
+import { isBorrowed, isDiatonic, keyName } from './key';
 import { seededRng } from './listening';
 import type { ChordModel } from './model';
 import { NgramModel } from './ngram';
@@ -450,15 +453,15 @@ describe('AnswerEngine jam mode', () => {
     expect(sink.chordTimes()).toHaveLength(16); // nothing after Stop
   });
 
-  it('continues the progression: each block follows on from the last (always IV here)', () => {
+  it('continues the progression: the answer matches your phrase, then about one chord per bar (always IV here)', () => {
     const { engine, sink, play } = jamRig();
     play(V.C, 0);
     play(V.G, 4000); // C then G: two changes per 4-bar phrase
     vi.advanceTimersByTime(23999 - Date.now());
     const names = sink.chordTimes().map((t) => detectChord(sink.log.filter((e) => e.t === t && e.velocity > 0).map((e) => e.pitch))!.name);
-    // after G the answer goes C, F; the next block carries on from F: Bb, Eb
-    expect(names).toEqual(['C', 'F', 'Bb', 'Eb']);
-    expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 20000]);
+    // after G the answer goes C, F (your two changes); the next block carries on from F, one chord a bar
+    expect(names).toEqual(['C', 'F', 'Bb', 'Eb', 'Ab', 'C#']);
+    expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 18000, 20000, 22000]);
     engine.cancel();
   });
 
@@ -469,7 +472,7 @@ describe('AnswerEngine jam mode', () => {
     vi.advanceTimersByTime(9000 - Date.now());
     play(V.F, 9000); // the player joins in during the frog's first block
     vi.advanceTimersByTime(23999 - Date.now());
-    expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 20000]);
+    expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 18000, 20000, 22000]);
     engine.cancel();
   });
 
@@ -480,7 +483,11 @@ describe('AnswerEngine jam mode', () => {
     vi.advanceTimersByTime(8000 - Date.now());
     expect(engine.upcoming()).toBeNull(); // still planning
     vi.advanceTimersByTime(500);
-    expect(engine.upcoming()!.chords.map((c) => c.name)).toEqual(['Bb', 'Eb']);
+    expect(engine.upcoming()!.chords.map((c) => c.name)).toEqual(['Bb', 'Eb', 'Ab', 'C#']);
+    expect(engine.upcomingCells()).toEqual([
+      { name: 'Bb', beat: 0 }, { name: 'Eb', beat: 4 }, { name: 'Ab', beat: 8 }, { name: 'C#', beat: 12 },
+    ]);
+    expect(engine.frogCells()).toEqual([{ name: 'C', beat: 0 }, { name: 'F', beat: 8 }]);
     vi.advanceTimersByTime(16000 - Date.now());
     const now = sink.log.filter((e) => e.t === 16000 && e.velocity > 0).map((e) => e.pitch);
     expect(detectChord(now)!.name).toBe('Bb');
@@ -516,5 +523,108 @@ describe('AnswerEngine jam mode', () => {
     }
     expect(outside).toBe(0); // only borrowed chords and secondary dominants for colour
     expect(diatonic).toBeGreaterThan(0.6 * 3 * 10 * 4);
+  });
+});
+
+describe('jam blocks: about one chord per bar', () => {
+  it('picks one chord per bar most of the time, sometimes one fewer or one more', () => {
+    expect([0.1, 0.5, 0.9].map((r) => jamBlockLength(4, () => r))).toEqual([3, 4, 5]);
+    expect([0.1, 0.5, 0.9].map((r) => jamBlockLength(8, () => r))).toEqual([7, 8, 9]);
+    expect([0.1, 0.5, 0.9].map((r) => jamBlockLength(2, () => r))).toEqual([2, 2, 3]);
+  });
+
+  it('lays the chords on bar lines: holds one for two bars, or splits a bar in half', () => {
+    const starts = (n: number, r = 0.9) => jamRhythm(n, 4, 80, 0, () => r).map((e) => e.start);
+    expect(starts(4)).toEqual([0, 4, 8, 12]);
+    expect(starts(3, 0.9)).toEqual([0, 4, 8]); // the last two bars merged: the last chord held 2 bars
+    expect(starts(5, 0.3)).toEqual([0, 4, 8, 12, 14]); // the last bar split: a turnaround
+    const ev = jamRhythm(4, 4, 80, 0, () => 0.5);
+    expect(ev.map((e) => e.chord)).toEqual([0, 1, 2, 3]);
+    expect(ev[3].end).toBeCloseTo(15.92);
+    expect(ev[0].velocity).toBe(86); // the first change accented
+  });
+
+  it('anticipates the first chord when the player did', () => {
+    expect(jamRhythm(4, 4, 80, -0.5, () => 0.5)[0].start).toBe(-0.5);
+  });
+});
+
+describe('AnswerEngine key centre and jam log', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const E: Record<string, number[]> = { E: [64, 68, 71], A: [57, 61, 64], B: [59, 63, 66], 'C#m': [61, 64, 68] };
+
+  function rig(model: ChordModel = new NgramModel(ngramJson)) {
+    vi.setSystemTime(0);
+    const settings: AnswerSettings = { answersOn: true, weirdness: 0.2, genre: 'all', bpm: 120, phraseBars: 4, continuous: true };
+    const engine = new AnswerEngine({ model, sink: () => null, settings: () => settings, now: () => Date.now(), rng: seededRng(7) });
+    const play = (pitches: number[], at: number) => {
+      vi.advanceTimersByTime(at - Date.now());
+      for (const p of pitches) engine.note({ pitch: p, velocity: 90, time: Date.now() });
+      engine.chord(detectChord(pitches)!);
+    };
+    return { engine, settings, play };
+  }
+
+  const gru = new GruModel(JSON.parse(readFileSync(new URL('../../../model/export/gru_weights.json', import.meta.url), 'utf8')));
+  for (const [name, model] of [['n-gram', new NgramModel(ngramJson)], ['GRU', cached(gru)]] as const) {
+    it(`shows the key once you play, and follows you to a new key mid-jam (${name})`, () => {
+      const { engine, play } = rig(model);
+      [V.C, V.Am, V.F, V.G].forEach((ch, i) => play(ch, i * 2000));
+      expect(keyName(engine.keyCentre().key!)).toBe('C major');
+      // jam along in E major for a few bars: the frog's key follows
+      const tune = ['E', 'A', 'B', 'E', 'C#m', 'A', 'B', 'E', 'A', 'B', 'E', 'C#m'];
+      tune.forEach((n, i) => play(E[n], 9000 + i * 1000));
+      const { key, change } = engine.keyCentre();
+      expect(keyName(key!)).toBe('E major');
+      expect(keyName(change!.from)).toBe('C major');
+      vi.advanceTimersByTime(40000 - Date.now());
+      const log = engine.stop()!;
+      expect(log.keyChanges.map((k) => keyName(k.to))).toEqual(['E major']);
+      // from the next bar on, the frog plays in E
+      const after = log.chords.filter((c) => c.who === 'frog' && c.bar > log.keyChanges[0].bar);
+      const inE = after.filter((c) => isDiatonic(c.chord, { tonic: 4, minor: false }) || isBorrowed(c.chord, { tonic: 4, minor: false }));
+      expect(after.length).toBeGreaterThan(6);
+      expect(inE.length / after.length).toBeGreaterThan(0.75);
+    }, 30000);
+  }
+
+  it('logs every chord of a jam with its bar, and returns the log on Stop', () => {
+    const { engine, play } = rig(alwaysIV);
+    [V.C, V.Am, V.F, V.G].forEach((ch, i) => play(ch, i * 2000));
+    vi.advanceTimersByTime(24000 - Date.now()); // the opening phrase and two frog blocks
+    const log = engine.stop()!;
+    expect(log.chords.slice(0, 4).map((c) => [c.who, c.name, c.bar, c.beat])).toEqual([
+      ['you', 'C', 1, 0], ['you', 'Am', 2, 0], ['you', 'F', 3, 0], ['you', 'G', 4, 0],
+    ]);
+    expect(log.chords.slice(4, 6).map((c) => [c.who, c.name, c.bar])).toEqual([['frog', 'C', 5], ['frog', 'F', 6]]);
+    expect(log.chords.filter((c) => c.who === 'frog').length).toBeGreaterThanOrEqual(8);
+    expect(log.startKey).toEqual({ tonic: 0, minor: false });
+    expect(log.bars).toBe(13);
+    expect(engine.stop()).toBeNull(); // nothing to report once stopped
+  });
+
+  it('gives no report for a plain answer (not a jam)', () => {
+    const { engine, settings, play } = rig(alwaysIV);
+    settings.continuous = false;
+    [V.C, V.Am].forEach((ch, i) => play(ch, i * 2000));
+    vi.advanceTimersByTime(10000 - Date.now());
+    expect(engine.stop()).toBeNull();
+  });
+
+  it('varies the number of chords from block to block', () => {
+    const { engine, play } = rig();
+    [V.C, V.Am, V.F, V.G].forEach((ch, i) => play(ch, i * 2000));
+    vi.advanceTimersByTime(8000 + 12 * 8000 - Date.now());
+    const log = engine.stop()!;
+    const perBlock = new Map<number, number>();
+    for (const c of log.chords.filter((c) => c.who === 'frog' && c.bar > 8)) {
+      const block = Math.floor((c.bar - 1) / 4);
+      perBlock.set(block, (perBlock.get(block) ?? 0) + 1);
+    }
+    const counts = [...perBlock.values()].slice(0, -1); // the last block was cut short by Stop
+    expect(new Set(counts).size).toBeGreaterThan(1);
+    expect(counts.every((n) => n >= 3 && n <= 5)).toBe(true);
   });
 });

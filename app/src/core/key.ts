@@ -84,3 +84,46 @@ export function estimateKey(history: ChordSymbol[], opts: KeyOptions = {}): Key 
   }
   return best;
 }
+
+const NOTE_NAMES = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+
+/** "C major", "F♯ minor" */
+export function keyName(key: Key): string {
+  return `${NOTE_NAMES[key.tonic]} ${key.minor ? 'minor' : 'major'}`;
+}
+
+export const sameKey = (a: Key | null, b: Key | null) => !!a && !!b && a.tonic === b.tonic && a.minor === b.minor;
+
+/**
+ * The key centre to show and to jam in: follows `estimateKey`, but only moves to a new key once the estimate
+ * has said so `confirm` chord changes in a row, so one passing chord doesn't count as a key change.
+ */
+export class KeyTracker {
+  key: Key | null = null;
+  private pending: { key: Key; count: number } | null = null;
+
+  constructor(private readonly confirm = 3) {}
+
+  /** Feed the latest estimate; returns the previous key when this is a key change (null otherwise). */
+  update(estimate: Key): Key | null {
+    if (!this.key) {
+      this.key = estimate;
+      return null;
+    }
+    if (sameKey(estimate, this.key)) {
+      this.pending = null;
+      return null;
+    }
+    this.pending = sameKey(estimate, this.pending?.key ?? null) ? { key: estimate, count: this.pending!.count + 1 } : { key: estimate, count: 1 };
+    if (this.pending.count < this.confirm) return null;
+    const from = this.key;
+    this.key = estimate;
+    this.pending = null;
+    return from;
+  }
+
+  reset(): void {
+    this.key = null;
+    this.pending = null;
+  }
+}

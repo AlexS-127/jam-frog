@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ATLAS_HEIGHT, ATLAS_WIDTH, KEYBOARD_ATLAS_HEIGHT, KEYBOARD_ATLAS_WIDTH, KEYBOARD_FRAMES, SPRITE_FRAMES } from './atlas';
 import {
-  ACTIONS, ART_SCALE, PET_SIZE, centeredPosition, clampPosition, frameAt,
-  movementBounds, releaseVelocity, restingAction, stepFling, type Action,
+  ACTIONS, ART_SCALE, PET_SIZE, beatsPerLoop, centeredPosition, clampPosition, frameAt,
+  movementBounds, releaseVelocity, restingAction, stepFling, syncedFrame, type Action,
 } from './motion';
 
 describe('frog sprite frames', () => {
@@ -67,5 +67,21 @@ describe('frog movement', () => {
     }
     expect(state.moving).toBe(false);
     expect(state.velocity).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('dancing in time', () => {
+  it('fits each loop to 1, 2 or 4 beats, nearest its natural length', () => {
+    expect(beatsPerLoop('idle', 500)).toBe(2); // 1100 ms loop at 120 BPM: 2 beats
+    expect(beatsPerLoop('idle', 1000)).toBe(1); // 60 BPM
+    expect(beatsPerLoop('playing', 300)).toBe(4); // 200 BPM
+  });
+  it('restarts each loop on the beat grid, whenever it is drawn', () => {
+    const beat = 500;
+    const anchor = 12345;
+    expect(syncedFrame('idle', anchor, anchor, beat)).toBe(0);
+    expect(syncedFrame('idle', anchor + 2 * beat, anchor, beat)).toBe(0); // the next loop starts on beat 3
+    expect(syncedFrame('idle', anchor + beat, anchor, beat)).toBe(3); // halfway through 6 frames
+    expect(syncedFrame('idle', anchor - beat, anchor, beat)).toBe(3); // before the anchor too
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estimateKey, isBorrowed } from './key';
+import { estimateKey, isBorrowed, KeyTracker, keyName } from './key';
 import type { ChordSymbol, Quality } from './types';
 
 const NAMES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -63,5 +63,25 @@ describe('isBorrowed', () => {
   });
   it('knows the major IV in minor', () => {
     expect(isBorrowed(parse('D'), { tonic: 9, minor: true })).toBe(true);
+  });
+});
+
+describe('KeyTracker', () => {
+  const C = { tonic: 0, minor: false };
+  const G = { tonic: 7, minor: false };
+  it('takes the first estimate, then changes only after 3 in a row agree', () => {
+    const t = new KeyTracker();
+    expect(t.update(C)).toBeNull();
+    expect(t.key).toEqual(C);
+    expect(t.update(G)).toBeNull();
+    expect(t.update(C)).toBeNull(); // a passing chord: back home, nothing changes
+    expect(t.update(G)).toBeNull();
+    expect(t.update(G)).toBeNull();
+    expect(t.update(G)).toEqual(C); // the change, from C
+    expect(t.key).toEqual(G);
+  });
+  it('names keys', () => {
+    expect(keyName({ tonic: 10, minor: false })).toBe('B♭ major');
+    expect(keyName({ tonic: 6, minor: true })).toBe('F♯ minor');
   });
 });

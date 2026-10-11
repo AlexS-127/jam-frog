@@ -1,5 +1,5 @@
 import { chordName } from './chords';
-import { estimateKey, isBorrowed, isDiatonic, type Key } from './key';
+import { estimateKey, isBorrowed, isDiatonic, KeyTracker, type Key } from './key';
 import type { ChordModel } from './model';
 import { isSecondaryDominant, reshape, sampleToken } from './sampler';
 import { CONTEXT_CHORDS, priorFor } from './suggest';
@@ -36,6 +36,33 @@ export interface AnswerProgress {
   bars: number;
   /** index of the answer chord sounding now, -1 when none */
   chord: number;
+}
+
+/** A chord on the display: its name and where it starts, in beats from bar 1 of its phrase or block. */
+export interface Cell {
+  name: string;
+  beat: number;
+}
+
+/** One chord of a jam, for the jam report. */
+export interface LogChord {
+  /** 1-based bar from the start of the player's opening phrase, and the beat within it (0-3.x) */
+  bar: number;
+  beat: number;
+  who: 'you' | 'frog';
+  chord: ChordSymbol;
+  name: string;
+}
+
+/** Everything the jam report needs: every chord (yours and the frog's), the key and its changes. */
+export interface JamLog {
+  chords: LogChord[];
+  startKey: Key;
+  keyChanges: { bar: number; from: Key; to: Key }[];
+  phraseBars: number;
+  bpm: number;
+  /** total bars, from the opening phrase to Stop */
+  bars: number;
 }
 
 export interface AnswerEngineDeps {
@@ -156,6 +183,48 @@ export function harmonicRhythm(
   }));
 }
 
+/**
+ * A jam block's rhythm when the frog isn't copying the player's: about one chord per bar. Fewer chords than
+ * bars hold one chord for two bars, more split a bar in half (the last bar most often: a turnaround). The
+ * first chord comes in early by `anticipation` beats if the player's phrase did.
+ */
+export function jamRhythm(chords: number, bars: number, velocity: number, anticipation: number, rng: () => number): RhythmEvent[] {
+  const lens = Array.from({ length: bars }, () => BEATS_PER_BAR);
+  while (lens.length > chords && lens.length > 1) {
+    const j = Math.floor(rng() * (lens.length - 1));
+    lens.splice(j, 2, lens[j] + lens[j + 1]);
+  }
+  while (lens.length < chords) {
+    const whole = lens.map((l, i) => (l >= BEATS_PER_BAR ? i : -1)).filter((i) => i >= 0);
+    if (!whole.length) break;
+    const j = rng() < 0.5 ? whole[whole.length - 1] : whole[Math.floor(rng() * whole.length)];
+    lens.splice(j, 1, lens[j] / 2, lens[j] / 2);
+  }
+  const total = bars * BEATS_PER_BAR;
+  let at = 0;
+  return lens.map((len, i) => {
+    const start = i === 0 ? Math.min(0, anticipation) : at;
+    at += len;
+    return { start, end: Math.max(start + 0.1, at - 0.08), velocity: Math.min(127, velocity + (i === 0 ? 6 : 0)), chord: i };
+  }).map((ev, i, all) => (i === all.length - 1 ? { ...ev, end: total - 0.08 } : ev));
+}
+
+/** How many chords a jam block gets: one per bar, sometimes one fewer or one more. */
+export function jamBlockLength(bars: number, rng: () => number): number {
+  const r = rng();
+  const n = r < 0.2 ? bars - 1 : r > 0.8 ? bars + 1 : bars;
+  return Math.max(2, Math.min(2 * bars, 10, n));
+}
+
+interface JamJobOptions {
+  history: ChordSymbol[];
+  avoid: ChordSymbol[];
+  startVoicing: number[];
+  key: Key;
+  /** chords in the block; undefined: as many as the player's phrase had */
+  length?: number;
+}
+
 interface PlanJob {
   forKey: string;
   s: AnswerSettings;
@@ -216,8 +285,23 @@ export class AnswerEngine {
    * jam mode: the progression so far (the player's + the frog's), the next block planned ahead, and the key,
    * fixed to the player's when the jam starts (taking it from the frog's own chords lets it drift away)
    */
-  private jam: { history: ChordSymbol[]; key: Key; next: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null; job: PlanJob | null } | null = null;
+  private jam: {
+    history: ChordSymbol[];
+    key: Key;
+    next: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null;
+    job: PlanJob | null;
+    /** the next block has started sounding early (an anticipation): it can no longer be re-planned */
+    committed: boolean;
+  } | null = null;
   private jamTimer: ReturnType<typeof setTimeout> | null = null;
+  /** the events of the block on the display (kept after it ends, for the display) */
+  private shown: { plan: AnswerPlan; events: RhythmEvent[] } | null = null;
+  private loggedPlan: AnswerPlan | null = null;
+  /** the key centre shown and jammed in (changes only once the player has clearly moved) */
+  private keys = new KeyTracker();
+  private keyChange: { from: Key; to: Key; at: number } | null = null;
+  /** the chords of the current phrase and jam, for the jam report */
+  private log: { startBar: number; chords: LogChord[]; keyChanges: JamLog['keyChanges']; startKey: Key | null } | null = null;
   private noteTimers: ReturnType<typeof setTimeout>[] = [];
   private clock: ReturnType<typeof setTimeout> | null = null;
   private planTimer: ReturnType<typeof setTimeout> | null = null;
@@ -260,7 +344,8 @@ export class AnswerEngine {
     // The models and the key see each chord change once (the training data has repeats collapsed);
     // re-strikes of the same chord only count for the rhythm.
     const last = this.history[this.history.length - 1];
-    if (!last || last.root !== c.root || last.quality !== c.quality) {
+    const changed = !last || last.root !== c.root || last.quality !== c.quality;
+    if (changed) {
       this.history.push({ root: c.root, quality: c.quality });
       if (this.history.length > SESSION_CHORDS) {
         this.history.shift();
@@ -268,7 +353,14 @@ export class AnswerEngine {
       }
     }
 
-    if (this.status === 'playing' && this.jam) return; // jamming: the player plays along; only Stop ends it
+    if (this.status === 'playing' && this.jam) {
+      // jamming: the player plays along (only Stop ends it); if they move to a new key, the frog follows
+      if (changed) {
+        this.logChord('you', c);
+        this.trackKey();
+      }
+      return;
+    }
     if (this.status === 'playing') {
       // A chord in the answer's first beat is the tail of the player's phrase; later, the player takes over.
       if (this.now() - this.lastBarAt < this.beatMs() && this.barIndex === this.answerStart) return;
@@ -277,7 +369,11 @@ export class AnswerEngine {
     if (this.status === 'idle') this.startPhrase();
     const prev = this.phrase[this.phrase.length - 1];
     const change = !prev || prev.root !== c.root || prev.quality !== c.quality;
-    if (change) this.phrase.push(c);
+    if (change) {
+      this.phrase.push(c);
+      this.logChord('you', c);
+    }
+    if (changed) this.trackKey();
     this.recordStrike(c);
     if (change) this.schedulePlan();
     this.emit();
@@ -314,6 +410,48 @@ export class AnswerEngine {
   /** Jam mode: the block the frog plays after this one, once it is planned (null otherwise). */
   upcoming(): AnswerPlan | null {
     return this.status === 'playing' ? (this.jam?.next?.plan ?? null) : null;
+  }
+
+  /** Where each chord of the player's phrase starts (beats from the phrase's bar 1), for the bar display. */
+  phraseCells(): Cell[] {
+    return this.phrase.map((c, i) => {
+      const mine = this.strikes.filter((st) => st.chord === i);
+      const beat = mine.length ? snap(Math.min(...mine.map((st) => st.beats)), CHANGE_GRID) : i * BEATS_PER_BAR;
+      return { name: c.name, beat: Math.max(0, beat) };
+    });
+  }
+
+  /** The frog's chords on the display (the block playing, or the last one) with their start beats. */
+  frogCells(): Cell[] {
+    if (!this.plan) return [];
+    const events = this.shown?.plan === this.plan ? this.shown.events : null;
+    return cellsOf(this.plan, events);
+  }
+
+  /** Jam mode: the next block's chords and start beats, once planned. */
+  upcomingCells(): Cell[] {
+    const next = this.status === 'playing' ? this.jam?.next : null;
+    return next ? cellsOf(next.plan, next.events) : [];
+  }
+
+  /** The key centre (null before the first chords), and the latest key change. */
+  keyCentre(): { key: Key | null; change: { from: Key; to: Key; at: number } | null } {
+    return { key: this.keys.key, change: this.keyChange };
+  }
+
+  /** The bar grid in use: when the latest bar started and how long a bar is (for the frog's dance). */
+  barClock(): { at: number; ms: number } {
+    return { at: Number.isFinite(this.lastBarAt) ? this.lastBarAt : 0, ms: this.barMs() };
+  }
+
+  /** Stop: ends a jam and returns its log for the jam report (null if the frog wasn't jamming). */
+  stop(): JamLog | null {
+    const log = this.jam && this.log && this.log.startKey ? this.log : null;
+    const s = this.d.settings();
+    const bars = this.barIndex - (log?.startBar ?? 0) + 1;
+    this.cancel();
+    if (!log || !log.chords.some((c) => c.who === 'frog')) return null;
+    return { chords: log.chords, startKey: log.startKey!, keyChanges: log.keyChanges, phraseBars: s.phraseBars, bpm: s.bpm, bars };
   }
 
   /** The session's key: every chord so far, recent phrases weighted most, phrase openings as tonic cues. */
@@ -383,6 +521,7 @@ export class AnswerEngine {
   }
 
   private startPhrase(): void {
+    this.log = null; // set up below, once the phrase's bar 1 is known
     this.phrase = [];
     this.strikes = [];
     this.prepared = null;
@@ -414,7 +553,47 @@ export class AnswerEngine {
       this.stopClock();
       this.clock = setTimeout(() => this.tick(false), Math.max(0, this.barMs() - (t - struck)));
     }
+    this.log = { startBar: this.phraseStart, chords: [], keyChanges: [], startKey: null };
     this.status = 'listening';
+  }
+
+  /** Where we are now in the log's bars (1-based bar, beat within it); before bar 1 counts as bar 1, beat 0. */
+  private logPosition(): { bar: number; beat: number } {
+    const beats = Math.max(0, (this.barIndex - this.log!.startBar) * BEATS_PER_BAR + (this.now() - this.lastBarAt) / this.beatLen());
+    const bar = Math.floor(beats / BEATS_PER_BAR);
+    return { bar: bar + 1, beat: Math.round((beats - bar * BEATS_PER_BAR) * 4) / 4 };
+  }
+
+  private logChord(who: 'you' | 'frog', c: ChordSymbol): void {
+    if (!this.log) return;
+    this.log.chords.push({ ...this.logPosition(), who, chord: { root: c.root, quality: c.quality }, name: chordName(c.root, c.quality) });
+  }
+
+  /** Update the key centre from the player's chords; a confirmed key change is logged and the jam follows it. */
+  private trackKey(): void {
+    const from = this.keys.update(this.key());
+    const to = this.keys.key!;
+    if (!from) return;
+    this.keyChange = { from, to, at: this.now() };
+    if (this.log?.startKey) this.log.keyChanges.push({ bar: this.logPosition().bar, from, to });
+    const jam = this.jam;
+    if (!jam || this.status !== 'playing') return;
+    // Follow the player: the new key, and their latest chords as the model's context (otherwise the model
+    // carries on from the frog's own chords in the old key). Re-plan the next block unless it has started.
+    jam.key = to;
+    jam.history.push(...this.history.slice(-4));
+    if (jam.committed) return;
+    const s = this.d.settings();
+    if (this.barIndex - this.answerStart < s.phraseBars - 1) this.planNextBlock(s);
+    else {
+      // the block ends within a bar: plan it now, quickly
+      if (this.jamTimer) clearTimeout(this.jamTimer);
+      this.jamTimer = null;
+      jam.next = null;
+      jam.job = null;
+      this.lockNextBlock(s);
+    }
+    this.emit();
   }
 
   private onBar(): void {
@@ -440,7 +619,10 @@ export class AnswerEngine {
       }
       this.playBar(bar);
       if (this.jam && bar === s.phraseBars - 1) {
-        this.scheduleAnticipations(s, () => this.lockNextBlock(this.d.settings()), () => this.status === 'playing' && !!this.jam);
+        this.scheduleAnticipations(s, () => {
+          this.jam!.committed = true;
+          return this.lockNextBlock(this.d.settings());
+        }, () => this.status === 'playing' && !!this.jam);
       }
     }
     this.emit();
@@ -455,8 +637,11 @@ export class AnswerEngine {
     this.plan = prepared.plan;
     this.status = 'playing';
     this.answerStart = this.barIndex;
+    this.shown = prepared;
     if (s.continuous) {
-      this.jam = { history: [...this.history, ...prepared.plan.chords.map((c) => c.chord)], key: this.key(), next: null, job: null };
+      const key = this.keys.key ?? this.key();
+      this.jam = { history: [...this.history, ...prepared.plan.chords.map((c) => c.chord)], key, next: null, job: null, committed: false };
+      if (this.log) this.log.startKey = key;
       this.planNextBlock(s);
     }
     this.playBar(0);
@@ -470,7 +655,7 @@ export class AnswerEngine {
     const jam = this.jam;
     if (!jam || !this.prepared) return;
     const current = this.prepared.plan.chords;
-    const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing, jam.key);
+    const job = this.newJob(s, this.jamJob(s, jam.history, current, jam.key));
     jam.job = job;
     jam.next = null;
     const slice = () => {
@@ -488,9 +673,34 @@ export class AnswerEngine {
     this.jamTimer = setTimeout(slice, 0);
   }
 
+  /** A jam block's job: continue the jam in its key, about one chord per bar (or the player's rhythm, copied). */
+  private jamJob(s: AnswerSettings, history: ChordSymbol[], current: AnswerPlan['chords'], key: Key): JamJobOptions {
+    return {
+      history,
+      avoid: current.map((c) => c.chord),
+      startVoicing: current[current.length - 1].voicing,
+      key,
+      length: s.rhythm ? undefined : jamBlockLength(s.phraseBars, this.rng),
+    };
+  }
+
   private blockFrom(job: PlanJob): { key: string; plan: AnswerPlan; events: RhythmEvent[] } {
     const plan = this.finishJob(job);
-    return { key: job.forKey, plan, events: this.eventsFor(job.s, plan) };
+    const events = job.s.rhythm
+      ? this.eventsFor(job.s, plan)
+      : jamRhythm(plan.chords.length, job.s.phraseBars, this.phraseVelocity(), this.anticipation(job.s), this.rng);
+    return { key: job.forKey, plan, events };
+  }
+
+  /** The player's average strike velocity (the frog's jam blocks follow their dynamics). */
+  private phraseVelocity(): number {
+    return this.strikes.length ? this.strikes.reduce((a, st) => a + st.velocity, 0) / this.strikes.length : this.velocity;
+  }
+
+  /** How early (beats, <= 0) the player's phrase came in before its bar 1, as the answer's events have it. */
+  private anticipation(s: AnswerSettings): number {
+    const first = harmonicRhythm(this.strikes, this.phrase.length, 2, s.phraseBars * BEATS_PER_BAR)[0];
+    return first ? Math.min(0, first.start) : 0;
   }
 
   /** The next block, now: planned ahead if ready, else the best candidate so far, else a quick plan. */
@@ -500,7 +710,7 @@ export class AnswerEngine {
       if (jam.job && jam.job.cands.length) jam.next = this.blockFrom(jam.job);
       else {
         const current = this.prepared!.plan.chords;
-        const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing, jam.key);
+        const job = this.newJob(s, this.jamJob(s, jam.history, current, jam.key));
         this.workOn(job, QUICK_PLAN_MS, 8);
         jam.next = this.blockFrom(job);
       }
@@ -515,9 +725,11 @@ export class AnswerEngine {
     const jam = this.jam!;
     const next = this.lockNextBlock(s);
     jam.next = null;
+    jam.committed = false;
     jam.history.push(...next.plan.chords.map((c) => c.chord));
     if (jam.history.length > SESSION_CHORDS) jam.history.splice(0, jam.history.length - SESSION_CHORDS);
     this.prepared = { key: next.key, plan: next.plan, events: next.events };
+    this.shown = this.prepared;
     this.plan = next.plan;
     this.answerStart = this.barIndex;
     this.playBar(0);
@@ -594,6 +806,8 @@ export class AnswerEngine {
 
   private playEvent(ev: RhythmEvent, plan: AnswerPlan): void {
     const voicing = plan.chords[ev.chord].voicing;
+    if (ev.chord !== this.currentChord || plan !== this.loggedPlan) this.logChord('frog', plan.chords[ev.chord].chord);
+    this.loggedPlan = plan;
     for (const p of [...this.sounding]) this.send(p, 0); // the previous chord ends where this one starts
     voicing.forEach((p, i) => this.send(p, this.humanize(ev.velocity, i, voicing.length)));
     this.currentChord = ev.chord;
@@ -679,18 +893,18 @@ export class AnswerEngine {
    * continue the jam's progression in the jam's key, avoid repeating the previous block, and voice-lead from
    * its last chord.
    */
-  private newJob(s: AnswerSettings, history?: ChordSymbol[], avoid?: ChordSymbol[], startVoicing?: number[], key?: Key): PlanJob {
+  private newJob(s: AnswerSettings, jam?: JamJobOptions): PlanJob {
     return {
       forKey: this.phraseKey(),
       s,
-      // one answer chord per chord change in the phrase (up to 8), so every change has a partner
-      length: Math.min(8, Math.max(2, this.phrase.length)),
-      key: key ?? this.key(),
+      // answers: one chord per chord change in the phrase (up to 8), so every change has a partner
+      length: jam?.length ?? Math.min(8, Math.max(2, this.phrase.length)),
+      key: jam?.key ?? this.key(),
       prior: priorFor(this.d.model, s.genre),
-      history: [...(history ?? this.history)],
+      history: [...(jam?.history ?? this.history)],
       phrase: [...this.phrase],
-      avoid: avoid ?? this.phrase,
-      startVoicing: startVoicing ?? this.phrase.at(-1)?.pitches ?? null,
+      avoid: jam?.avoid ?? this.phrase,
+      startVoicing: jam?.startVoicing ?? this.phrase.at(-1)?.pitches ?? null,
       cands: [],
       seen: new Set(),
       tries: 0,
@@ -796,4 +1010,13 @@ export function scoreAnswer(chords: ChordSymbol[], meanLogp: number, phrase: Cho
   // power chords only if the player plays them (rare moves get a boost when weird, and these drift to rock)
   if (!phrase.some((c) => c.quality === 'pow')) score -= 0.4 * chords.filter((c) => c.quality === 'pow').length;
   return score;
+}
+
+/** Each plan chord with the beat it first sounds at (events clamped to bar 1; evenly spaced without events). */
+function cellsOf(plan: AnswerPlan, events: RhythmEvent[] | null): Cell[] {
+  return plan.chords.map((c, i) => {
+    const mine = events?.filter((ev) => ev.chord === i) ?? [];
+    const beat = mine.length ? Math.min(...mine.map((ev) => ev.start)) : i * plan.beatsPerChord;
+    return { name: c.name, beat: Math.max(0, beat) };
+  });
 }

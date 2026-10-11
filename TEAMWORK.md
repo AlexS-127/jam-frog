@@ -128,13 +128,18 @@ Build `createOverlay(root: HTMLElement, handlers: Handlers): { update(state: UiS
 ```ts
 interface UiState {   // as built (see app/src/renderer/ui/overlay.ts)
   mood: FrogMood; phase: 'idle' | 'listening' | 'playing'; bar: number; bars: number;
-  yourChords: string[]; frogChords: string[]; frogIndex: number; nextChords: string[]; suggestions: string[]; borrowed: boolean;
+  // chords as { name, beat } (beat from bar 1), drawn bar by bar
+  yourChords: Cell[]; frogChords: Cell[]; frogIndex: number; nextChords: Cell[];
+  key: string | null; keyChange: { from: string; to: string } | null; beat: { barAt: number; barMs: number };
+  suggestions: string[]; borrowed: boolean;
   weirdness: number; genre: string; phraseBars: 2 | 4 | 8; frogMode: 'off' | 'answer' | 'jam'; rhythm: boolean; model: string;
   bpm: number; liveTempo: number | null; liveBar: number | null; status: string;
+  report: JamReport | null; reportPending: boolean; reportBubble: boolean; reportMode: 'gemini' | 'local'; geminiAvailable: boolean;
 }
 interface Handlers {
   onWeirdness(v: number): void; onGenre(g: string): void; onPhraseBars(b: 2 | 4 | 8): void;
   onFrogMode(m: 'off' | 'answer' | 'jam'): void; onStop(): void; onRhythm(on: boolean): void; onModel(m: string): void; onBpm(bpm: number): void;
+  onReportMode(m: 'gemini' | 'local'): void;
 }
 ```
 

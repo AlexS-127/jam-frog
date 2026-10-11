@@ -5,7 +5,7 @@ import {
 } from './atlas';
 import {
   ACTIONS, ART_SCALE, DRAG_THRESHOLD, PET_SIZE, STOP_SPEED,
-  centeredPosition, clampPosition, frameAt, movementBounds, releaseVelocity, restingAction, stepFling,
+  centeredPosition, clampPosition, frameAt, movementBounds, releaseVelocity, restingAction, stepFling, syncedFrame,
   type Action, type DragSample, type Point,
 } from './motion';
 
@@ -21,6 +21,8 @@ export interface PetSnapshot {
 export interface PetController {
   setMood(mood: FrogMood): void;
   setMusicPlaying(playing: boolean): void;
+  /** dance in time: looping actions follow this beat grid (anchor: a bar line, in performance.now ms) */
+  setTempo(tempo: { anchor: number; beatMs: number } | null): void;
   preview(action: Action | null): void;
   setAmbientEnabled(enabled: boolean): void;
   resetPosition(): void;
@@ -74,6 +76,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   let fling = false;
   let mood: FrogMood = 'idle';
   let musicPlaying = false;
+  let tempo: { anchor: number; beatMs: number } | null = null;
   let previewAction: Action | null = null;
   let currentAction: Action = 'idle';
   let actionStarted = 0;
@@ -116,7 +119,10 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
       actionStarted = clock;
       lastFrame = -1;
     }
-    const frame = reducedMotion ? 0 : frameAt(action, clock - actionStarted, reaction === null && ambient === null);
+    const looping = reaction === null && ambient === null && drag === null && !fling;
+    const frame = reducedMotion ? 0
+      : looping && tempo ? syncedFrame(action, performance.now(), tempo.anchor, tempo.beatMs)
+        : frameAt(action, clock - actionStarted, looping);
     if (loaded && (action !== 'playing' || loadedAssets.playing) && frame !== lastFrame) {
       const source = action === 'playing' ? KEYBOARD_FRAMES[frame] : SPRITE_FRAMES[ACTIONS[action].row][frame];
       const image = action === 'playing' ? images.playing : images.main;
@@ -318,6 +324,11 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
       musicPlaying = playing;
       lastFrame = -1;
       draw();
+    },
+    setTempo(next) {
+      if (disposed) return;
+      if (next && !(next.beatMs > 0 && Number.isFinite(next.anchor))) next = null;
+      tempo = next;
     },
     preview(action) {
       if (disposed) return;

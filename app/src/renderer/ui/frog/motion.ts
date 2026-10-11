@@ -30,6 +30,19 @@ export function frameAt(action: Action, elapsed: number, loop = true): number {
   return loop ? frame % clip.frames : Math.min(frame, clip.frames - 1);
 }
 
+/** How many beats one loop of an action lasts at this tempo: 1, 2 or 4, whichever is nearest its natural length. */
+export function beatsPerLoop(action: Action, beatMs: number): number {
+  const natural = ACTIONS[action].duration;
+  return [1, 2, 4].reduce((best, n) => (Math.abs(Math.log((n * beatMs) / natural)) < Math.abs(Math.log((best * beatMs) / natural)) ? n : best));
+}
+
+/** The frame of a looping action in time with the music: loops last whole beats and restart on the beat grid. */
+export function syncedFrame(action: Action, now: number, anchor: number, beatMs: number): number {
+  const loop = beatsPerLoop(action, beatMs) * beatMs;
+  const t = (((now - anchor) % loop) + loop) % loop;
+  return Math.floor((t / loop) * ACTIONS[action].frames) % ACTIONS[action].frames;
+}
+
 export function movementBounds(stage: Size, pet = PET_SIZE): Bounds {
   const margin = MARGIN * pet.width / PET_SIZE.width;
   const verticalMargin = MARGIN * pet.height / PET_SIZE.height;

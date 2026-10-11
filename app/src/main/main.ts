@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, session } from 'electron';
 import path from 'node:path';
+import { startGemini } from './gemini';
 import { startOsc } from './osc';
 
 function createWindow(): void {
@@ -68,6 +69,7 @@ app.whenReady().then(() => {
   // quietly: Chromium asks about things like background-sync on every page load, which is not an error.
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, cb) => cb(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
+  startGemini();
   buildMenu();
   createWindow();
 });

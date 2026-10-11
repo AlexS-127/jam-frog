@@ -1,12 +1,14 @@
-import { AnswerEngine, type AnswerProgress } from '../core/answer';
+import { AnswerEngine, type AnswerProgress, type JamLog } from '../core/answer';
 import { detectChord } from '../core/chords';
 import { OnsetGrouper, type NoteGroup } from '../core/grouper';
+import { keyName } from '../core/key';
 import type { ChordModel } from '../core/model';
+import { analyseJam, geminiRequest, localReport, parseGeminiReport, type JamReport } from '../core/report';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord, FrogMood, NoteEvent, Suggestion } from '../core/types';
 import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
 import { loadModels } from './models';
-import { createOverlay, type FrogMode, type UiState } from './ui/overlay';
+import { createOverlay, type FrogMode, type ReportMode, type UiState } from './ui/overlay';
 
 // The app: notes in from Live (Frog Ear, Max for Live, over OSC) -> chord detection -> suggestions in the
 // frog's speech bubble; the AnswerEngine answers each 2/4/8-bar phrase on the frog track (Frog Voice).
@@ -21,6 +23,8 @@ const settings = {
   phraseBars: 4 as 2 | 4 | 8,
   bpm: 120,
   rhythm: false,
+  /** the jam report: written by Gemini (if there is an API key), or on this Mac only */
+  reportMode: 'gemini' as ReportMode,
 };
 
 // ---- models: both behind ChordModel ----
@@ -46,6 +50,20 @@ let tempoFromLive = false;
 let liveBars = 0;
 let lastBarAt = -Infinity;
 let status = '';
+let report: JamReport | null = null;
+let reportPending = false;
+let reportBubble = false;
+let reportSeq = 0;
+let geminiAvailable = false;
+/** how long the frog announces a key change */
+const KEY_CHANGE_MS = 4000;
+let keyChangeTimer: ReturnType<typeof setTimeout> | null = null;
+let shownKeyChange = 0;
+
+window.jamFrog.gemini.available().then((ok) => {
+  geminiAvailable = ok;
+  render();
+});
 
 const answers = new AnswerEngine({
   model,
@@ -72,6 +90,7 @@ function onNote(e: NoteEvent): void {
 function onGroup(g: NoteGroup): void {
   const chord = detectChord(g.pitches);
   if (!chord) return; // single notes and non-chords are ignored
+  reportBubble = false; // the frog stops talking about the last jam once you play again
   history.push(chord);
   if (history.length > 256) history.shift(); // the whole session; the models only look at the last 8
   answers.chord(chord); // first, so the session key includes this chord
@@ -110,7 +129,8 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
     render();
   },
   onStop() {
-    answers.cancel();
+    const log = answers.stop();
+    if (log) void makeReport(log);
     render();
   },
   onPhraseBars(bars) {
@@ -130,7 +150,44 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
     settings.bpm = bpm;
     render();
   },
+  onReportMode(mode) {
+    settings.reportMode = mode;
+    render();
+  },
 });
+
+/**
+ * After a jam: the frog sums it up at once from the local analysis, or, with Gemini on, asks Gemini for a
+ * livelier write-up first (the local report stays if Gemini fails or takes too long).
+ */
+async function makeReport(log: JamLog): Promise<void> {
+  const seq = ++reportSeq;
+  const analysis = analyseJam(log);
+  report = localReport(analysis);
+  reportBubble = true;
+  reportPending = geminiAvailable && settings.reportMode === 'gemini';
+  render();
+  if (!reportPending) return;
+  const { response, error } = await window.jamFrog.gemini.generate(geminiRequest(analysis));
+  if (seq !== reportSeq) return; // a newer jam's report took over
+  const written = response ? parseGeminiReport(response, analysis) : null;
+  if (written) report = written;
+  else status = `Jam report: ${error ?? 'Gemini gave no usable answer'} (written locally instead)`;
+  reportPending = false;
+  render();
+}
+
+/** The latest key change, while it is still news (a few seconds). */
+function recentKeyChange(): UiState['keyChange'] {
+  const change = answers.keyCentre().change;
+  if (!change || performance.now() - change.at > KEY_CHANGE_MS) return null;
+  if (change.at !== shownKeyChange) {
+    shownKeyChange = change.at;
+    if (keyChangeTimer) clearTimeout(keyChangeTimer);
+    keyChangeTimer = setTimeout(render, KEY_CHANGE_MS - (performance.now() - change.at) + 20);
+  }
+  return { from: keyName(change.from), to: keyName(change.to) };
+}
 
 function mood(): FrogMood {
   if (progress.status === 'listening') return progress.bar >= progress.bars ? 'thinking' : 'listening';
@@ -143,10 +200,13 @@ function uiState(): UiState {
     phase: progress.status,
     bar: progress.bar,
     bars: progress.bars,
-    yourChords: answers.phraseChords(),
-    frogChords: plan && progress.status !== 'listening' ? plan.chords.map((c) => c.name) : [],
+    yourChords: answers.phraseCells(),
+    frogChords: plan && progress.status !== 'listening' ? answers.frogCells() : [],
     frogIndex: progress.chord,
-    nextChords: answers.upcoming()?.chords.map((c) => c.name) ?? [],
+    nextChords: answers.upcomingCells(),
+    key: answers.keyCentre().key ? keyName(answers.keyCentre().key!) : null,
+    keyChange: recentKeyChange(),
+    beat: { barAt: answers.barClock().at, barMs: answers.barClock().ms },
     suggestions: suggestions.map((s) => s.name),
     borrowed: suggestions.some((s) => s.borrowed),
     weirdness: settings.weirdness,
@@ -159,6 +219,11 @@ function uiState(): UiState {
     liveTempo,
     liveBar: liveBars > 0 ? liveBars : null,
     status,
+    report,
+    reportPending,
+    reportBubble,
+    reportMode: settings.reportMode,
+    geminiAvailable,
   };
 }
 

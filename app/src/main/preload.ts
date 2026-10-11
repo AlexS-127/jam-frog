@@ -12,4 +12,8 @@ contextBridge.exposeInMainWorld('jamFrog', {
       ipcRenderer.on('osc:error', (_e, text: string) => cb(text));
     },
   },
+  gemini: {
+    available: (): Promise<boolean> => ipcRenderer.invoke('gemini:available'),
+    generate: (body: unknown): Promise<{ response?: unknown; error?: string }> => ipcRenderer.invoke('gemini:generate', body),
+  },
 });
