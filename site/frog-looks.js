@@ -11,11 +11,11 @@ const SPRITE_REGIONS = {
 // Each motion is applied to the complete, baked-in genre sprite so the frog,
 // clothing, and instrument always move together as one pixel-art character.
 const MOVEMENTS = {
-  idle: [[0, 0, 1, 1], [0, -1, 1, 1], [0, -2, 1, 1], [0, -1, 1, 1], [0, 0, 1, 1], [0, 1, 1, 1]],
+  idle: [[0, 0, 1, 1], [-1, -2, 1, 1], [0, -3, 1, 1], [1, -2, 1, 1], [0, -1, 1, 1], [0, 0, 1, 1]],
   waving: [[0, 0, 1, 1], [-2, -2, 0.99, 1.01], [2, -3, 1.01, 1], [-1, -1, 0.99, 1.01]],
   jumping: [[0, 0, 1, 1], [0, -5, 0.99, 1.02], [0, -13, 1.01, 0.98], [0, -17, 0.98, 1.02], [0, -3, 1.03, 0.96]],
   failed: [[0, 0, 1, 1], [0, 1, 1.01, 0.99], [0, 3, 1.02, 0.97], [0, 4, 1.03, 0.96], [0, 4, 1.03, 0.96], [0, 3, 1.02, 0.97], [0, 1, 1.01, 0.99], [0, 0, 1, 1]],
-  waiting: [[0, 0, 1, 1], [0, -1, 1, 1], [0, -2, 1, 1], [0, -1, 1, 1], [0, 0, 1, 1], [0, 1, 1, 1]],
+  waiting: [[0, 0, 1, 1], [-1, -2, 1, 1], [0, -3, 1, 1], [1, -2, 1, 1], [0, -1, 1, 1], [0, 0, 1, 1]],
   review: [[0, 0, 1, 1], [1, -1, 1, 1], [2, -2, 1, 1], [1, -2, 1, 1], [-1, -1, 1, 1], [0, 0, 1, 1]],
   playing: [[0, 0, 1, 1], [0, -2, 1.01, 0.99], [1, -3, 1, 1.01], [0, -2, 1.01, 0.99], [-1, 0, 1, 1.01], [0, 0, 1, 1]],
 };
@@ -25,10 +25,14 @@ const MOVEMENT_LABELS = {
 };
 
 const image = new Image();
-const frogs = [...document.querySelectorAll('[data-frog-look]')].map((canvas) => ({
+const TONGUE_ANCHORS = {
+  jazz: [0.5, 0.35], rock: [0.5, 0.4], country: [0.5, 0.36], electronic: [0.5, 0.43],
+};
+const frogs = [...document.querySelectorAll('[data-frog-look]')].map((canvas, index) => ({
   canvas,
   context: canvas.getContext('2d'),
   look: canvas.dataset.frogLook,
+  index,
   greeting: null,
   greetingStarts: 0,
 }));
@@ -78,6 +82,27 @@ function poseFor(action, elapsed, loop) {
   return MOVEMENTS[action][index];
 }
 
+function tongueIsOut(elapsed, index) {
+  const interval = 8200;
+  const phase = (elapsed + index * 1700) % interval;
+  return phase >= 5700 && phase < 6500;
+}
+
+function drawTongue(context, look, x, y, width, height) {
+  const [mouthX, mouthY] = TONGUE_ANCHORS[look];
+  const pixel = Math.max(2, Math.round(width / 60));
+  const left = x + width * mouthX - pixel * 2;
+  const top = y + height * mouthY;
+  context.fillStyle = '#191b13';
+  context.fillRect(Math.round(left - pixel), Math.round(top), pixel * 6, pixel * 3);
+  context.fillStyle = '#e94e68';
+  context.fillRect(Math.round(left), Math.round(top + pixel), pixel * 4, pixel * 3);
+  context.fillStyle = '#ff8c9c';
+  context.fillRect(Math.round(left + pixel), Math.round(top + pixel), pixel * 2, pixel);
+  context.fillStyle = '#b82f55';
+  context.fillRect(Math.round(left + pixel), Math.round(top + pixel * 4), pixel * 2, pixel * 2);
+}
+
 function paint(frog, now) {
   if (!loaded || !frog.context) return;
   if (frog.greeting && now - frog.greetingStarts >= ACTIONS[frog.greeting].duration) {
@@ -106,6 +131,9 @@ function paint(frog, now) {
     sprite.x, sprite.y, sprite.width, sprite.height,
     -width / 2, -height / 2, width, height,
   );
+  if ((action === 'idle' || action === 'waiting') && tongueIsOut(elapsed, frog.index)) {
+    drawTongue(context, frog.look, -width / 2, -height / 2, width, height);
+  }
   context.restore();
 }
 
