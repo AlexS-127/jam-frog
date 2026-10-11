@@ -52,8 +52,12 @@ const lookAnnouncement = document.querySelector('[data-look-announcement]');
 const lookMessages = {
   jazz: 'Jazz frog is ready to sit in. Try another look.',
   rock: 'Rock frog is ready to turn up the amp.',
+  punk: 'Punk frog is ready to play fast rhythm guitar.',
+  alternative: 'Alternative frog is ready to find a new texture.',
+  pop: 'Pop frog is ready at the piano.',
   country: 'Country frog is ready to ride the changes.',
   electronic: 'Electronic frog is ready to find the pulse.',
+  rap: 'Rap frog is ready on the mic.',
 };
 
 lookButtons.forEach((button) => {

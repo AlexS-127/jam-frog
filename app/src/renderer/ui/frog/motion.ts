@@ -24,10 +24,10 @@ export const MARGIN = 12;
 export const STOP_SPEED = 0.05;
 export const DRAG_THRESHOLD = 4;
 
-export function frameAt(action: Action, elapsed: number, loop = true): number {
+export function frameAt(action: Action, elapsed: number, loop = true, frames: number = ACTIONS[action].frames): number {
   const clip = ACTIONS[action];
-  const frame = Math.floor(Math.max(0, elapsed) / clip.duration * clip.frames);
-  return loop ? frame % clip.frames : Math.min(frame, clip.frames - 1);
+  const frame = Math.floor(Math.max(0, elapsed) / clip.duration * frames);
+  return loop ? frame % frames : Math.min(frame, frames - 1);
 }
 
 /** How many beats one loop of an action lasts at this tempo: 1, 2 or 4, whichever is nearest its natural length. */
@@ -37,10 +37,10 @@ export function beatsPerLoop(action: Action, beatMs: number): number {
 }
 
 /** The frame of a looping action in time with the music: loops last whole beats and restart on the beat grid. */
-export function syncedFrame(action: Action, now: number, anchor: number, beatMs: number): number {
+export function syncedFrame(action: Action, now: number, anchor: number, beatMs: number, frames: number = ACTIONS[action].frames): number {
   const loop = beatsPerLoop(action, beatMs) * beatMs;
   const t = (((now - anchor) % loop) + loop) % loop;
-  return Math.floor((t / loop) * ACTIONS[action].frames) % ACTIONS[action].frames;
+  return Math.floor((t / loop) * frames) % frames;
 }
 
 export function movementBounds(stage: Size, pet = PET_SIZE): Bounds {

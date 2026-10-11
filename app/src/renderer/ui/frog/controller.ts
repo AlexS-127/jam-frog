@@ -8,7 +8,8 @@ import {
   centeredPosition, clampPosition, frameAt, movementBounds, releaseVelocity, restingAction, stepFling, syncedFrame,
   type Action, type DragSample, type Point,
 } from './motion';
-import { drawOutfit, OUTFIT_SHEET, type Look } from './looks';
+import { drawOutfit, GENRE_FRAME_COUNT, GENRE_LOOKS, OUTFIT_SHEETS, type Look } from './looks';
+import type { GenreLook } from '../../../../../shared/genre-animations';
 
 export interface PetSnapshot {
   action: Action;
@@ -101,8 +102,14 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   const listeners = new Set<(snapshot: PetSnapshot) => void>();
   const media = window.matchMedia('(prefers-reduced-motion: reduce)');
   let reducedMotion = media.matches;
-  const images = { main: new Image(), playing: new Image(), outfits: new Image() };
-  const loadedAssets = { main: false, playing: false, outfits: false };
+  const images = {
+    main: new Image(), playing: new Image(),
+    outfits: Object.fromEntries(GENRE_LOOKS.map((genre) => [genre, new Image()])) as Record<GenreLook, HTMLImageElement>,
+  };
+  const loadedAssets = {
+    main: false, playing: false,
+    outfits: Object.fromEntries(GENRE_LOOKS.map((genre) => [genre, false])) as Record<GenreLook, boolean>,
+  };
 
   const busy = () => drag !== null || fling || reaction !== null;
   const rescheduleAmbient = () => { nextAmbient = clock + 1700 + Math.random() * 1300; };
@@ -124,12 +131,14 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
       lastFrame = -1;
     }
     const looping = reaction === null && ambient === null && drag === null && !fling;
+    const outfitReady = look !== 'classic' && loadedAssets.outfits[look];
+    const frameCount = outfitReady && (action === 'idle' || action === 'waiting' || action === 'playing')
+      ? GENRE_FRAME_COUNT : ACTIONS[action].frames;
     const frame = reducedMotion ? 0
-      : looping && tempo ? syncedFrame(action, performance.now(), tempo.anchor, tempo.beatMs)
-        : frameAt(action, clock - actionStarted, looping);
-    if (loaded && look !== 'classic' && loadedAssets.outfits) {
-      // an outfit: the whole sprite moves (and plays its own instrument)
-      if (frame !== lastFrame) drawOutfit(context, images.outfits, look, action, frame);
+      : looping && tempo ? syncedFrame(action, performance.now(), tempo.anchor, tempo.beatMs, frameCount)
+        : frameAt(action, clock - actionStarted, looping, frameCount);
+    if (loaded && look !== 'classic' && outfitReady) {
+      if (frame !== lastFrame) drawOutfit(context, images.outfits[look], look, action, frame);
     } else if (loaded && (action !== 'playing' || loadedAssets.playing) && frame !== lastFrame) {
       const source = action === 'playing' ? KEYBOARD_FRAMES[frame] : SPRITE_FRAMES[ACTIONS[action].row][frame];
       const image = action === 'playing' ? images.playing : images.main;
@@ -203,11 +212,10 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
     }
   }
 
-  for (const [asset, image] of Object.entries(images) as [keyof typeof images, HTMLImageElement][]) {
+  for (const [asset, image] of [['main', images.main], ['playing', images.playing]] as const) {
     image.addEventListener('load', () => {
       const dimensions = asset === 'playing'
-        ? [KEYBOARD_ATLAS_WIDTH, KEYBOARD_ATLAS_HEIGHT]
-        : asset === 'outfits' ? [OUTFIT_SHEET.width, OUTFIT_SHEET.height] : [ATLAS_WIDTH, ATLAS_HEIGHT];
+        ? [KEYBOARD_ATLAS_WIDTH, KEYBOARD_ATLAS_HEIGHT] : [ATLAS_WIDTH, ATLAS_HEIGHT];
       if (image.naturalWidth !== dimensions[0] || image.naturalHeight !== dimensions[1]) {
         notice.textContent = 'Frog artwork dimensions do not match its frame map.';
         console.warn('[frog_sprite] Atlas dimensions do not match frame metadata.');
@@ -228,7 +236,21 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   }
   images.main.src = new URL('./green-frog.png', import.meta.url).href;
   images.playing.src = new URL('./keyboard-frog.png', import.meta.url).href;
-  images.outfits.src = new URL('./genre-outfits.png', import.meta.url).href;
+  for (const genre of GENRE_LOOKS) {
+    const image = images.outfits[genre];
+    image.addEventListener('load', () => {
+      const { width, height } = OUTFIT_SHEETS[genre];
+      if (image.naturalWidth !== width || image.naturalHeight !== height) {
+        console.warn(`[frog_sprite] ${genre} outfit atlas dimensions do not match its frame map.`);
+        return;
+      }
+      loadedAssets.outfits[genre] = true;
+      lastFrame = -1;
+      draw();
+    }, { signal });
+    image.addEventListener('error', () => console.warn(`[frog_sprite] Could not load the ${genre} outfit atlas.`), { signal });
+    image.src = new URL(`../../../../../site/assets/genre-animations/${genre}.png`, import.meta.url).href;
+  }
 
   const interactive = options.interactive ?? true;
   if (!interactive) {

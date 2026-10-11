@@ -116,7 +116,7 @@
           <div class="section-intro">
             <p class="section-index">03 / PICK A GENRE</p>
             <h2 id="looks-title">Same frog.<br />New stage look.</h2>
-            <p>Four pixel-art outfits for four of Jam Frog’s supported styles. Pick a card to give the little player a different gig-day look.</p>
+            <p>Eight pixel-art players for Jam Frog’s supported styles. Each one has its own idle and instrument-playing animation.</p>
           </div>
           <div class="looks-note"><span class="looks-star" aria-hidden="true">✦</span><p><strong>In the app too.</strong> The app’s genre setting guides its chord model, and the frog on the amp wears the matching outfit.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/vocab.ts" target="_blank" rel="noreferrer">See supported genres <span aria-hidden="true">↗</span></a></div>
         </div>
@@ -131,20 +131,32 @@
             <button class="movement-button" type="button" data-action="review" aria-pressed="false">Think</button>
             <button class="movement-button" type="button" data-action="playing" aria-pressed="false">Play</button>
           </div>
-          <p class="movement-status" data-movement-status aria-live="polite">All four frogs: Idle</p>
+          <p class="movement-status" data-movement-status aria-live="polite">All eight frogs: Idle</p>
         </div>
         <div class="look-picker" role="group" aria-label="Choose a frog genre outfit">
-          <button class="look-card is-selected" type="button" data-look="jazz" aria-pressed="true" aria-label="Jazz outfit: beret, gold scarf, and saxophone">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="jazz"></canvas></span><span class="look-caption"><strong>Jazz</strong><small>Beret · brass sax</small></span><span class="look-status" aria-hidden="true">SELECTED</span>
+          <button class="look-card is-selected" type="button" data-look="jazz" aria-pressed="true" aria-label="Jazz outfit: beret, scarf, and hollow-body rhythm guitar">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="jazz"></canvas></span><span class="look-caption"><strong>Jazz</strong><small>Hollow-body rhythm guitar</small></span><span class="look-status" aria-hidden="true">SELECTED</span>
           </button>
-          <button class="look-card" type="button" data-look="rock" aria-pressed="false" aria-label="Rock outfit: red mohawk, studded vest, and electric guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rock"></canvas></span><span class="look-caption"><strong>Rock</strong><small>Mohawk · electric guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          <button class="look-card" type="button" data-look="rock" aria-pressed="false" aria-label="Rock outfit: denim jacket and Telecaster-style guitar">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rock"></canvas></span><span class="look-caption"><strong>Rock</strong><small>Denim · Telecaster-style guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+          <button class="look-card" type="button" data-look="punk" aria-pressed="false" aria-label="Punk outfit: red mohawk and Ibanez-style rhythm guitar">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="punk"></canvas></span><span class="look-caption"><strong>Punk</strong><small>Mohawk · Ibanez-style rhythm guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+          <button class="look-card" type="button" data-look="alternative" aria-pressed="false" aria-label="Alternative outfit: flannel and offset electric guitar">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="alternative"></canvas></span><span class="look-caption"><strong>Alternative</strong><small>Flannel · offset electric guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+          <button class="look-card" type="button" data-look="pop" aria-pressed="false" aria-label="Pop outfit: coral cardigan and acoustic piano">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="pop"></canvas></span><span class="look-caption"><strong>Pop</strong><small>Cardigan · acoustic piano</small></span><span class="look-status" aria-hidden="true">SELECT</span>
           </button>
           <button class="look-card" type="button" data-look="country" aria-pressed="false" aria-label="Country outfit: cowboy hat, neckerchief, and acoustic guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="country"></canvas></span><span class="look-caption" aria-hidden="true"><strong>Country</strong><small>Cowboy hat · acoustic guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="country"></canvas></span><span class="look-caption"><strong>Country</strong><small>Cowboy hat · acoustic guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
           </button>
-          <button class="look-card" type="button" data-look="electronic" aria-pressed="false" aria-label="Electronic outfit: headphones and cyan and magenta lightsticks">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="electronic"></canvas></span><span class="look-caption" aria-hidden="true"><strong>Electronic</strong><small>Headphones · lightsticks</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          <button class="look-card" type="button" data-look="electronic" aria-pressed="false" aria-label="Electronic outfit: headphones and DJ deck">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="electronic"></canvas></span><span class="look-caption"><strong>Electronic</strong><small>Headphones · DJ deck</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+          </button>
+          <button class="look-card" type="button" data-look="rap" aria-pressed="false" aria-label="Rap outfit: backwards cap, hoodie, and microphone">
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rap"></canvas></span><span class="look-caption"><strong>Rap</strong><small>Backwards cap · microphone</small></span><span class="look-status" aria-hidden="true">SELECT</span>
           </button>
         </div>
         <p class="look-announcement" data-look-announcement aria-live="polite">Jazz frog is ready to sit in. Try another look.</p>
