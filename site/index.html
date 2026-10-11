@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#09150d" />
+    <meta name="theme-color" content="#eee9d8" />
     <meta name="description" content="Jam Frog is a real-time Ableton Live jam partner that suggests chords and answers your phrases." />
-    <title>Jam Frog — Your next chord has a co-pilot</title>
+    <title>Jam Frog — A bandmate for your next chord</title>
     <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./main.js"></script>
   </head>
@@ -28,11 +28,12 @@
       <section class="hero" id="top" aria-labelledby="hero-title">
         <div class="hero-art" aria-hidden="true"></div>
         <div class="hero-copy">
-          <h1 id="hero-title"><span class="headline-wide"><span>Your next</span><span>chord has a</span><span>co-pilot.</span></span><span class="headline-narrow">Your next chord<br />has a co-pilot.</span></h1>
+          <p class="hero-kicker">A little bandmate for Ableton Live</p>
+          <h1 id="hero-title"><span class="headline-wide"><span>Play a chord.</span><span>Meet your</span><span>next move.</span></span><span class="headline-narrow">Play a chord.<br />Meet your next move.</span></h1>
           <p class="hero-deck">Play a progression in Ableton. Jam Frog listens, suggests what comes next, then answers in the rhythm you played.</p>
           <div class="hero-actions">
-            <a class="pixel-button pixel-button-bright" href="#signal">Follow the signal <span aria-hidden="true">↓</span></a>
-            <a class="text-link" href="#setup">Run it in Live <span aria-hidden="true">↗</span></a>
+            <button class="pixel-button pixel-button-bright" type="button" data-render-demo>▶ Make a demo tape</button>
+            <a class="text-link" href="#signal">See how it works <span aria-hidden="true">↗</span></a>
           </div>
           <div class="hero-proof" aria-label="Project properties">
             <span>Local chord models</span><i aria-hidden="true"></i>
@@ -231,6 +232,14 @@
       <p class="dataset-credit">Chord data: <a href="https://huggingface.co/datasets/ailsntua/Chordonomicon" target="_blank" rel="noreferrer">Chordonomicon</a> by Kantarelis et al. (2024), CC BY-NC 4.0.</p>
       <a class="footer-source" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Source on GitHub <span aria-hidden="true">↗</span></a>
     </footer>
+    <dialog class="demo-dialog" data-demo-dialog aria-label="Jam Frog demo tape">
+      <div class="demo-panel">
+        <div class="demo-panel-head"><span>JAM FROG / DEMO TAPE</span><button class="demo-close" type="button" data-demo-close aria-label="Close demo">×</button></div>
+        <div class="demo-screen"><canvas width="960" height="540" data-demo-canvas aria-label="Illustrative Jam Frog walkthrough"></canvas><video controls playsinline hidden data-demo-video aria-label="Rendered Jam Frog walkthrough"></video></div>
+        <div class="demo-panel-foot"><p data-demo-status role="status">Preparing a short illustrated walkthrough…</p><a class="demo-download" data-demo-download download="jam-frog-demo.webm" hidden>Download video ↓</a></div>
+      </div>
+    </dialog>
     <script type="module" src="./frog-looks.js"></script>
+    <script type="module" src="./demo-video.js"></script>
   </body>
 </html>

@@ -90,15 +90,12 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-pet { position: absolute; top: 0; left: 0; display: block; margin: 0; padding: 0; border: 0; background: transparent; }
 .jf-pet canvas { display: block; image-rendering: pixelated; }
 .jf-pet-notice { position: absolute; left: 0; right: 0; bottom: 40px; color: #a8bda7; font-size: 11px; text-align: center; }
-/* the bubble sits right of the frog (clear of its outfit and instrument), bottom-anchored so 1 or 2 lines both
-   stay put, its tail pointing left at the frog's head */
-.jf-bubble { position: absolute; z-index: 3; bottom: 92px; left: 186px; right: 6px; padding: 12px 14px; border-radius: 16px;
+/* The bubble stays clear of the sprite; its tail follows the rendered mouth. */
+.jf-bubble { position: absolute; z-index: 3; top: 8px; left: 186px; right: 6px; padding: 12px 14px; border-radius: 16px;
   background: #f4f1df; color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
-.jf-bubble::before { content: ""; position: absolute; left: -13px; bottom: 16px; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 14px solid #f4f1df; }
+.jf-bubble-tail { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; fill: #f4f1df; }
 .jf-bubble b { color: #1f6b2c; font-size: 18px; }
-/* the jam report: beside the frog's head (more room), the tail pointing left at it */
-.jf-bubble.is-report { bottom: 40px; display: grid; gap: 8px; font-size: 14px; }
-.jf-bubble.is-report::before { bottom: 66px; }
+.jf-bubble.is-report { display: grid; gap: 8px; font-size: 14px; }
 .jf-more { justify-self: start; padding: 4px 10px; border: 0; border-radius: 8px; background: #1f6b2c; color: #f4f1df; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .jf-more:hover { background: #2a8a3b; }
 .jf-shell[data-phase="playing"] .jf-bubble b { color: #7a5a00; }

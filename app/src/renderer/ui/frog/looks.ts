@@ -1,4 +1,4 @@
-import { PET_SIZE, type Action } from './motion';
+import { PET_SIZE, type Action, type Point } from './motion';
 import {
   GENRE_ANIMATIONS, GENRE_FRAME_COUNT, GENRE_LOOKS, genreFrame, genreFrameSize,
   type GenreLook,
@@ -42,7 +42,7 @@ export function outfitScale(look: GenreLook): number {
 export function drawOutfit(
   context: CanvasRenderingContext2D, sheet: CanvasImageSource,
   look: GenreLook, action: Action, frame: number,
-): void {
+): Point {
   const index = action === 'playing' ? GENRE_FRAME_COUNT + frame % GENRE_FRAME_COUNT
     : frame % GENRE_FRAME_COUNT;
   const source = genreFrame(look, index);
@@ -58,4 +58,9 @@ export function drawOutfit(
   context.scale(sx, sy);
   context.drawImage(sheet, source.x, source.y, source.width, source.height, -width / 2, -height, width, height);
   context.restore();
+  const [mouthX, mouthY] = GENRE_ANIMATIONS[look].mouth;
+  return {
+    x: PET_SIZE.width / 2 + dx + sx * (width * (mouthX - .5)),
+    y: PET_SIZE.height - 12 + dy + sy * (height * (mouthY - 1)),
+  };
 }

@@ -15,6 +15,7 @@ export interface PetSnapshot {
   action: Action;
   frame: number;
   position: Point;
+  mouth: Point;
   interaction: 'resting' | 'dragging' | 'flinging' | 'reacting';
   loaded: boolean;
   reducedMotion: boolean;
@@ -77,6 +78,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
   let position = centeredPosition(measure(), displaySize);
   if (options.initialPosition) position = clampPosition(options.initialPosition, bounds);
   let velocity: Point = { x: 0, y: 0 };
+  let mouthInCanvas: Point = { x: PET_SIZE.width / 2, y: PET_SIZE.height / 2 };
   let fling = false;
   let mood: FrogMood = 'idle';
   let musicPlaying = false;
@@ -116,7 +118,9 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
 
   function snapshot(): PetSnapshot {
     return {
-      action: currentAction, frame: Math.max(0, lastFrame), position: { ...position }, loaded, reducedMotion,
+      action: currentAction, frame: Math.max(0, lastFrame), position: { ...position },
+      mouth: { x: position.x + mouthInCanvas.x * scale, y: position.y + mouthInCanvas.y * scale },
+      loaded, reducedMotion,
       interaction: drag ? 'dragging' : fling ? 'flinging' : reaction ? 'reacting' : 'resting',
     };
   }
@@ -138,7 +142,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
       : looping && tempo ? syncedFrame(action, performance.now(), tempo.anchor, tempo.beatMs, frameCount)
         : frameAt(action, clock - actionStarted, looping, frameCount);
     if (loaded && look !== 'classic' && outfitReady) {
-      if (frame !== lastFrame) drawOutfit(context, images.outfits[look], look, action, frame);
+      if (frame !== lastFrame) mouthInCanvas = drawOutfit(context, images.outfits[look], look, action, frame);
     } else if (loaded && (action !== 'playing' || loadedAssets.playing) && frame !== lastFrame) {
       const source = action === 'playing' ? KEYBOARD_FRAMES[frame] : SPRITE_FRAMES[ACTIONS[action].row][frame];
       const image = action === 'playing' ? images.playing : images.main;
@@ -149,6 +153,7 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
       const y = Math.round(PET_SIZE.height - 12 - height - source.lift * artScale);
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, source.x, source.y, source.width, source.height, x, y, width, height);
+      mouthInCanvas = { x: x + width * .5, y: y + height * (action === 'playing' ? .4 : .44) };
     }
     lastFrame = frame;
     button.style.transform = `translate(${position.x}px, ${position.y}px)`;
