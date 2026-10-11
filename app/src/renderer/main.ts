@@ -6,8 +6,9 @@ import type { ChordModel } from '../core/model';
 import { analyseJam, geminiRequest, localReport, parseGeminiReport, type JamReport } from '../core/report';
 import { suggest } from '../core/suggest';
 import type { AnswerPlan, Chord, FrogMood, NoteEvent, Suggestion } from '../core/types';
-import { OscNoteSink, OscNoteSource, onOsc } from './bridges/osc';
+import { OscNoteSink, OscNoteSource, onOsc, sendGenre } from './bridges/osc';
 import { loadModels } from './models';
+import { styled } from '../core/styles';
 import { createOverlay, type FrogMode, type ReportMode, type UiState } from './ui/overlay';
 
 // The app: notes in from Live (Frog Ear, Max for Live, over OSC) -> chord detection -> suggestions in the
@@ -30,12 +31,13 @@ const settings = {
 // ---- models: both behind ChordModel ----
 
 const models: Record<string, ChordModel> = loadModels();
-const model: ChordModel = {
+// settings.genre is a picker choice (see core/styles.ts); styled() turns it into the model's genres.
+const model: ChordModel = styled({
   get name() {
     return models[settings.model].name;
   },
   predictNext: (context, genre) => models[settings.model].predictNext(context, genre),
-};
+});
 
 // ---- live state ----
 
@@ -59,6 +61,8 @@ let geminiAvailable = false;
 const KEY_CHANGE_MS = 4000;
 let keyChangeTimer: ReturnType<typeof setTimeout> | null = null;
 let shownKeyChange = 0;
+/** the genre whose sound Frog Voice was last told to play (null: not told yet) */
+let soundGenre: string | null = null;
 
 window.jamFrog.gemini.available().then((ok) => {
   geminiAvailable = ok;
@@ -122,6 +126,8 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
   onGenre(g) {
     settings.genre = g;
     refreshSuggestions();
+    // While Live plays, the sound changes on Live's next bar line (see /bar below); otherwise at once.
+    if (performance.now() - lastBarAt > answers.barClock().ms * 1.5) switchSound();
   },
   onFrogMode(mode) {
     settings.frogMode = mode;
@@ -237,6 +243,15 @@ function render(): void {
   });
 }
 
+// ---- the frog's sound follows the genre: Frog Voice switches the rack chain on its track ----
+
+function switchSound(): void {
+  if (soundGenre === settings.genre) return;
+  sink.release(); // a note held across the switch could hang on the old chain
+  sendGenre(settings.genre);
+  soundGenre = settings.genre;
+}
+
 // ---- transport info from Frog Voice: /tempo <bpm> and /bar at every bar start ----
 
 onOsc((msg) => {
@@ -245,6 +260,9 @@ onOsc((msg) => {
     const bpm = Math.round(Number(msg[1]) * 100) / 100;
     settings.bpm = bpm;
     liveTempo = bpm;
+    // /tempo also means Frog Voice just loaded: tell it the genre (a no-op in Live if nothing changed).
+    sendGenre(settings.genre);
+    soundGenre = settings.genre;
     render();
   } else if (msg[0] === '/bar') {
     const now = performance.now();
@@ -257,6 +275,7 @@ onOsc((msg) => {
     }
     lastBarAt = now;
     liveBars++;
+    switchSound(); // before the bar's notes, so they play on the new sound
     answers.bar();
     render();
   }

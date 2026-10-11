@@ -2,7 +2,7 @@ import { ipcMain, type WebContents } from 'electron';
 import { Client, Server } from 'node-osc';
 
 // OSC bridge to the Max for Live devices. Localhost only.
-// Frog Ear / Frog Voice -> app on 9001 (/note, /tempo, /bar); app -> Frog Voice on 9002 (/note).
+// Frog Ear / Frog Voice -> app on 9001 (/note, /tempo, /bar); app -> Frog Voice on 9002 (/note, /genre).
 export const OSC_IN_PORT = 9001;
 export const OSC_OUT_PORT = 9002;
 const HOST = '127.0.0.1';

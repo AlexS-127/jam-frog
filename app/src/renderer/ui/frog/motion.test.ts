@@ -89,8 +89,8 @@ describe('dancing in time', () => {
 
 describe('genre outfits', () => {
   it('dresses the frog for its genre, the classic frog otherwise', () => {
-    expect(['jazz', 'soul', 'metal', 'punk', 'country', 'electronic', 'rap', 'pop', 'all'].map(lookFor))
-      .toEqual(['jazz', 'jazz', 'rock', 'rock', 'country', 'electronic', 'electronic', 'classic', 'classic']);
+    expect(['jazz', 'rock', 'punk', 'country', 'electronic', 'pop', 'all'].map(lookFor))
+      .toEqual(['jazz', 'rock', 'rock', 'country', 'electronic', 'classic', 'classic']);
   });
   it('has a movement for every frame of every action, and every outfit fits the canvas mid-jump', () => {
     for (const [action, clip] of Object.entries(ACTIONS)) expect(OUTFIT_MOVES[action as Action]).toHaveLength(clip.frames);

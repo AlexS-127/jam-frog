@@ -3,7 +3,7 @@ import type { Token } from './vocab';
 /**
  * Every chord model (n-gram, GRU) implements this.
  * Returns probabilities over the whole vocabulary (length VOCAB_SIZE); specials are 0.
- * `genre` is one of GENRES or "all".
+ * `genre` is one of GENRES or "all" (the picker's choices are mapped onto these by styled() in styles.ts).
  */
 export interface ChordModel {
   readonly name: string;

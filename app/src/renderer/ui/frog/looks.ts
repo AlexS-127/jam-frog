@@ -16,12 +16,12 @@ export const OUTFITS: Record<Exclude<Look, 'classic'>, { x: number; y: number; w
   electronic: { x: 687, y: 683, width: 534, height: 430 },
 };
 
-/** Which outfit each genre wears; pop and "all styles" keep the classic frog (with its keyboard). */
+/** Which outfit each picker genre wears (core/styles.ts); pop and "all styles" keep the classic frog (with its keyboard). */
 const GENRE_LOOKS: Record<string, Look> = {
-  jazz: 'jazz', soul: 'jazz',
-  rock: 'rock', 'pop rock': 'rock', alternative: 'rock', punk: 'rock', metal: 'rock',
+  jazz: 'jazz',
+  rock: 'rock', punk: 'rock',
   country: 'country',
-  electronic: 'electronic', rap: 'electronic', reggae: 'electronic',
+  electronic: 'electronic',
 };
 
 export function lookFor(genre: string): Look {

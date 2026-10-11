@@ -1,7 +1,7 @@
 import type { Cell } from '../../core/answer';
 import type { JamReport } from '../../core/report';
 import type { FrogMood } from '../../core/types';
-import { GENRES } from '../../core/vocab';
+import { STYLE_NAMES } from '../../core/styles';
 import { createFrogPet } from './frog/controller';
 import { lookFor } from './frog/looks';
 
@@ -217,7 +217,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   const modes = [...shell.querySelectorAll<HTMLButtonElement>('[data-mode]')];
   const stop = q<HTMLButtonElement>('[data-action="stop"]');
   genre.add(new Option('All styles', 'all'));
-  for (const g of GENRES) genre.add(new Option(g[0].toUpperCase() + g.slice(1), g));
+  for (const g of STYLE_NAMES) genre.add(new Option(g[0].toUpperCase() + g.slice(1), g));
 
   // The knob turns like a hardware knob: press anywhere on it and drag up (clockwise, more) or down (less),
   // relative to where you pressed, so it never jumps. Arrow keys work too.

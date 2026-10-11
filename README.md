@@ -19,7 +19,9 @@ bar by bar, each as wide as it lasts, so you can see when the changes come; the 
 up when it changes. The frog dances in time with Live's tempo and dresses for the genre you pick (Kevin's outfits:
 jazz, rock, country and electronic; pop and all styles keep the classic frog with its keyboard).
 
-A weirdness knob and a genre picker reshape both. Weird means colourful (borrowed chords like ♭VI and ♭VII, secondary dominants), not lost: the frog stays in your key. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
+A weirdness knob and a genre picker reshape both. The picker has six genres: jazz, rock, electronic, country, pop
+(which also draws on pop rock songs) and punk (also metal and alternative). The genre also changes the frog's sound in Live: each genre can
+have its own instrument, effects and sends (see [A frog sound per genre](ableton/SETUP.md#a-frog-sound-per-genre)). Weird means colourful (borrowed chords like ♭VI and ♭VII, secondary dominants), not lost: the frog stays in your key. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
 
 > Status: feature-complete for the demo. Bridge: Max for Live (Frog Ear + Frog Voice). Models: a GRU (default) and an n-gram, switchable in ⚙ Settings.
 

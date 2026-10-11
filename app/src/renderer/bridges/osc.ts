@@ -1,4 +1,5 @@
 import type { NoteEvent, NoteSink, NoteSource } from '../../core/types';
+import { STYLE_NAMES } from '../../core/styles';
 
 // Primary bridge: the Frog Ear / Frog Voice Max for Live devices, OSC over localhost UDP.
 // The main process owns the sockets; this side only sees decoded messages over IPC.
@@ -46,8 +47,21 @@ export class OscNoteSink implements NoteSink {
     else this.held.delete(pitch);
   }
 
-  close(): void {
+  /** Note off for every note still held. */
+  release(): void {
     for (const p of this.held) window.jamFrog.osc.send('/note', p, 0);
     this.held.clear();
   }
+
+  close(): void {
+    this.release();
+  }
+}
+
+/**
+ * Switch the frog's sound: Frog Voice moves the Chain Selector of the Instrument Rack on its track to the chain
+ * named after the genre (see ableton/frog_genre.js). Sent as an index into STYLE_NAMES; -1 is all styles.
+ */
+export function sendGenre(genre: string): void {
+  window.jamFrog.osc.send('/genre', (STYLE_NAMES as string[]).indexOf(genre));
 }
