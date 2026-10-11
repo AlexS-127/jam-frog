@@ -90,8 +90,9 @@ Feature 3, live suggestions. **Can start now.**
   `sampleToken(dist, rng)` draws from it (for answers); `ranked(dist)` lists tokens best first.
   - **Low weirdness (0.3 and below):** plain probability ranking, sharpened, top 4.
   - **High weirdness:** higher temperature, wider top-k, rare moves and borrowed chords (♭VI, ♭VII, iv in major) boosted.
+  - **Always in key:** chords outside the key (not borrowed, not secondary dominants) stay less likely at every weirdness.
   - **Never uniform**, and never repeats the chord just played.
-- `suggest.ts`: `suggest(history: Chord[], model, genre, weirdness): Suggestion[]` returns the 3 distinct best chords, each voiced near the last chord the player played.
+- `suggest.ts`: `suggest(history: Chord[], model, genre, weirdness): Suggestion[]` returns the 3 distinct best chords, each voiced near the last chord the player played. From weirdness 0.6, the third is a borrowed chord.
 - `key.ts`: estimate the key from the recent phrase. The sampler needs it for "borrowed".
 - Tests for each.
 
@@ -111,7 +112,9 @@ Feature 4, frog answers, as call and response in bars (changed at Alex's request
   - **Where bars come from:** Live's `/bar` while the transport runs. Otherwise, or if the transport stops mid-phrase, the
     engine counts bars itself from the BPM.
   - **Choosing the answer:** it generates about 48 candidates through the weirdness sampler and keeps the best by model
-    likelihood plus a cadence bonus (ending on I or V), with penalties for ping-pong (A B A) and for echoing your phrase.
+    likelihood plus a cadence bonus (ending on I or V), with penalties for ping-pong (A B A), for echoing your phrase,
+    for chords outside the key, for more colour chords than the weirdness allows (or two in a row), and for ending
+    outside the key. In Jam mode the key stays the player's for the whole jam, so the frog can't drift off.
   - **Interrupting:** playing during an answer (after its first beat) cuts it off and starts a new phrase.
 
 **Done when:** an answer lands on the bar in Live over the Max for Live bridge, with no stuck notes.
@@ -125,7 +128,7 @@ Build `createOverlay(root: HTMLElement, handlers: Handlers): { update(state: UiS
 ```ts
 interface UiState {   // as built (see app/src/renderer/ui/overlay.ts)
   mood: FrogMood; phase: 'idle' | 'listening' | 'playing'; bar: number; bars: number;
-  yourChords: string[]; frogChords: string[]; frogIndex: number; suggestions: string[]; borrowed: boolean;
+  yourChords: string[]; frogChords: string[]; frogIndex: number; nextChords: string[]; suggestions: string[]; borrowed: boolean;
   weirdness: number; genre: string; phraseBars: 2 | 4 | 8; frogMode: 'off' | 'answer' | 'jam'; rhythm: boolean; model: string;
   bpm: number; liveTempo: number | null; liveBar: number | null; status: string;
 }

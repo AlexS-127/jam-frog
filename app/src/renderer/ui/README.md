@@ -14,8 +14,9 @@ Reduced motion freezes the displayed pose and disables ambient gestures and flin
 The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from the engine. This browser demo does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
 
 The overlay (440×640) is laid out as Alex asked on Saturday night: a big display that shows **your chords** while you play
-and **the frog's** while it plays (the sounding chord lit), bar dots for the phrase, the frog sitting fixed on the amp
-(no dragging; it still animates and changes mood), a speech bubble suggesting the next chords, and the amp's controls:
+and **the frog's** while it plays (the sounding chord lit; in Jam mode its next block underneath in blue, so you
+can get ready), bar dots for the phrase, the frog sitting fixed on the amp
+(no dragging; it still animates and changes mood), a speech bubble (pointing at the frog's head) suggesting the next chords, and the amp's controls:
 weirdness knob (drag up/down from where you press), genre, phrase length (2/4/8 bars), FROG Off / Answer / Jam
 (with a Stop button while jamming) and Copy my rhythm. The model and the
 fallback BPM are in the ⚙ settings panel. No mini keyboards.

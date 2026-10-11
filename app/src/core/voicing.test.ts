@@ -39,6 +39,15 @@ describe('voicing', () => {
     expect(new Set(near).size).toBe(near.length);
   });
 
+  it('widens a register too narrow for the chord instead of failing (A5 in 53..68)', () => {
+    const a5 = { root: 9, quality: 'pow' as const };
+    expect(candidateVoicings(a5, 53, 68)).toEqual([]);
+    const v = voiceChord(a5, [53, 57, 60], 53, 68);
+    expect(v.map((p) => p % 12).sort()).toEqual([4, 9, 9]);
+    expect(Math.min(...v)).toBeGreaterThanOrEqual(52);
+    expect(Math.max(...v)).toBeLessThanOrEqual(70);
+  });
+
   it('measures movement across different note counts', () => {
     expect(movement([60, 64, 67], [60, 64, 67])).toBe(0);
     expect(movement([60, 64, 67, 70], [60, 64, 67])).toBe(1.5);

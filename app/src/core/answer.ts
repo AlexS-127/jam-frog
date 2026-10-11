@@ -1,7 +1,7 @@
 import { chordName } from './chords';
-import { estimateKey, type Key } from './key';
+import { estimateKey, isBorrowed, isDiatonic, type Key } from './key';
 import type { ChordModel } from './model';
-import { reshape, sampleToken } from './sampler';
+import { isSecondaryDominant, reshape, sampleToken } from './sampler';
 import { CONTEXT_CHORDS, priorFor } from './suggest';
 import type { AnswerPlan, Chord, ChordSymbol, NoteEvent, NoteSink } from './types';
 import { decode, encode } from './vocab';
@@ -212,8 +212,11 @@ export class AnswerEngine {
   /** the answer locked in for this phrase: its chords and its timed events (from the player's phrase) */
   private prepared: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null = null;
   private currentChord = -1;
-  /** jam mode: the progression so far (the player's + the frog's), and the next block planned ahead */
-  private jam: { history: ChordSymbol[]; next: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null; job: PlanJob | null } | null = null;
+  /**
+   * jam mode: the progression so far (the player's + the frog's), the next block planned ahead, and the key,
+   * fixed to the player's when the jam starts (taking it from the frog's own chords lets it drift away)
+   */
+  private jam: { history: ChordSymbol[]; key: Key; next: { key: string; plan: AnswerPlan; events: RhythmEvent[] } | null; job: PlanJob | null } | null = null;
   private jamTimer: ReturnType<typeof setTimeout> | null = null;
   private noteTimers: ReturnType<typeof setTimeout>[] = [];
   private clock: ReturnType<typeof setTimeout> | null = null;
@@ -306,6 +309,11 @@ export class AnswerEngine {
   /** The chords of the phrase in progress (or the last one), for the overlay's trail. */
   phraseChords(): string[] {
     return this.phrase.map((c) => c.name);
+  }
+
+  /** Jam mode: the block the frog plays after this one, once it is planned (null otherwise). */
+  upcoming(): AnswerPlan | null {
+    return this.status === 'playing' ? (this.jam?.next?.plan ?? null) : null;
   }
 
   /** The session's key: every chord so far, recent phrases weighted most, phrase openings as tonic cues. */
@@ -448,7 +456,7 @@ export class AnswerEngine {
     this.status = 'playing';
     this.answerStart = this.barIndex;
     if (s.continuous) {
-      this.jam = { history: [...this.history, ...prepared.plan.chords.map((c) => c.chord)], next: null, job: null };
+      this.jam = { history: [...this.history, ...prepared.plan.chords.map((c) => c.chord)], key: this.key(), next: null, job: null };
       this.planNextBlock(s);
     }
     this.playBar(0);
@@ -462,7 +470,7 @@ export class AnswerEngine {
     const jam = this.jam;
     if (!jam || !this.prepared) return;
     const current = this.prepared.plan.chords;
-    const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing);
+    const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing, jam.key);
     jam.job = job;
     jam.next = null;
     const slice = () => {
@@ -475,6 +483,7 @@ export class AnswerEngine {
       }
       jam.next = this.blockFrom(job);
       jam.job = null;
+      this.emit(); // the next block is ready to show
     };
     this.jamTimer = setTimeout(slice, 0);
   }
@@ -491,7 +500,7 @@ export class AnswerEngine {
       if (jam.job && jam.job.cands.length) jam.next = this.blockFrom(jam.job);
       else {
         const current = this.prepared!.plan.chords;
-        const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing);
+        const job = this.newJob(s, jam.history, current.map((c) => c.chord), current[current.length - 1].voicing, jam.key);
         this.workOn(job, QUICK_PLAN_MS, 8);
         jam.next = this.blockFrom(job);
       }
@@ -667,15 +676,16 @@ export class AnswerEngine {
 
   /**
    * A planning job. Answers continue the session's history and avoid echoing the player's phrase; jam blocks
-   * continue the jam's progression, avoid repeating the previous block, and voice-lead from its last chord.
+   * continue the jam's progression in the jam's key, avoid repeating the previous block, and voice-lead from
+   * its last chord.
    */
-  private newJob(s: AnswerSettings, history?: ChordSymbol[], avoid?: ChordSymbol[], startVoicing?: number[]): PlanJob {
+  private newJob(s: AnswerSettings, history?: ChordSymbol[], avoid?: ChordSymbol[], startVoicing?: number[], key?: Key): PlanJob {
     return {
       forKey: this.phraseKey(),
       s,
       // one answer chord per chord change in the phrase (up to 8), so every change has a partner
       length: Math.min(8, Math.max(2, this.phrase.length)),
-      key: history ? estimateKey(history) : this.key(),
+      key: key ?? this.key(),
       prior: priorFor(this.d.model, s.genre),
       history: [...(history ?? this.history)],
       phrase: [...this.phrase],
@@ -715,7 +725,7 @@ export class AnswerEngine {
       const id = chords.map((c) => `${c.root}${c.quality}`).join(' ');
       if (job.seen.has(id)) continue;
       job.seen.add(id);
-      job.cands.push({ chords, score: scoreAnswer(chords, logp / job.length, job.avoid, job.key) });
+      job.cands.push({ chords, score: scoreAnswer(chords, logp / job.length, job.avoid, job.key, job.s.weirdness) });
     }
     job.spent += this.now() - t0;
   }
@@ -726,7 +736,7 @@ export class AnswerEngine {
     const cands = [...job.cands].sort((a, b) => b.score - a.score);
     let pick = cands[0];
     if (s.weirdness > 0.3 && cands.length > 1) {
-      const temp = 0.2 + 1.5 * s.weirdness;
+      const temp = 0.15 + 0.6 * s.weirdness;
       const top = cands.slice(0, 12);
       const weights = top.map((c) => Math.exp((c.score - top[0].score) / temp));
       let r = this.rng() * weights.reduce((a, b) => a + b, 0);
@@ -760,8 +770,12 @@ export class AnswerEngine {
  * How good an answer sounds, on top of how likely the model finds it (mean log-probability):
  * ending on the tonic is a full cadence, ending on V a half cadence; bouncing back and forth
  * (A B A) and repeating the player's own phrase chord for chord count against it.
+ * Staying in key: chords outside the key (not borrowed, not secondary dominants) count against it; colour
+ * chords (borrowed, secondary dominants) are fine up to `weirdness` x 2 per answer, but not back to back
+ * (a run of them modulates), and the answer should end back in the key. Power chords only if the player
+ * played some.
  */
-export function scoreAnswer(chords: ChordSymbol[], meanLogp: number, phrase: ChordSymbol[], key: Key): number {
+export function scoreAnswer(chords: ChordSymbol[], meanLogp: number, phrase: ChordSymbol[], key: Key, weirdness = 0): number {
   const same = (a: ChordSymbol, b: ChordSymbol) => a.root === b.root && a.quality === b.quality;
   const last = chords[chords.length - 1];
   const tonicQuality = key.minor ? ['min', 'min7'] : ['maj', 'maj7'];
@@ -773,5 +787,13 @@ export function scoreAnswer(chords: ChordSymbol[], meanLogp: number, phrase: Cho
   const tail = phrase.slice(-chords.length);
   if (tail.length === chords.length) score -= 0.6 * tail.filter((c, i) => same(c, chords[i])).length;
   if (chords.length >= 2 && phrase.length && same(chords[0], phrase[phrase.length - 1])) score -= 0.5;
+  const inKey = chords.map((c) => isDiatonic(c, key));
+  for (const c of chords) if (!isDiatonic(c, key) && !isBorrowed(c, key) && !isSecondaryDominant(c, key)) score -= 0.5;
+  const colour = inKey.filter((d) => !d).length;
+  score -= 0.6 * Math.max(0, colour - Math.round(2 * weirdness));
+  for (let i = 1; i < chords.length; i++) if (!inKey[i] && !inKey[i - 1]) score -= 0.3;
+  if (!inKey[inKey.length - 1]) score -= 0.6;
+  // power chords only if the player plays them (rare moves get a boost when weird, and these drift to rock)
+  if (!phrase.some((c) => c.quality === 'pow')) score -= 0.4 * chords.filter((c) => c.quality === 'pow').length;
   return score;
 }

@@ -30,7 +30,10 @@ export function priorFor(model: ChordModel, genre: string): Float32Array {
   return p;
 }
 
-/** The 3 best distinct next chords after weirdness reshaping. */
+/** From this weirdness up, one of the 3 suggestions is a borrowed chord, if the model offers one at all. */
+const COLOUR_PICK_WEIRDNESS = 0.6;
+
+/** The 3 best distinct next chords after weirdness reshaping (the third a borrowed chord when weird). */
 export function suggest(history: ChordSymbol[], model: ChordModel, o: SuggestOptions): Suggestion[] {
   if (history.length === 0) return [];
   const recent = history.slice(-CONTEXT_CHORDS);
@@ -38,8 +41,14 @@ export function suggest(history: ChordSymbol[], model: ChordModel, o: SuggestOpt
   const key = o.key ?? estimateKey(history);
   const probs = model.predictNext(encode(recent), o.genre);
   const dist = reshape(probs, { weirdness: o.weirdness, prev, key, prior: priorFor(model, o.genre) });
-  return ranked(dist)
-    .slice(0, 3)
+  const order = ranked(dist);
+  const picks = order.slice(0, 3);
+  const isColour = (t: number) => isBorrowed(decode(prev.root, t)!, key);
+  if (o.weirdness >= COLOUR_PICK_WEIRDNESS && picks.length === 3 && !picks.some(isColour)) {
+    const colour = order.find(isColour);
+    if (colour !== undefined) picks[2] = colour;
+  }
+  return picks
     .map((t) => {
       const chord = decode(prev.root, t)!;
       return {

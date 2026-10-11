@@ -8,9 +8,10 @@ You play chords in Ableton. A frog overlay floats above Live and:
 2. **Answers** (toggle): you play a 2, 4 or 8-bar phrase; on the next downbeat the frog answers with as many bars of
    its own chords on its Ableton track, changing chord where you did (anticipations included), in your register.
 3. **Jams** (FROG: Jam): after your phrase it keeps playing, phrase after phrase, continuing the progression in your
-   rhythm, until you press **Stop**. Play along over it.
+   rhythm and your key, until you press **Stop**. The next block shows under the current one so you can get ready.
+   Play along over it.
 
-A weirdness knob and a genre picker reshape both. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
+A weirdness knob and a genre picker reshape both. Weird means colourful (borrowed chords like ♭VI and ♭VII, secondary dominants), not lost: the frog stays in your key. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
 
 > Status: feature-complete for the demo. Bridge: Max for Live (Frog Ear + Frog Voice). Models: a GRU (default) and an n-gram, switchable in ⚙ Settings.
 

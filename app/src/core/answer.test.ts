@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnswerEngine, scoreAnswer, type AnswerProgress, type AnswerSettings } from './answer';
 import { detectChord } from './chords';
+import { isBorrowed, isDiatonic } from './key';
+import { seededRng } from './listening';
 import type { ChordModel } from './model';
 import { NgramModel } from './ngram';
+import { isSecondaryDominant } from './sampler';
 import { ngramJson } from './testdata';
 import type { AnswerPlan, ChordSymbol, NoteSink } from './types';
 import { INTERVAL0, VOCAB_SIZE } from './vocab';
@@ -468,5 +471,50 @@ describe('AnswerEngine jam mode', () => {
     vi.advanceTimersByTime(23999 - Date.now());
     expect(sink.chordTimes()).toEqual([8000, 12000, 16000, 20000]);
     engine.cancel();
+  });
+
+  it('shows the next block ahead of time, and then plays exactly that', () => {
+    const { engine, sink, play } = jamRig();
+    play(V.C, 0);
+    play(V.G, 4000);
+    vi.advanceTimersByTime(8000 - Date.now());
+    expect(engine.upcoming()).toBeNull(); // still planning
+    vi.advanceTimersByTime(500);
+    expect(engine.upcoming()!.chords.map((c) => c.name)).toEqual(['Bb', 'Eb']);
+    vi.advanceTimersByTime(16000 - Date.now());
+    const now = sink.log.filter((e) => e.t === 16000 && e.velocity > 0).map((e) => e.pitch);
+    expect(detectChord(now)!.name).toBe('Bb');
+    engine.cancel();
+    expect(engine.upcoming()).toBeNull();
+  });
+
+  it('stays in the key of the player at full weirdness instead of wandering off', () => {
+    const C = { tonic: 0, minor: false };
+    let diatonic = 0;
+    let outside = 0;
+    for (let seed = 1; seed <= 3; seed++) {
+      vi.setSystemTime(0);
+      const settings: AnswerSettings = { answersOn: true, weirdness: 1, genre: 'all', bpm: 120, phraseBars: 4, continuous: true };
+      const blocks = new Set<AnswerPlan>();
+      const engine = new AnswerEngine({
+        model: new NgramModel(ngramJson), sink: () => null, settings: () => settings, now: () => Date.now(), rng: seededRng(seed),
+        onPlan: (p) => p && blocks.add(p),
+      });
+      [V.C, V.Am, V.F, V.G].forEach((ch, i) => {
+        vi.advanceTimersByTime(i * 2000 - Date.now());
+        for (const p of ch) engine.note({ pitch: p, velocity: 90, time: Date.now() });
+        engine.chord(detectChord(ch)!);
+      });
+      vi.advanceTimersByTime(8000 + 10 * 8000 - Date.now()); // 10 blocks
+      engine.cancel();
+      for (const b of [...blocks].slice(-10)) {
+        for (const { chord } of b.chords) {
+          if (isDiatonic(chord, C)) diatonic++;
+          else if (!isBorrowed(chord, C) && !isSecondaryDominant(chord, C)) outside++;
+        }
+      }
+    }
+    expect(outside).toBe(0); // only borrowed chords and secondary dominants for colour
+    expect(diatonic).toBeGreaterThan(0.6 * 3 * 10 * 4);
   });
 });

@@ -66,6 +66,7 @@ for (const [action, details] of Object.entries(ACTIONS) as [Action, (typeof ACTI
 const state: UiState = {
   mood: 'idle', phase: 'listening', bar: 2, bars: 4,
   yourChords: ['Cmaj7', 'Am7', 'Fmaj7'], frogChords: ['Dm7', 'G7', 'Cmaj7', 'Am7'], frogIndex: 1,
+  nextChords: ['Fmaj7', 'Em7', 'Dm7', 'G7'],
   suggestions: ['G7', 'Dm7', 'Ab'], borrowed: false,
   weirdness: 0.24, genre: 'jazz', phraseBars: 4, frogMode: 'answer', rhythm: false, model: 'gru', bpm: 120,
   liveTempo: 120, liveBar: 18, status: '',

@@ -146,6 +146,7 @@ function uiState(): UiState {
     yourChords: answers.phraseChords(),
     frogChords: plan && progress.status !== 'listening' ? plan.chords.map((c) => c.name) : [],
     frogIndex: progress.chord,
+    nextChords: answers.upcoming()?.chords.map((c) => c.name) ?? [],
     suggestions: suggestions.map((s) => s.name),
     borrowed: suggestions.some((s) => s.borrowed),
     weirdness: settings.weirdness,

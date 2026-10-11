@@ -16,6 +16,8 @@ export interface UiState {
   frogChords: string[];
   /** which answer chord is sounding, -1 when none */
   frogIndex: number;
+  /** jam mode: the frog's next block, shown under the current one so the player can get ready */
+  nextChords: string[];
   /** the top suggestions, for the frog's speech bubble */
   suggestions: string[];
   /** a suggestion is borrowed from the parallel key (the frog looks weird) */
@@ -84,6 +86,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
         </span>
       </div>
       <ol class="jf-chords" data-ref="chords"></ol>
+      <div class="jf-next" data-ref="next" hidden><span>NEXT</span><ol class="jf-chords" data-ref="next-chords"></ol></div>
       <p class="jf-hint" data-ref="hint">Play some chords. The frog answers after your phrase (or jams on, in Jam mode).</p>
     </section>
     <section class="jf-scene">
@@ -225,6 +228,13 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
         return li;
       }));
       q('[data-ref="hint"]').hidden = chords.length > 0;
+      const next = frogTurn && state.phase === 'playing' ? state.nextChords : [];
+      q('[data-ref="next"]').hidden = next.length === 0;
+      q('[data-ref="next-chords"]').replaceChildren(...next.map((name) => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        return li;
+      }));
       q('[data-ref="bars"]').replaceChildren(...Array.from({ length: state.phase === 'idle' ? 0 : state.bars }, (_, i) => {
         const dot = document.createElement('i');
         if (i < state.bar) dot.className = 'is-done';

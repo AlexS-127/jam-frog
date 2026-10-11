@@ -33,7 +33,9 @@ export function movement(a: number[], b: number[]): number {
  * Without a previous voicing, picks the one centred nearest the middle of the range.
  */
 export function voiceChord(chord: ChordSymbol, prev: number[] | null, lo = 60, hi = 84): number[] {
-  const cands = candidateVoicings(chord, lo, hi);
+  let cands = candidateVoicings(chord, lo, hi);
+  // A narrow range can miss a chord entirely (a power chord spans an octave): widen it a step at a time.
+  for (let widen = 1; cands.length === 0 && widen <= 12; widen++) cands = candidateVoicings(chord, lo - (widen >> 1), hi + widen - (widen >> 1));
   if (cands.length === 0) throw new Error(`no voicing for ${chord.root}/${chord.quality} in ${lo}..${hi}`);
   const mid = (lo + hi) / 2;
   const cost = (v: number[]) =>

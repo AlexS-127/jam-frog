@@ -19,17 +19,19 @@ const weirdAmount = (w: number) => Math.max(0, (w - 0.3) / 0.7);
  * Reshape model probabilities by weirdness. Never uniform:
  * - low weirdness: plain probability ranking, sharpened, top 4, out-of-key chords made less likely
  * - high weirdness: higher temperature, wider top-k, rare moves and borrowed chords (bVI, bVII, iv in major) boosted
- * Repeating the previous chord is excluded. Returns a distribution over the vocabulary (zeros elsewhere).
+ * Chords outside the key (not borrowed, not secondary dominants) stay less likely at every weirdness, so weird
+ * means colourful, not lost. Repeating the previous chord is excluded. Returns a distribution over the vocabulary (zeros elsewhere).
  */
 export function reshape(probs: Float32Array, o: ReshapeOptions): Float32Array {
   const w = Math.min(1, Math.max(0, o.weirdness));
   const m = weirdAmount(w);
-  const temperature = 0.6 + 1.6 * w;
-  const k = Math.round(4 + 24 * w * w);
-  const novelty = 0.8 * m;
+  const temperature = 0.6 + 1.0 * w;
+  const k = Math.round(4 + 14 * w * w);
+  const novelty = 0.5 * m;
   const borrowedBoost = Math.log(1 + 5 * m);
-  // At low weirdness, chords outside the key (other than secondary dominants) are made 2.5x less likely.
-  const outOfKey = Math.log(2.5) * Math.max(0, 1 - w / 0.5);
+  // Chords outside the key (other than borrowed chords and secondary dominants) are made 2.5x less likely at
+  // weirdness 0, still 1.9x at weirdness 1.
+  const outOfKey = Math.log(2.5) * (1 - 0.3 * w);
 
   const scored: { t: Token; s: number }[] = [];
   for (let t = INTERVAL0; t < VOCAB_SIZE; t++) {

@@ -8,7 +8,7 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
   --accent: #a4e58e; --muted: #91a894; --line: rgba(164, 229, 142, .18); --gold: #e3c46b;
   position: relative; width: 440px; height: 640px; overflow: hidden; padding: 12px 14px 10px;
   display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(164, 229, 142, .22); border-radius: 18px;
-  background: linear-gradient(160deg, rgba(24, 41, 29, .97), rgba(12, 22, 16, .98)); color: #edf6e9;
+  background: linear-gradient(160deg, rgba(24, 41, 29, .62), rgba(12, 22, 16, .74)); color: #edf6e9;
 }
 
 /* header: drag the window from here */
@@ -21,7 +21,7 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 
 /* the display: your chords while you play, the frog's while it plays */
 .jf-display { flex: 0 0 168px; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
-  border: 1px solid var(--line); border-radius: 14px; background: rgba(5, 15, 9, .55); }
+  border: 1px solid var(--line); border-radius: 14px; background: rgba(5, 15, 9, .5); }
 .jf-display-top { display: flex; align-items: center; justify-content: space-between; }
 .jf-who { color: var(--muted); font-size: 11px; letter-spacing: .14em; }
 .jf-shell[data-phase="playing"] .jf-who { color: var(--gold); }
@@ -33,6 +33,12 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-chords li { padding: 6px 12px; border-radius: 10px; background: rgba(164, 229, 142, .09); color: #dcebd6; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
 .jf-chords li.is-now { background: var(--accent); color: #0d1a10; }
 .jf-shell[data-phase="playing"] .jf-chords li.is-now { background: var(--gold); }
+/* jam mode: the frog's next block, smaller and in blue, under the one playing now */
+.jf-next { display: flex; align-items: center; gap: 10px; }
+.jf-next[hidden] { display: none; }
+.jf-next > span { color: #8cc8f0; font-size: 11px; letter-spacing: .14em; }
+.jf-next .jf-chords { flex-wrap: nowrap; }
+.jf-next .jf-chords li { padding: 3px 10px; border: 1px solid rgba(140, 200, 240, .45); background: rgba(140, 200, 240, .1); color: #b9e0fa; font-size: 17px; }
 .jf-hint { margin: auto 0; color: var(--muted); font-size: 13px; text-align: center; }
 
 /* the frog and its speech bubble, sitting on the amp */
@@ -41,9 +47,11 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 -apple-sy
 .jf-pet { position: absolute; top: 0; left: 0; display: block; margin: 0; padding: 0; border: 0; background: transparent; }
 .jf-pet canvas { display: block; image-rendering: pixelated; }
 .jf-pet-notice { position: absolute; left: 0; right: 0; bottom: 40px; color: #a8bda7; font-size: 11px; text-align: center; }
-.jf-bubble { position: absolute; z-index: 3; top: 26px; left: 200px; right: 6px; padding: 12px 14px; border-radius: 16px;
+/* the bubble sits above and right of the frog (bottom-anchored, so 1 or 2 lines both stay put), its tail
+   pointing down-left at the frog's head */
+.jf-bubble { position: absolute; z-index: 3; bottom: 104px; left: 100px; max-width: 300px; padding: 12px 14px; border-radius: 16px;
   background: #f4f1df; color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
-.jf-bubble::before { content: ""; position: absolute; left: -10px; bottom: 18px; border: 8px solid transparent; border-right: 12px solid #f4f1df; border-left: 0; }
+.jf-bubble::before { content: ""; position: absolute; left: 22px; bottom: -13px; border-top: 14px solid #f4f1df; border-right: 16px solid transparent; }
 .jf-bubble b { color: #1f6b2c; font-size: 18px; }
 .jf-shell[data-phase="playing"] .jf-bubble b { color: #7a5a00; }
 
