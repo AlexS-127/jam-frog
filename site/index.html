@@ -120,18 +120,31 @@
           </div>
           <div class="looks-note"><span class="looks-star" aria-hidden="true">✦</span><p><strong>Just for the showcase.</strong> The app’s genre setting guides its chord model; these outfit changes are a website illustration.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/vocab.ts" target="_blank" rel="noreferrer">See supported genres <span aria-hidden="true">↗</span></a></div>
         </div>
+        <div class="movement-picker">
+          <p class="movement-label">TRY A MOVE <span>· THE APP’S ANIMATION CLIPS</span></p>
+          <div class="movement-controls" role="group" aria-label="Choose a frog movement">
+            <button class="movement-button is-active" type="button" data-action="idle" aria-pressed="true">Idle</button>
+            <button class="movement-button" type="button" data-action="waving" aria-pressed="false">Wave</button>
+            <button class="movement-button" type="button" data-action="jumping" aria-pressed="false">Jump</button>
+            <button class="movement-button" type="button" data-action="failed" aria-pressed="false">Sad</button>
+            <button class="movement-button" type="button" data-action="waiting" aria-pressed="false">Wait</button>
+            <button class="movement-button" type="button" data-action="review" aria-pressed="false">Think</button>
+            <button class="movement-button" type="button" data-action="playing" aria-pressed="false">Play keys</button>
+          </div>
+          <p class="movement-status" data-movement-status aria-live="polite">All four frogs: Idle</p>
+        </div>
         <div class="look-picker" role="group" aria-label="Choose a frog genre outfit">
           <button class="look-card is-selected" type="button" data-look="jazz" aria-pressed="true" aria-label="Jazz outfit: beret, gold scarf, and saxophone">
-            <span class="look-art look-jazz" aria-hidden="true"></span><span class="look-caption"><strong>Jazz</strong><small>Beret · brass sax</small></span><span class="look-status" aria-hidden="true">SELECTED</span>
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="216" data-frog-look="jazz"></canvas></span><span class="look-caption"><strong>Jazz</strong><small>Beret · brass sax</small></span><span class="look-status" aria-hidden="true">SELECTED</span>
           </button>
           <button class="look-card" type="button" data-look="rock" aria-pressed="false" aria-label="Rock outfit: red mohawk, studded vest, and electric guitar">
-            <span class="look-art look-rock" aria-hidden="true"></span><span class="look-caption"><strong>Rock</strong><small>Mohawk · electric guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="216" data-frog-look="rock"></canvas></span><span class="look-caption"><strong>Rock</strong><small>Mohawk · electric guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
           </button>
           <button class="look-card" type="button" data-look="country" aria-pressed="false" aria-label="Country outfit: cowboy hat, neckerchief, and acoustic guitar">
-            <span class="look-art look-country" aria-hidden="true"></span><span class="look-caption"><strong>Country</strong><small>Cowboy hat · acoustic guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="216" data-frog-look="country"></canvas></span><span class="look-caption"><strong>Country</strong><small>Cowboy hat · acoustic guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
           </button>
           <button class="look-card" type="button" data-look="electronic" aria-pressed="false" aria-label="Electronic outfit: headphones and cyan and magenta lightsticks">
-            <span class="look-art look-electronic" aria-hidden="true"></span><span class="look-caption"><strong>Electronic</strong><small>Headphones · lightsticks</small></span><span class="look-status" aria-hidden="true">SELECT</span>
+            <span class="look-art" aria-hidden="true"><canvas width="192" height="216" data-frog-look="electronic"></canvas></span><span class="look-caption"><strong>Electronic</strong><small>Headphones · lightsticks</small></span><span class="look-status" aria-hidden="true">SELECT</span>
           </button>
         </div>
         <p class="look-announcement" data-look-announcement aria-live="polite">Jazz frog is ready to sit in. Try another look.</p>
@@ -206,5 +219,6 @@
       <p class="dataset-credit">Chord data: <a href="https://huggingface.co/datasets/ailsntua/Chordonomicon" target="_blank" rel="noreferrer">Chordonomicon</a> by Kantarelis et al. (2024), CC BY-NC 4.0.</p>
       <a class="footer-source" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Source on GitHub <span aria-hidden="true">↗</span></a>
     </footer>
+    <script type="module" src="./frog-looks.js"></script>
   </body>
 </html>
