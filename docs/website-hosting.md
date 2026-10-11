@@ -62,9 +62,10 @@ Recordings go in /Users/alex/jam-frog/site/demo-videos/. Use all.mp4, jazz.mp4,
 rock.mp4, punk.mp4, pop.mp4, country.mp4, and electronic.mp4. WebM also works;
 optional captions use matching .vtt filenames.
 
-The closing drawing goes in /Users/alex/jam-frog/docs/art/jam-frog.png. Supported
-alternatives are JPG, WebP, AVIF, and SVG. Until that image exists, its section is
-hidden.
+The current closing drawing is /Users/alex/jam-frog/docs/art/jf.png. The website
+prefers jam-frog.* if supplied, then jf.*, then other supported images. JPG,
+WebP, AVIF, and SVG are supported too. The alternate jf_transparent.png is
+retained; the full drawing is selected so the handwritten message is complete.
 
 Run npm run site:build from /Users/alex/jam-frog/app after changing content or media,
 then republish the new site/dist snapshot. Local edits do not automatically update

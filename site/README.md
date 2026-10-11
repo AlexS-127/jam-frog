@@ -1,8 +1,16 @@
 # Jam Frog showcase site
 
-The Hacklanta project page lives here. The seven-frog selector keeps the sprites
-still at rest and shows the three-frame tongue greeting on hover or keyboard
-focus. Selecting a frog opens its recording or a labeled silent illustration.
+The Hacklanta project page lives here. The opening screen is full-height white,
+with the name, a question, and seven still frogs. Hover or keyboard focus enlarges
+the chosen frog slightly without a tongue animation. Navigation appears after
+scrolling or selecting a frog. Selecting opens its recording or a labeled silent
+illustration.
+
+The All styles frog uses `assets/default-frog.png`, a transparent cutout of Alex's
+attached Gemini-generated sprite. The cutout was made with the built-in image
+generation tool using this prompt: "Remove only the charcoal gray background;
+preserve the frog's pose, colors, face, dark outline, and square pixel edges.
+Transparent PNG, no tongue, no shadows, no redesign."
 
 ```sh
 cd app
@@ -20,6 +28,8 @@ Optional captions are `all.vtt`, `jazz.vtt`, etc. See that folder's README.
 Put the closing drawing in `docs/art/jam-frog.png` (or another supported image
 format). It appears at the end of the page automatically. If there is no image,
 the section remains hidden rather than showing a broken placeholder.
+The current drawing is `docs/art/jf.png`, which takes priority over the alternate
+transparent version so the handwritten thank-you remains complete.
 
 The website does not connect to Live, run model inference, or call Gemini. The
 mode and weirdness examples are illustrative. Missing recordings have a silent
@@ -31,6 +41,9 @@ From `app/`, run `npm run site:build`. The static website is generated in
 `site/dist/`, including the shared sprites, font, recordings, and artwork. Upload
 the contents of that folder to a static host, or publish it through Sites. Rebuild
 and republish after adding or replacing media.
+
+Pitch, judge Q&A, and the submission checklist live in
+`docs/hackathon-pitch.md`. The durable team history is in `docs/project-story.md`.
 
 GoDaddy is the domain registrar for `jamfrog.us`; hosting serves the actual
 website. The domain's DNS records connect those two. Hosting instructions and

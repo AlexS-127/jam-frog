@@ -60,6 +60,10 @@ and restart the app. Without it (or with **⚙ Settings → Jam report → On th
 
 **Hackathon showcase page:** from `app/`, run `npm run site` to preview the standalone project page.
 
+**Judging:** the [three-minute pitch, live-demo sequence, Q&A, and submission checklist](docs/hackathon-pitch.md)
+are ready for rehearsal. The [project story](docs/project-story.md) preserves the team build journey.
+See the [website hosting guide](docs/website-hosting.md) for `jamfrog.us`.
+
 **Listening test** (n-gram vs GRU): in the running app, **Jam Frog → Listening test…** (Cmd+Shift+L). Each row plays a
 progression and then answer A or B on the frog track; the models are hidden and shuffled. Vote, then **Reveal**.
 
