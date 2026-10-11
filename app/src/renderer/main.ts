@@ -146,8 +146,17 @@ const overlay = createOverlay(document.getElementById('overlay-root')!, {
     answers.cancel(); // switching mode stops whatever the frog was doing
     render();
   },
-  onStop() {
+  onReset() {
+    // Start again: the frog stops, and the phrase and the session (chords, key, suggestions, report) are
+    // forgotten. Ending a jam, the frog still sums it up: its report is made after the reset.
     const log = answers.stop();
+    answers.reset();
+    history.length = 0;
+    suggestions = [];
+    reportSeq++; // a report still being written is dropped
+    report = null;
+    reportPending = false;
+    reportBubble = false;
     if (log) void makeReport(log);
     render();
   },
@@ -231,7 +240,9 @@ function uiState(): UiState {
     bar: progress.bar,
     bars: progress.bars,
     yourChords: cells(answers.phraseCells()),
-    frogChords: plan && progress.status !== 'listening' ? cells(answers.frogCells()) : [],
+    // While you play a phrase the frog's chords are hidden, except in Off mode: there they are its suggested set,
+    // re-planned with every chord you play, shown above yours.
+    frogChords: plan && (progress.status !== 'listening' || settings.frogMode === 'off') ? cells(answers.frogCells()) : [],
     frogIndex: progress.chord,
     nextChords: cells(answers.upcomingCells()),
     key: answers.keyCentre().key ? keyName(answers.keyCentre().key!) : null,

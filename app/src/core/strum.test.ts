@@ -16,11 +16,11 @@ describe('Ample Guitar strums (Strummer, Detect mode)', () => {
       }
     }
   });
-  it('plays the chord keys first, then strums down (C4) or up (E4)', () => {
+  it('plays the chord keys first, then strums down (C3) or up (E3)', () => {
     const down = strumNotes({ root: 0, quality: 'maj' }, false);
     expect(down.map((n) => n.pitch)).toEqual([36, 40, 43, STRUM_DOWN]);
     expect(strumNotes({ root: 0, quality: 'maj' }, true).at(-1)!.pitch).toBe(STRUM_UP);
-    expect([STRUM_DOWN, STRUM_UP]).toEqual([72, 76]);
+    expect([STRUM_DOWN, STRUM_UP]).toEqual([60, 64]);
   });
   it('strums every genre but electronic and pop', () => {
     expect(['jazz', 'rock', 'country', 'punk', 'all'].every((g) => strumsFor(g))).toBe(true);

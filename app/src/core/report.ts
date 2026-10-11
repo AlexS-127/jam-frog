@@ -3,7 +3,7 @@ import { chordName, parseChordName } from './chords';
 import { isBorrowed, isDiatonic, keyName, type Key } from './key';
 import type { ChordSymbol } from './types';
 
-// The jam report: after Stop, the jam's chords are analysed here (Roman numerals, borrowed chords,
+// The jam report: after a jam ends (Reset), the jam's chords are analysed here (Roman numerals, borrowed chords,
 // substitutions, cadences, well-known progressions, key changes). The result is a short local report, and
 // the facts Gemini gets to write a livelier one from (see geminiRequest; the call itself is in the main process).
 

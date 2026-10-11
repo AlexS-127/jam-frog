@@ -5,25 +5,30 @@ A real-time jam partner for Ableton Live Suite 12 (Hacklanta 2026, Adobe Creativ
 You play chords in Ableton. A frog overlay floats above Live and:
 
 1. **Suggests** what to play next, in a speech bubble ("Try **F**, **Am** or **G**"), every time it recognises a chord.
+   With the frog Off, the screen also shows the chords it would play next under yours, re-planned with every chord.
 2. **Answers** (toggle): you play a 2, 4 or 8-bar phrase; on the next downbeat the frog answers with as many bars of
    its own chords on its Ableton track, changing chord where you did (anticipations included), in your register.
 3. **Jams** (FROG: Jam): after your phrase it keeps playing, phrase after phrase, about one chord per bar (sometimes
-   one more or one fewer), in your key, until you press **Stop**. The next block shows under the current one so you
+   one more or one fewer), in your key, until you press **Reset**. The next block shows under the current one so you
    can get ready. Play along over it; if you move to a new key, the frog follows.
-4. **Reports** on the jam when you press Stop: the frog sums it up in its speech bubble, and **Full report** lists the
+4. **Reports** on the jam when you press Reset: the frog sums it up in its speech bubble, and **Full report** lists the
    interesting moments in Roman numerals (key changes, substitutions, borrowed chords, secondary dominants, cadences,
    famous progressions) with a little trivia. Written by Gemini if you add an API key (see below), otherwise on your Mac.
 
 The frog sits on a guitar amp: the head holds the controls, and the cabinet is the screen. The screen shows the chords
-bar by bar, each as wide as it lasts, so you can see when the changes come; the key centre sits above them and lights
-up when it changes. The frog dances in time with Live's tempo and dresses for the genre you pick (Kevin's animated
+bar by bar, each as wide as it lasts, so you can see when the changes come, in up to three rows: **your chords** on
+top (empty bars until you play), **the frog's** underneath (the chord it is playing lit), and in Jam mode its **next**
+block. The key centre sits above them and lights up when it changes. **↺ Reset** starts again from nothing: the frog
+stops (ending a jam, with its report), and the phrase, the session's chords and key, and the frog's position are reset. The frog dances in time with Live's tempo and dresses for the genre you pick (Kevin's animated
 outfits, each with its own instrument poses; all styles keeps the classic frog with its keyboard).
 
 A weirdness knob and a genre picker reshape both. The picker has six genres: jazz, rock, electronic, country, pop
 (which also draws on pop rock songs) and punk (also metal and alternative). The genre also changes the frog's sound in Live: each genre can
-have its own instrument, effects and sends (see [A frog sound per genre](ableton/SETUP.md#a-frog-sound-per-genre)). Weird means colourful (borrowed chords like ♭VI and ♭VII, secondary dominants), not lost: the frog stays in your key. With **Copy my rhythm** on, the frog answers in the rhythm and dynamics you played (strike positions, lengths, re-strikes and velocities); otherwise it plays one chord per bar, following your overall dynamics. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
+have its own instrument, effects and sends (see [A frog sound per genre](ableton/SETUP.md#a-frog-sound-per-genre)). Weird means colourful (borrowed chords like ♭VI and ♭VII, secondary dominants), not lost: the frog stays in your key. Turning the knob while jamming changes the next block. For the guitar genres (jazz, rock, country, punk) the frog plays **Ample Guitar strums** instead of chord voicings (see [Strummed guitar](ableton/SETUP.md#strummed-guitar-ample-guitar-for-the-guitar-genres)); electronic and pop get voicings, and All styles plays the rack's `user` chain.
 
-> Status: feature-complete for the demo. Bridge: Max for Live (Frog Ear + Frog Voice). Models: a GRU (default) and an n-gram, switchable in ⚙ Settings.
+**⚙ Settings:** chord names as letters or **Roman numerals** (in the session key), **Copy my rhythm** (the frog answers in the rhythm and dynamics you played: strike positions, lengths, re-strikes and velocities; otherwise one chord per bar, following your overall dynamics), whether the `user` chain is an Ample Guitar, the model, the BPM used when Live is stopped, and where the jam report is written. To keep a jam, record it in Live: see [Recording a jam](ableton/SETUP.md#recording-a-jam).
+
+> Status: feature-complete for the demo. Bridge: Max for Live (Frog Ear + Frog Voice). Models: a GRU (default) and an n-gram, switchable in ⚙ Settings. The overlay is 440×700, in the Nunito font (bundled; nothing is fetched).
 
 ## Repo layout (one lane per folder)
 
@@ -69,7 +74,7 @@ progression and then answer A or B on the frog track; the models are hidden and 
 
 ## What leaves your machine
 
-Nothing, unless you turn on the Gemini jam report. Then, once per jam, when you press Stop: the jam's chord names, Roman
+Nothing, unless you turn on the Gemini jam report. Then, once per jam, when you press Reset: the jam's chord names, Roman
 numerals, bar numbers, key and tempo go to Google's Gemini API to write the report. No audio, no MIDI notes or timing
 beyond bar numbers, nothing about you. Without an API key, or with **Jam report → On this Mac only**, nothing leaves.
 

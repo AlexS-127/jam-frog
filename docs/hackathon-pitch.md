@@ -60,7 +60,7 @@ Then switch to Jam, play a phrase, and improvise briefly over the frog.]
 > the change affects the next planned phrase. I can record the MIDI in Live and
 > edit it like the rest of my music.
 
-[Turn weirdness once; hear the next phrase if time allows. Press Stop.]
+[Turn weirdness once; hear the next phrase if time allows. Press Reset.]
 
 ### 1:40-2:10 | How we built it and what was hard
 
@@ -209,7 +209,7 @@ separately from working features.
    the full handwritten message. Verify it on the published page. The alternate
    `jf_transparent.png` is retained, but is not the selected closing artwork.
 6. **Run a full Live smoke test.** Confirm input recognition, the two-bar answer,
-   continuous Jam, weirdness re-planning, genre switching, Stop/note-off cleanup,
+   continuous Jam, weirdness re-planning, genre switching, Reset/note-off cleanup,
    and the local report. Test the exact set and speaker setup you will use.
 7. **Check secrets and credits.** Never commit `.env.local` or API keys. Credit
    Chordonomicon, generated artwork, libraries, and AI assistance. Identify

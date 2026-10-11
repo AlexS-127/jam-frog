@@ -65,8 +65,8 @@ export interface Handlers {
   onGenre(genre: string): void;
   onPhraseBars(bars: 2 | 4 | 8): void;
   onFrogMode(mode: FrogMode): void;
-  /** stop the frog (ends a jam, and asks for its report) */
-  onStop(): void;
+  /** start again: forget the phrase and the session, and put the frog back where it started (a jam ends, with its report) */
+  onReset(): void;
   onRhythm(on: boolean): void;
   onModel(model: string): void;
   onBpm(bpm: number): void;
@@ -159,7 +159,7 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
               <div class="jf-segments" role="radiogroup" aria-label="What the frog does">
                 <button type="button" data-mode="off" role="radio" title="The frog only suggests">Off</button>
                 <button type="button" data-mode="answer" role="radio" title="The frog answers each phrase">Answer</button>
-                <button type="button" data-mode="jam" role="radio" title="After your phrase the frog keeps playing until you stop it">Jam</button>
+                <button type="button" data-mode="jam" role="radio" title="After your phrase the frog keeps playing until you press Reset">Jam</button>
               </div>
             </div>
           </div>
@@ -171,11 +171,12 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
             <span class="jf-who" data-ref="who">YOUR CHORDS</span>
             <span class="jf-key" data-ref="key" hidden></span>
             <span class="jf-display-right">
-              <button type="button" class="jf-stop" data-action="stop" hidden>■ Stop</button>
+              <button type="button" class="jf-reset" data-action="reset" title="Start again: stop the frog, forget this phrase and session, and reset the frog. Ending a jam, the frog sums it up.">↺ Reset</button>
               <span class="jf-bars" data-ref="bars" aria-label="Bar"></span>
             </span>
           </div>
           <div class="jf-grid" data-ref="chords"></div>
+          <div class="jf-mine" data-ref="mine" hidden><span>FROG PLAYS</span><div class="jf-grid" data-ref="mine-chords"></div></div>
           <div class="jf-next" data-ref="next" hidden><span>NEXT</span><div class="jf-grid" data-ref="next-chords"></div></div>
           <p class="jf-hint" data-ref="hint">Play some chords. The frog answers after your phrase (or jams on, in Jam mode).</p>
           <footer class="jf-footer"><b data-ref="live">WAITING FOR LIVE</b><span data-ref="status" class="jf-status" role="status"></span></footer>
@@ -230,7 +231,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
   const reportPanel = q<HTMLElement>('[data-ref="report-panel"]');
   const segments = [...shell.querySelectorAll<HTMLButtonElement>('[data-bars]')];
   const modes = [...shell.querySelectorAll<HTMLButtonElement>('[data-mode]')];
-  const stop = q<HTMLButtonElement>('[data-action="stop"]');
   genre.add(new Option('All styles', 'all'));
   for (const g of STYLE_NAMES) genre.add(new Option(g[0].toUpperCase() + g.slice(1), g));
 
@@ -285,7 +285,11 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     b.addEventListener('click', () => handlers.onPhraseBars(Number(b.dataset.bars) as 2 | 4 | 8), { signal });
   }
   for (const b of modes) b.addEventListener('click', () => handlers.onFrogMode(b.dataset.mode as FrogMode), { signal });
-  stop.addEventListener('click', () => handlers.onStop(), { signal });
+  q('[data-action="reset"]').addEventListener('click', () => {
+    pet.preview(null);
+    pet.resetPosition();
+    handlers.onReset();
+  }, { signal });
   q('[data-action="settings"]').addEventListener('click', () => (settings.hidden = !settings.hidden), { signal });
   q('[data-action="settings-done"]').addEventListener('click', () => (settings.hidden = true), { signal });
   q('[data-action="report"]').addEventListener('click', () => (reportPanel.hidden = !reportPanel.hidden), { signal });
@@ -308,6 +312,10 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
     grid.replaceChildren(...barSegments(cells, bars).map((segs, b) => {
       const bar = document.createElement('div');
       bar.className = 'jf-bar';
+      if (!cells.length) { // nothing played yet: just the empty bar
+        if (b === nowBar) bar.classList.add('is-current');
+        return bar;
+      }
       if (b === nowBar) bar.classList.add('is-current');
       if (segs.filter((s) => s.name).length > 1) bar.classList.add('is-split');
       for (const seg of segs) {
@@ -369,15 +377,24 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       pet.setLook(look);
       pet.setTempo(state.beat.barMs > 0 ? { anchor: state.beat.barAt, beatMs: state.beat.barMs / BEATS_PER_BAR } : null);
 
-      // The display: your chords while you play, the frog's while it plays, bar by bar.
-      const frogTurn = state.phase === 'playing' || (state.phase === 'idle' && state.frogChords.length > 0 && state.yourChords.length === 0);
-      const chords = frogTurn ? state.frogChords : state.yourChords;
-      q('[data-ref="who"]').textContent = frogTurn ? 'FROG PLAYS' : 'YOUR CHORDS';
+      // The display, bar by bar, in three rows: your section on top (empty bars until you play), then the frog's
+      // chords (what it plays, or in Off mode its suggestions, re-planned with every chord you play), then in Jam
+      // mode its next block.
+      const off = state.frogMode === 'off';
+      const playing = state.phase === 'playing';
+      q('[data-ref="who"]').textContent = 'YOUR CHORDS';
       const nowBar = state.phase === 'idle' ? -1 : state.bar - 1;
-      const nowIndex = frogTurn ? state.frogIndex : state.phase === 'listening' ? chords.length - 1 : -1;
-      drawBars(q('[data-ref="chords"]'), chords, chords.length ? state.bars : 0, nowIndex, nowBar);
-      q('[data-ref="hint"]').hidden = chords.length > 0;
-      const next = frogTurn && state.phase === 'playing' ? state.nextChords : [];
+      const yourNow = state.phase === 'listening' ? state.yourChords.length - 1 : -1;
+      drawBars(q('[data-ref="chords"]'), state.yourChords, state.bars, yourNow, playing ? -1 : nowBar);
+      const frog = state.frogChords;
+      q('[data-ref="mine"]').hidden = frog.length === 0;
+      drawBars(q('[data-ref="mine-chords"]'), frog, frog.length ? state.bars : 0, playing ? state.frogIndex : -1, playing ? nowBar : -1);
+      const hint = q('[data-ref="hint"]');
+      hint.hidden = state.yourChords.length > 0 || frog.length > 0;
+      hint.textContent = off
+        ? 'This is your section: play some chords. The frog’s ideas show up underneath.'
+        : 'This is your section: play some chords. The frog answers after your phrase (or jams on, in Jam mode).';
+      const next = playing ? state.nextChords : [];
       q('[data-ref="next"]').hidden = next.length === 0;
       drawBars(q('[data-ref="next-chords"]'), next, next.length ? state.bars : 0, -1, -1);
       q('[data-ref="bars"]').replaceChildren(...Array.from({ length: state.phase === 'idle' ? 0 : state.bars }, (_, i) => {
@@ -389,7 +406,9 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       // The key centre, lit up for a moment when it changes.
       const key = q('[data-ref="key"]');
       key.hidden = !state.key;
-      key.textContent = state.keyChange ? `${state.keyChange.from} → ${state.keyChange.to}` : `KEY ${state.key ?? ''}`;
+      // a change shows just the new key, so it fits beside Reset and the bar dots (the bubble says from → to)
+      key.textContent = state.keyChange ? `→ ${state.keyChange.to}` : `KEY ${state.key ?? ''}`;
+      key.title = state.keyChange ? `Key change: ${state.keyChange.from} → ${state.keyChange.to}` : '';
       key.classList.toggle('is-changed', !!state.keyChange);
 
       // The frog's speech bubble: the jam report, a key change, or what to play next.
@@ -407,8 +426,8 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
         more.addEventListener('click', () => (reportPanel.hidden = false));
         const words = Object.assign(document.createElement('span'), { textContent: state.reportPending ? 'Ribbit! Let me write up our jam…' : state.report!.summary });
         bubble.replaceChildren(...(state.reportPending ? [words] : [words, more]));
-      } else if (state.keyChange) bubble.replaceChildren('Key change! Now in ', Object.assign(document.createElement('b'), { textContent: state.keyChange.to }), '.');
-      else if (state.phase === 'playing') bubble.replaceChildren(state.frogMode === 'jam' ? 'Jamming! Play along, or press Stop.' : 'Listen… then your turn!');
+      } else if (state.keyChange) bubble.replaceChildren('Key change! ', state.keyChange.from, ' → ', Object.assign(document.createElement('b'), { textContent: state.keyChange.to }), '.');
+      else if (state.phase === 'playing') bubble.replaceChildren(state.frogMode === 'jam' ? 'Jamming! Play along, or press Reset.' : 'Listen… then your turn!');
       else if (state.suggestions.length) bubble.replaceChildren(...suggestionText(state.suggestions));
       else bubble.replaceChildren('Play me a chord!');
       }
@@ -423,7 +442,6 @@ export function createOverlay(root: HTMLElement, handlers: Handlers) {
       }
       setValue(genre, state.genre || 'all');
       for (const b of modes) b.setAttribute('aria-checked', String(b.dataset.mode === state.frogMode));
-      stop.hidden = !(state.frogMode === 'jam' && state.phase === 'playing');
       setChecked(rhythm, state.rhythm);
       setChecked(userAmple, state.userAmple);
       setValue(model, state.model);

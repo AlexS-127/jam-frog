@@ -34,6 +34,7 @@ export interface PetController {
   setSprites(version: string): void;
   preview(action: Action | null): void;
   setAmbientEnabled(enabled: boolean): void;
+  /** put the frog back where it started (its initialPosition, else the centre of the stage) */
   resetPosition(): void;
   subscribe(listener: (state: PetSnapshot) => void): () => void;
   destroy(): void;
@@ -463,7 +464,8 @@ export function createFrogPet(stage: HTMLElement, options: PetControllerOptions 
       fling = false;
       reaction = null;
       velocity = { x: 0, y: 0 };
-      position = centeredPosition(measure(), displaySize);
+      // back where it started: the given starting spot (the overlay's, on the amp), else the stage's centre
+      position = options.initialPosition ? clampPosition(options.initialPosition, bounds) : centeredPosition(measure(), displaySize);
       draw();
     },
     subscribe(listener) {

@@ -6,7 +6,7 @@ import { startOsc } from './osc';
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 440,
-    height: 640,
+    height: 700,
     frame: false,
     transparent: true,
     resizable: false,

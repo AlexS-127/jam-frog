@@ -85,8 +85,8 @@ For every genre except **electronic** and **pop** (so jazz, rock, country, punk,
 **⚙ Settings → All styles: user chain is Ample Guitar**), the frog doesn't send its chord voicings. It sends MIDI for **Ample Guitar's Strummer in Detect mode** instead:
 
 - the chord, in root position from **C1** (root in C1–B1, the rest up to B2), which Detect mode reads, and
-- a strum key at the same moment: **C4** strums down. When the frog re-strikes the same chord (with **Copy my
-  rhythm** on), it strums up (**E4**), then down again, alternating. Strum keys go out at velocity 120, Ample's top
+- a strum key at the same moment: **C3** strums down. When the frog re-strikes the same chord (with **Copy my
+  rhythm** on), it strums up (**E3**), then down again, alternating. Strum keys go out at velocity 120, Ample's top
   layer, which strums all six strings.
 
 Note names are Live's and Ample's (C3 = MIDI 60). Electronic and pop get the normal voicings, for keys and synths.
@@ -97,7 +97,7 @@ Set up each guitar-genre chain in the Frog Sounds rack:
 2. Turn on **Strum Mode** (the Strummer panel's toggle, or keyswitch C#6).
 3. Set **Chord Mode** to **Detect** (the Strummer panel, or D5 at high velocity).
 
-If a guitar chain plays low single notes plus a high C4/E4, that chain's Ample isn't in Strummer + Detect mode. If a
+If a guitar chain plays low single notes plus a C3/E3, that chain's Ample isn't in Strummer + Detect mode. If a
 keys or synth chain does, give it the genre electronic or pop, or put a guitar in it.
 
 ## Recording a jam

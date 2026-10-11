@@ -12,7 +12,7 @@ root.innerHTML = `
     </header>
     <div class="demo-layout">
       <section class="preview-column" aria-label="Frog preview">
-        <div class="stage-label"><span>OVERLAY PREVIEW</span><span>440 × 640</span></div>
+        <div class="stage-label"><span>OVERLAY PREVIEW</span><span>440 × 700</span></div>
         <div class="preview-surface" data-ref="stage"></div>
         <p class="gesture-hint">The frog sits on the amp · use the controls to explore</p>
       </section>
@@ -36,7 +36,7 @@ root.innerHTML = `
           <input id="music-toggle" data-control="music" type="checkbox" />
         </label>
         <button class="reset-button" type="button" data-action="next">Next mood</button>
-        <button class="reset-button" type="button" data-action="reset">Center frog</button>
+        <button class="reset-button" type="button" data-action="center-frog">Reset frog position</button>
         <div class="mock-copy">Listening shows next-chord suggestions; between phrases, the amp shows the frog’s answer.</div>
         <div class="readout">
           <span class="eyebrow">TELEMETRY</span>
@@ -82,7 +82,7 @@ const handlers: Handlers = {
   onWeirdness(value) { state.weirdness = value; overlay.update(state); },
   onGenre(value) { state.genre = value; overlay.update(state); },
   onFrogMode(value) { state.frogMode = value; overlay.update(state); },
-  onStop() { state.phase = 'idle'; overlay.update(state); },
+  onReset() { state.yourChords = []; state.frogChords = []; state.nextChords = []; state.suggestions = []; overlay.update(state); },
   onPhraseBars(value) { state.phraseBars = value; state.bars = value; overlay.update(state); },
   onRhythm(value) { state.rhythm = value; overlay.update(state); },
   onUserAmple(value) { state.userAmple = value; overlay.update(state); },
@@ -125,5 +125,5 @@ root.querySelector<HTMLButtonElement>('[data-action="next"]')!.addEventListener(
   state.borrowed = state.mood === 'weird';
   overlay.update(state);
 });
-root.querySelector<HTMLButtonElement>('[data-action="reset"]')!.addEventListener('click', () => pet.resetPosition());
+root.querySelector<HTMLButtonElement>('[data-action="center-frog"]')!.addEventListener('click', () => pet.resetPosition());
 window.addEventListener('pagehide', (event) => { if (!event.persisted) overlay.destroy(); });

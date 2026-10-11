@@ -86,6 +86,21 @@ describe('AnswerEngine (phrase call and response)', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('reset: forgets the phrase and the session, so the next chord starts a fresh phrase', () => {
+    const { engine, sink, progress, play, until } = setup();
+    play('C', 0);
+    play('Am', 2000); // two bars into a phrase
+    engine.reset();
+    expect(engine.phraseCells()).toEqual([]);
+    expect(progress.at(-1)!.status).toBe('idle');
+    until(9000); // the old phrase's answer never comes
+    expect(sink.log).toHaveLength(0);
+    play('F', 9000);
+    expect(engine.phraseCells().map((c) => c.name)).toEqual(['F']);
+    expect(progress.at(-1)!.status).toBe('listening');
+    engine.cancel();
+  });
+
   it('strum mode: sends Ample chord keys from C1 and a strum key instead of the voicing; re-strikes go up, then down', () => {
     const { sink, play, until } = setup({ strum: true, rhythm: true });
     play('C', 0);
@@ -97,12 +112,12 @@ describe('AnswerEngine (phrase call and response)', () => {
     const held = [...sink.held].sort((a, b) => a - b);
     expect(held.slice(0, -1).every((p) => p >= 36 && p <= 59)).toBe(true);
     expect(held[0]).toBeLessThanOrEqual(47);
-    expect(held.at(-1)).toBe(72); // C4: down
+    expect(held.at(-1)).toBe(60); // C3: down
     until(9000);
-    expect([...sink.held]).toContain(76); // E4: the re-strike strums up
+    expect([...sink.held]).toContain(64); // E3: the re-strike strums up
     until(16000);
     const strumKeys = sink.log.filter((e) => e.velocity > 0 && e.pitch >= 60).map((e) => e.pitch);
-    expect(new Set(strumKeys)).toEqual(new Set([72, 76]));
+    expect(new Set(strumKeys)).toEqual(new Set([60, 64]));
     expect(sink.held.size).toBe(0);
   });
 

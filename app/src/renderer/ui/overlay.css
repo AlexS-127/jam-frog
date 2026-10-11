@@ -1,11 +1,11 @@
-/* Jam Frog overlay: 440x640, frameless and transparent (Electron). No panel behind it: just the frog, sitting
+/* Jam Frog overlay: 440x700, frameless and transparent (Electron). No panel behind it: just the frog, sitting
    on a guitar amp whose head holds the controls and whose cabinet is the screen. */
 /* Nunito, bundled with the app (no font is fetched from the network) */
 @import '@fontsource-variable/nunito';
 .jf-shell, .jf-shell *, .jf-shell *::before, .jf-shell *::after { box-sizing: border-box; }
 html, body, #overlay-root { width: 100%; height: 100%; margin: 0; }
 html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #e8f3e6; }
-#overlay-root { width: 440px; height: 640px; margin: 0 auto; }
+#overlay-root { width: 440px; height: 700px; margin: 0 auto; }
 
 .jf-shell {
   font-family: "Nunito Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -14,7 +14,7 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito V
   --amp-grille: #2c271f; --amp-grille-line: #65583f; --amp-trim: #b9a46a; --amp-accent: #e3c46b;
   --amp-badge: #f1e3b1; --amp-screen: #07120b; --amp-screen-hi: #0b1a10; --amp-shadow: rgba(0, 0, 0, .52);
   --piping: var(--amp-trim);
-  position: relative; width: 440px; height: 640px; overflow: hidden; padding: 6px 10px 4px;
+  position: relative; width: 440px; height: 700px; overflow: hidden; padding: 6px 10px 4px;
   display: flex; flex-direction: column; background: transparent; color: #edf6e9;
 }
 .jf-shell[data-amp-look="jazz"] { --amp-face: #6f572f; --amp-panel: #8c713b; --amp-grille: #b99555; --amp-grille-line: #70512a; --amp-trim: #ead08d; --amp-accent: #f6df93; --amp-badge: #2d2113; --amp-screen: #102516; --amp-screen-hi: #17351f; }
@@ -54,7 +54,7 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito V
 
 /* the display: your chords while you play, the frog's while it plays */
 /* the cabinet's front is a screen, set in grille cloth */
-.jf-display { min-height: 200px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 8px;
+.jf-display { min-height: 260px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 8px;
   border: 9px solid transparent; border-radius: 0;
   background:
     linear-gradient(var(--amp-screen-hi), var(--amp-screen)) padding-box,
@@ -62,14 +62,19 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito V
     repeating-linear-gradient(-45deg, var(--amp-grille-line) 0 1px, var(--amp-grille) 1px 4px) border-box;
   box-shadow: inset 0 0 0 2px rgba(164, 229, 142, .22), inset 0 0 0 5px rgba(0, 0, 0, .18), 0 3px 0 rgba(0, 0, 0, .35); }
 .jf-display-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.jf-key { margin-right: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; color: #cfe3c8; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
+/* only the key pill gives way on a crowded top row (a key change is long): the label, Reset and the dots keep their size */
+.jf-display-top > .jf-who, .jf-display-right, .jf-reset { flex: none; white-space: nowrap; }
+.jf-key { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-right: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; color: #cfe3c8; font-size: 10px; letter-spacing: .08em; white-space: nowrap; }
 .jf-key[hidden] { display: none; }
 .jf-key.is-changed { border-color: #8cc8f0; background: rgba(140, 200, 240, .18); color: #d7eefc; animation: jf-key-flash .5s ease-out 3; }
 @keyframes jf-key-flash { 50% { background: rgba(140, 200, 240, .45); } }
 .jf-who { color: var(--muted); font-size: 11px; letter-spacing: .14em; }
-.jf-shell[data-phase="playing"] .jf-who { color: var(--gold); }
+.jf-shell[data-phase="playing"] .jf-mine > span { color: var(--gold); } /* the frog's row, while it plays */
 .jf-bars { display: flex; gap: 5px; }
 .jf-bars i { width: 9px; height: 9px; border-radius: 50%; background: rgba(164, 229, 142, .16); }
+/* 8-bar phrases: smaller dots, so the top row keeps room for the key (and a key change) */
+.jf-bars:has(i:nth-child(5)) { gap: 3px; }
+.jf-bars:has(i:nth-child(5)) i { width: 6px; height: 6px; }
 .jf-bars i.is-done { background: var(--accent); }
 .jf-shell[data-phase="playing"] .jf-bars i.is-done { background: var(--gold); }
 /* the chords bar by bar: a box per bar, each chord as wide as it lasts; a dotted stretch is the last chord held over */
@@ -86,6 +91,10 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito V
 .jf-seg.is-now { background: var(--accent); color: #0d1a10; }
 .jf-shell[data-phase="playing"] .jf-seg.is-now { background: var(--gold); }
 /* jam mode: the frog's next block, smaller and in blue, under the one playing now */
+/* Off mode: your chords under the frog's last ones */
+.jf-mine { display: grid; gap: 4px; }
+.jf-mine[hidden] { display: none; }
+.jf-mine > span { color: var(--muted); font-size: 10px; letter-spacing: .14em; }
 .jf-next { display: grid; gap: 4px; }
 .jf-next[hidden] { display: none; }
 .jf-next > span { color: #8cc8f0; font-size: 10px; letter-spacing: .14em; }
@@ -104,7 +113,7 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito V
 .jf-pet-notice { position: absolute; left: 0; right: 0; bottom: 40px; color: #a8bda7; font-size: 11px; text-align: center; }
 /* The bubble stays clear of the sprite; its tail follows the rendered mouth. */
 .jf-bubble { position: absolute; z-index: 3; bottom: 64px; left: 186px; right: 6px; max-height: calc(100% - 72px); overflow: auto;
-  padding: 12px 14px; border: 1px solid rgba(255, 255, 255, .45); border-radius: 10px; background: rgba(244, 241, 223, .78);
+  padding: 12px 14px; border: 1px solid rgba(255, 255, 255, .45); border-radius: 0; background: rgba(244, 241, 223, .78);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: #17241a; font-size: 16px; line-height: 1.3; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
 /* the tail: its own element (the bubble scrolls, which would clip it), under the bubble's bottom-left corner,
    pointing down and left at the frog */
@@ -144,10 +153,9 @@ html, body { overflow: hidden; background: transparent; font: 13px/1.3 "Nunito V
 .jf-segments button + button { border-left: 1px solid #75866a; }
 .jf-segments button[aria-checked="true"] { background: var(--accent); color: #0d1a10; font-weight: 700; }
 .jf-display-right { display: flex; align-items: center; gap: 10px; }
-.jf-stop { height: 24px; padding: 0 10px; border: 1px solid rgba(227, 196, 107, .6); border-radius: 6px; background: rgba(227, 196, 107, .14);
-  color: var(--gold); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.jf-stop:hover { background: rgba(227, 196, 107, .28); }
-.jf-stop[hidden] { display: none; }
+.jf-reset { height: 24px; padding: 0 9px; border: 1px solid var(--line); border-radius: 6px; background: transparent;
+  color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.jf-reset:hover { border-color: var(--accent); color: var(--accent); }
 .jf-segments[aria-label="What the frog does"] button { font-size: 12px; }
 .jf-check { display: flex; align-items: center; gap: 8px; color: #dce9d8; font-size: 13px; cursor: pointer; }
 .jf-check input { width: 16px; height: 16px; margin: 0; accent-color: #91d77d; }

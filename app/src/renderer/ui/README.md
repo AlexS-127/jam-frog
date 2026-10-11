@@ -13,18 +13,20 @@ Reduced motion freezes the displayed pose and disables ambient gestures and flin
 
 The Electron app (`src/renderer/main.ts`) mounts this overlay and drives it from the engine. This browser demo does not move the application window and does not connect to MIDI or OSC. The current Vite configuration builds both the main entry and the standalone demo; the frame review page is served by the development server.
 
-The overlay (440×640) has no background of its own: the frog sits on a guitar amp whose head holds the controls
+The overlay (440×700) has no background of its own: the frog sits on a guitar amp whose head holds the controls
 (logo plate, ⚙, ×, then the control panel) and whose cabinet front is the screen, set in grille cloth. The frog wears
 the genre's outfit (`frog/looks.ts`, with eight-frame idle and eight-frame performance sheets in `frog/sprites/a/genres/`). Before that, it was laid
-out as Alex asked on Saturday night: a big display that shows **your chords** while you play
-and **the frog's** while it plays, bar by bar (a box per bar, each chord as wide as it lasts, a dotted stretch where a
-chord is held over; the sounding chord lit; in Jam mode the next block underneath in blue, so you can get ready), the
+out as Alex asked on Saturday night: a display in up to three rows, bar by bar: **your chords** on top (empty bars
+until you play), **the frog's** underneath (what it plays, or with the frog Off, its suggestions, re-planned with every
+chord), and in Jam mode its next block in blue (a box per bar, each chord as wide as it lasts and shrunk to fit, a
+dotted stretch where a chord is held over; the sounding chord lit), the
 key centre (it flashes on a key change), bar dots for the phrase, the frog sitting fixed on the amp
-(no dragging; it still animates and changes mood), a speech bubble (pointing at the frog's head) suggesting the next chords (after a jam: its report's summary and a
+(no dragging; it still animates and changes mood), a translucent speech box beside it, with a tail at its bottom left, suggesting the next chords (after a jam: its report's summary and a
 **Full report** button; 📋 in the header reopens it), the frog's loops in time with the tempo (`pet.setTempo`), and the amp's controls:
-weirdness knob (drag up/down from where you press), genre, phrase length (2/4/8 bars), FROG Off / Answer / Jam
-(with a Stop button while jamming) and Copy my rhythm. The model and the
-fallback BPM are in the ⚙ settings panel. No mini keyboards.
+weirdness knob (drag up/down from where you press), genre, phrase length (2/4/8 bars), FROG Off / Answer / Jam,
+and **↺ Reset** on the screen (start again; ending a jam, the frog gives its report). Chord names (letters or Roman
+numerals), Copy my rhythm, the user chain's Ample setting, the model and the fallback BPM are in the ⚙ settings panel.
+No mini keyboards.
 
 ## Files
 

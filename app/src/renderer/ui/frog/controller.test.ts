@@ -241,6 +241,18 @@ describe('frog controller', () => {
     expect(count('blink')).toBeLessThanOrEqual(25);
     expect(canvas.fills).toBeGreaterThan(0); // the tongue was drawn
   });
+  it('resets to its starting spot when it has one (the overlay), else to the centre', () => {
+    const stage = new ElementStub();
+    const placed = createFrogPet(stage as unknown as HTMLElement, { initialPosition: { x: 24, y: 9999 } });
+    let at = { x: 0, y: 0 };
+    placed.subscribe((s) => { at = s.position; });
+    expect(at).toEqual({ x: 24, y: 252 }); // bottom left, clamped to the stage
+    placed.resetPosition();
+    expect(at).toEqual({ x: 24, y: 252 });
+    placed.destroy();
+    pet.resetPosition();
+    expect(state.position.x).toBe(84); // no starting spot: centred
+  });
   it('pauses hidden time and removes listeners and animation scheduling on disposal', () => {
     pet.preview('review');
     advance(350);

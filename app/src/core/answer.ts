@@ -486,6 +486,26 @@ export class AnswerEngine {
     this.tick(true);
   }
 
+  /**
+   * Start again from nothing: stop the frog (notes released), drop the phrase and forget the session (its chords,
+   * key and jam log), so the next chord starts a fresh phrase in a fresh key. The bar clock keeps running.
+   */
+  reset(): void {
+    this.cancel();
+    this.history = [];
+    this.phraseStarts = [];
+    this.strikes = [];
+    this.plan = null;
+    this.planFor = '';
+    this.shown = null;
+    this.loggedPlan = null;
+    this.strummedDown = false;
+    this.keys = new KeyTracker();
+    this.keyChange = null;
+    this.log = null;
+    this.emit();
+  }
+
   /** release everything and go back to waiting for a phrase */
   cancel(): void {
     this.stopAnswer();
