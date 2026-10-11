@@ -12,7 +12,7 @@ blocking each other or colliding in git.
 | IAC spike: chord in → name → IV answer out, 62 ms round trip | `app/` |
 | Chord detection (onset grouping, inversions, power chords), 21 tests | `app/src/core/chords.ts`, `grouper.ts` |
 | Max for Live bridge: Frog Ear + Frog Voice, `/note` `/tempo` `/bar` over OSC | `ableton/`, `app/src/main/osc.ts` |
-| Chordonomicon prep + n-gram (top-1 38.2%, top-3 69.8%) | `model/`, `model/export/ngram.json` |
+| Chordonomicon prep + n-gram (5-gram: top-1 56.2%, top-3 79.6%) | `model/`, `model/export/ngram.json` |
 | Shared contracts: `NoteSource`, `NoteSink`, `ChordModel`, tokens, `Suggestion`, `AnswerPlan`, `FrogMood` | `app/src/core/` |
 
 ## Who does what
@@ -25,7 +25,7 @@ Alex verifies everything in Live at the two integration points (9 PM and 11 PM).
 | --- | --- | --- | --- |
 | **Alex** | Integration in `main.ts`, Ableton demo Set, hand tests at each integration, merging PRs, demo rehearsal, Max stretch | Yes | Playing it in Live |
 | **Kevin** | **B** overlay UI → **E** listening test page → put **F**'s sprites in the UI → demo video + slides | No | `ui/demo.html` with mock data in a browser; `npm test` |
-| **Katie** | **D** GRU (5-hour box) + `gru.ts` → **F** frog sprites in Adobe tools → pitch story | No | Test accuracy vs the n-gram (38.2% / 69.8%) |
+| **Katie** | **D** GRU (5-hour box) + `gru.ts` → **F** frog sprites in Adobe tools → pitch story | No | Test accuracy vs the n-gram (56.2% / 79.6%) |
 | **Claude** (in Alex's session) | **A1** suggestions engine → **A2** answers + voicing → **C** Keep | No | Unit tests; Alex checks in Live |
 
 **Why this shape:**
@@ -82,18 +82,17 @@ MIDI 60 is C3 (Ableton's naming), so "C3 to C5" means MIDI 60 to 84.
 Each lane lists the files it **owns**. Only edit your own files. If you need a change in someone else's file or
 in a shared file, ask its owner.
 
-### Lane A1 (Claude): prediction engine (`app/src/core`)
+### Lane A1 (Claude): prediction engine (`app/src/core`). **Done** (`ngram.ts`, `key.ts`, `sampler.ts`, `suggest.ts`, `voicing.ts`)
 
 Feature 3, live suggestions. **Can start now.**
 
 - `ngram.ts`: `NgramModel implements ChordModel`. A TypeScript port of `Predictor` in `model/build_ngram.py`
   (interpolated absolute discounting; the formula is in that file's docstring). Loads `model/export/ngram.json`.
-- `sampler.ts`, built around this signature:
-  `reshape(probs: Float32Array, weirdness: number, prevRoot: number, key: {tonic: number; minor: boolean}): Float32Array`
-  - **Low weirdness:** rank by probability.
-  - **High weirdness:** raise the temperature, widen top-k, and boost borrowed chords from the parallel key (♭VI, ♭VII in major).
-  - **Never sample uniformly at random.**
-  - Also `sampleNext(...)`, for answers.
+- `sampler.ts`: `reshape(probs, {weirdness, prev, key, prior?})` returns a reshaped distribution;
+  `sampleToken(dist, rng)` draws from it (for answers); `ranked(dist)` lists tokens best first.
+  - **Low weirdness (0.3 and below):** plain probability ranking, sharpened, top 4.
+  - **High weirdness:** higher temperature, wider top-k, rare moves and borrowed chords (♭VI, ♭VII, iv in major) boosted.
+  - **Never uniform**, and never repeats the chord just played.
 - `suggest.ts`: `suggest(history: Chord[], model, genre, weirdness): Suggestion[]` returns the 3 distinct best chords, each voiced near the last chord the player played.
 - `key.ts`: estimate the key from the recent phrase. The sampler needs it for "borrowed".
 - Tests for each.
@@ -101,17 +100,21 @@ Feature 3, live suggestions. **Can start now.**
 **Done when:** the Python and TS n-gram give the same probabilities on 3 contexts (±1e-4), `predictNext` takes under
 5 ms, and suggestions come back under 50 ms after a chord.
 
-### Lane A2 (Claude): answers and voicing (`app/src/core`)
+### Lane A2 (Claude): answers and voicing (`app/src/core`). **Done** (`answer.ts`, `voicing.ts`); hand test in Live pending
 
-Feature 4, frog answers. **Can start now** with a fake `ChordModel`.
+Feature 4, frog answers, as call and response in bars (changed at Alex's request from the original 1.5 s silence trigger):
 
-- `voicing.ts`: voice a `ChordSymbol` between MIDI 60 and 84 with the least total movement from the previous voicing.
-- `answer.ts`: an `AnswerEngine` that:
-  - watches note events and fires after a configurable silence (default 1.5 s) once there are at least 2 chords;
-  - builds an `AnswerPlan` of 2 to 4 chords (sampled autoregressively through A1's sampler; a stub until A1 lands);
-  - schedules it into a `NoteSink`, one chord per 2 beats. It starts on the **next `/bar`** when Live's transport runs (we get `/bar`
-    from Frog Voice); otherwise it starts right away, timed from `/tempo` and the UI's BPM.
-- Tests with fake timers, in the same style as `grouper.test.ts`.
+- `voicing.ts`: voices answers in the register of the player's phrase (and with a bass note if they play a bass line), with the least total movement from the previous voicing.
+- `answer.ts`, `AnswerEngine`:
+  - **The phrase:** you pick a phrase length of **4 or 8 bars**. The phrase starts on the bar of your first chord (a chord in
+    the last quarter of a bar counts for the next bar).
+  - **The answer:** on the downbeat right after the phrase, if you played at least 2 chords, the frog answers for the same
+    number of bars with 2 to 4 chords, changing on bar lines.
+  - **Where bars come from:** Live's `/bar` while the transport runs. Otherwise, or if the transport stops mid-phrase, the
+    engine counts bars itself from the BPM.
+  - **Choosing the answer:** it generates about 48 candidates through the weirdness sampler and keeps the best by model
+    likelihood plus a cadence bonus (ending on I or V), with penalties for ping-pong (A B A) and for echoing your phrase.
+  - **Interrupting:** playing during an answer (after its first beat) cuts it off and starts a new phrase.
 
 **Done when:** an answer lands on the bar in Live over the Max for Live bridge, with no stuck notes.
 
@@ -124,12 +127,13 @@ Build `createOverlay(root: HTMLElement, handlers: Handlers): { update(state: UiS
 ```ts
 interface UiState {
   mood: FrogMood; current: string | null; trail: string[]; suggestions: Suggestion[];
-  answer: AnswerPlan | null; weirdness: number; genre: string; answersOn: boolean;
+  answer: AnswerPlan | null; progress: AnswerProgress; // {status: 'idle'|'listening'|'playing', bar, bars}
+  weirdness: number; genre: string; answersOn: boolean; phraseBars: 4 | 8;
   bridge: 'osc' | 'ports'; bpm: number; liveTempo: number | null; bar: number | null; status: string;
 }
 interface Handlers {
   onWeirdness(v: number): void; onGenre(g: string): void; onAnswersToggle(on: boolean): void;
-  onKeep(): void; onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void;
+  onKeep(): void; onBridge(b: 'osc' | 'ports'): void; onBpm(bpm: number): void; onPhraseBars(bars: 4 | 8): void;
 }
 ```
 
@@ -139,7 +143,7 @@ What to build:
 - 3 suggestion cards with a **mini keyboard** drawing each card's `voicing`
 - weirdness knob (0 to 1)
 - genre dropdown (`GENRES` + "all")
-- answer toggle and Keep button
+- answer toggle, phrase length (4 / 8 bars) with a "bar 2/4" counter, and Keep button
 - bridge selector, BPM, and the Live tempo/bar line
 
 Window constraints:
@@ -171,7 +175,7 @@ Feature 6. **Can start now.**
    - under 1 hour of training, on a subsample if needed.
 3. Export ONNX with input `[1, 8]` int64 tokens + genre id and output `[1, 119]` logits.
 4. `gru.ts`: `GruModel implements ChordModel` with `onnxruntime-web`, taking under 5 ms per call.
-5. Report test top-1 and top-3 in `model/README.md`, next to the n-gram's **38.2% / 69.8%**. Use the same 20k-section sample (seed 0) as `build_ngram.py`.
+5. Report test top-1 and top-3 in `model/README.md`, next to the n-gram's **56.2% / 79.6%** (5-gram). Use the same 20k-section sample (seed 0) as `build_ngram.py`.
 
 **The GRU replaces the n-gram only if it's at least as accurate and passes the listening test (lane E).**
 If the box runs out, we ship the n-gram.
