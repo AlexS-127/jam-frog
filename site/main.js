@@ -2,21 +2,21 @@ const steps = [
   {
     kicker: 'PLAYER INPUT',
     title: 'Start with the chords you play.',
-    copy: 'Frog Ear sends note-on and note-off events from your Live instrument track to Jam Frog over localhost OSC. The IAC virtual MIDI ports are a fallback.',
+    copy: 'Frog Ear sends note-on and note-off events from your Live instrument track to Jam Frog over localhost OSC.',
     link: 'Read the Ableton routing guide',
     href: 'https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md',
   },
   {
     kicker: 'LOCAL PREDICTION',
-    title: 'See three ways forward.',
-    copy: 'The app groups the note-ons into a chord, estimates the session key, then ranks three model suggestions. Genre and the weirdness control reshape that distribution.',
+    title: 'Review a few possible next chords.',
+    copy: 'OnsetGrouper collects the notes; detectChord names the chord. The selected local model suggests candidates, then genre, key and the weirdness control reshape their ranking.',
     link: 'Read suggestion ranking',
     href: 'https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/suggest.ts',
   },
   {
     kicker: 'CALL AND RESPONSE',
-    title: 'The frog takes a turn.',
-    copy: 'At the next bar line, AnswerEngine plays a 2–4 chord continuation in your register. With Copy my rhythm on, it can use up to 8 chords and mirror note timing, lengths, and dynamics.',
+    title: 'Invite a phrase in reply.',
+    copy: 'AnswerEngine plans a continuation for the next bar and voices it near your register. Copy My Rhythm can reuse your note timing, lengths, re-strikes and dynamics.',
     link: 'Read the answer engine',
     href: 'https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/answer.ts',
   },
@@ -50,14 +50,14 @@ buttons.forEach((button) => {
 const lookButtons = [...document.querySelectorAll('[data-look]')];
 const lookAnnouncement = document.querySelector('[data-look-announcement]');
 const lookMessages = {
-  jazz: 'Jazz frog is ready to sit in. Try another look.',
-  rock: 'Rock frog is ready to turn up the amp.',
-  punk: 'Punk frog is ready to play fast rhythm guitar.',
-  alternative: 'Alternative frog is ready to find a new texture.',
-  pop: 'Pop frog is ready at the piano.',
-  country: 'Country frog is ready to ride the changes.',
-  electronic: 'Electronic frog is ready to find the pulse.',
-  rap: 'Rap frog is ready on the mic.',
+  jazz: 'Jazz look selected. Choose Play to preview its instrument animation.',
+  rock: 'Rock look selected. Choose Play to preview its instrument animation.',
+  punk: 'Punk look selected. Choose Play to preview its instrument animation.',
+  alternative: 'Alternative look selected. Choose Play to preview its instrument animation.',
+  pop: 'Pop look selected. Choose Play to preview its instrument animation.',
+  country: 'Country look selected. Choose Play to preview its instrument animation.',
+  electronic: 'Electronic look selected. Choose Play to preview its instrument animation.',
+  rap: 'Rap look selected. Choose Play to preview its instrument animation.',
 };
 
 lookButtons.forEach((button) => {
@@ -66,7 +66,6 @@ lookButtons.forEach((button) => {
       const selected = item === button;
       item.classList.toggle('is-selected', selected);
       item.setAttribute('aria-pressed', String(selected));
-      item.querySelector('.look-status').textContent = selected ? 'SELECTED' : 'SELECT';
     });
     window.dispatchEvent(new CustomEvent('frog-look-selected', { detail: button.dataset.look }));
     lookAnnouncement.textContent = lookMessages[button.dataset.look];

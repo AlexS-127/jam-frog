@@ -3,295 +3,98 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#eee9d8" />
-    <meta name="description" content="Jam Frog is a real-time Ableton Live jam partner that suggests chords and answers your phrases." />
-    <title>Jam Frog — A bandmate for your next chord</title>
+    <meta name="theme-color" content="#f3f1e7" />
+    <meta name="description" content="Jam Frog is a local Ableton Live collaborator that listens to your chords, suggests what could come next, and can answer with a phrase of its own." />
+    <title>Jam Frog — Keep the music moving</title>
     <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./main.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
-      <a class="wordmark" href="#top" aria-label="Jam Frog home">
-        <span class="wordmark-frog" aria-hidden="true"></span>
-        <span>JAM FROG</span>
-      </a>
-      <nav aria-label="Main navigation">
-        <a href="#why">The idea</a>
-        <a href="#architecture">Architecture</a>
-        <a href="#business">Business case</a>
-        <a href="#models">The models</a>
-        <a href="#setup">Run it</a>
-      </nav>
-      <a class="header-link" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">View the code <span aria-hidden="true">↗</span></a>
+      <a class="wordmark" href="#top" aria-label="Jam Frog home"><span class="wordmark-frog" aria-hidden="true"></span><span>Jam Frog</span></a>
+      <nav aria-label="Main navigation"><a href="#approach">Approach</a><a href="#how-it-works">How it works</a><a href="#evidence">Evidence</a><a href="#project">Project</a></nav>
+      <a class="header-link" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Source code <span aria-hidden="true">↗</span></a>
     </header>
 
     <main id="main">
       <section class="hero" id="top" aria-labelledby="hero-title">
-        <div class="hero-art" aria-hidden="true"></div>
         <div class="hero-copy">
-          <p class="hero-kicker">Hacklanta 2026 · Adobe Creative track</p>
-          <h1 id="hero-title"><span class="headline-wide"><span>Play a chord.</span><span>Meet your</span><span>next move.</span></span><span class="headline-narrow">Play a chord.<br />Meet your next move.</span></h1>
-          <p class="hero-deck">A real-time jam partner for Ableton Live. Play a progression; Jam Frog listens, suggests what could come next, then answers your phrase on the next downbeat.</p>
-          <div class="hero-actions">
-            <button class="pixel-button pixel-button-bright" type="button" data-render-demo>▶ Make a demo tape</button>
-            <a class="text-link" href="#signal">See how it works <span aria-hidden="true">↗</span></a>
-          </div>
-          <div class="hero-proof" aria-label="Project properties">
-            <span>Local chord models</span><i aria-hidden="true"></i>
-            <span>Live MIDI in and out</span><i aria-hidden="true"></i>
-            <span>Call and response</span>
-          </div>
+          <p class="eyebrow">A musical collaborator for Ableton Live</p>
+          <h1 id="hero-title">Jam Frog listens, suggests, then answers.</h1>
+          <p class="hero-deck">Jam Frog listens to the chords you play, offers a few possible next steps, and can answer your phrase on its own Live track. It is built to keep you in the music and in control.</p>
+          <div class="hero-actions"><button class="button button-dark" type="button" data-render-demo>Watch the 12-second walkthrough</button><a class="text-link" href="#approach">Why we built it <span aria-hidden="true">↓</span></a></div>
+          <p class="hero-note">Hacklanta 2026 · Adobe Creative track · Local desktop prototype</p>
         </div>
-
-        <div class="hero-creature" aria-hidden="true"><span class="frog-sprite frog-alert"></span><span class="sprite-note">♪</span></div>
-
-        <div class="overlay-preview" aria-label="Illustrative Jam Frog overlay preview">
-          <div class="overlay-topbar"><span class="pixel-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>JAM FROG / LIVE SESSION</span><span class="window-mark" aria-hidden="true">▧</span></div>
-          <div class="overlay-current"><div><small>PLAYER CHORD</small><strong>Am7</strong></div><div class="overlay-live"><b></b> LISTENING</div></div>
-          <div class="overlay-suggestions">
-            <div class="overlay-label"><span>FROG SUGGESTS</span><span>NEXT 3</span></div>
-            <div class="suggestion"><span class="suggestion-rank">01</span><strong>Fmaj7</strong><span class="probability">42%</span><span class="tiny-keys" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
-            <div class="suggestion"><span class="suggestion-rank">02</span><strong>G7</strong><span class="probability">31%</span><span class="tiny-keys" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
-            <div class="suggestion"><span class="suggestion-rank">03</span><strong>Ab</strong><span class="probability">17%</span><span class="tiny-keys" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
-          </div>
-          <div class="overlay-footer"><span>MAX FOR LIVE</span><span>120 BPM · BAR 18</span></div>
-          <p class="preview-caption">A page-side illustration of the app UI. It does not connect to Ableton or process MIDI.</p>
+        <div class="product-preview" aria-label="Illustrative Jam Frog chord suggestion panel">
+          <div class="preview-heading"><span>JAM FROG</span><span class="connection">APP PREVIEW</span></div>
+          <div class="preview-current"><span>YOU PLAYED</span><strong>Am7</strong><small>bar 18 · 120 BPM</small></div>
+          <div class="preview-results"><div class="preview-results-heading"><span>Possible next chords</span><span>ranked</span></div><div class="preview-row"><span>01</span><strong>Fmaj7</strong><small>42%</small></div><div class="preview-row"><span>02</span><strong>G7</strong><small>31%</small></div><div class="preview-row"><span>03</span><strong>Ab</strong><small>17%</small></div></div>
+          <div class="preview-answer"><span class="mini-frog" aria-hidden="true"></span><p><strong>Then it can take a turn.</strong><br />A phrase played back in Live, in time with your session.</p></div>
+          <p class="preview-caption">Illustrative product UI · This webpage does not connect to Ableton or process MIDI.</p>
         </div>
-        <a class="down-cue" href="#signal" aria-label="Scroll to how it works"><span aria-hidden="true">↓</span></a>
       </section>
 
-      <section class="why-section section-wrap" id="why" aria-labelledby="why-title">
-        <div class="why-heading">
-          <p class="section-index">01 / THE HACKATHON IDEA</p>
-          <h2 id="why-title">When the idea stops,<br />the jam stops.</h2>
-          <p>We built Jam Frog around a creative-workflow hypothesis: when choosing what comes next interrupts a musician’s momentum, a collaborator that listens and takes a musical turn could help keep the jam moving.</p>
-        </div>
-        <div class="why-cards">
-          <article><span class="why-mark" aria-hidden="true">01</span><h3>Keep the hands on the instrument</h3><p>Suggestions appear in the Ableton session, so the musician can try an idea without leaving the creative flow to look up a progression.</p></article>
-          <article><span class="why-mark" aria-hidden="true">02</span><h3>Turn a prompt into a partner</h3><p>Jam Frog does more than show chord names: in Answer or Jam mode, it voices and plays a continuation on its own Live track.</p></article>
-          <article><span class="why-mark" aria-hidden="true">03</span><h3>Make exploration controllable</h3><p>Genre, weirdness, and rhythm controls let the player steer the answer. The musician stays in charge of what to keep.</p></article>
-        </div>
-        <p class="why-note"><strong>Design principle:</strong> offer a next move without taking over the session. The page’s walkthrough is illustrative; live input and output happen in the desktop app.</p>
+      <section class="approach section-wrap" id="approach" aria-labelledby="approach-title">
+        <div class="section-heading"><p class="eyebrow">The idea</p><h2 id="approach-title">The musician makes the decisions.</h2></div>
+        <div class="approach-copy"><p class="lead">A tool can offer a next chord. The musician decides whether it belongs.</p><p>Jam Frog is an experiment in musical back-and-forth. It listens for the harmony already taking shape, presents a short list of possible next chords, and can play a response when invited. The player can follow an idea, ignore it, or steer the next one.</p><p>That is the product principle: <strong>make the next step easier to explore while keeping authorship with the musician.</strong></p></div>
+        <div class="principles" aria-label="Product principles"><article><span>01</span><h3>Stay in the session</h3><p>Suggestions appear alongside Ableton, where the musician is already working.</p></article><article><span>02</span><h3>Show possibilities</h3><p>Ranked chords create options; they are not instructions or a finished song.</p></article><article><span>03</span><h3>Make a real response</h3><p>When asked, the frog voices notes and plays a continuation on its own track.</p></article></div>
       </section>
 
-      <section class="signal-section section-wrap" id="signal" aria-labelledby="signal-title">
-        <div class="section-intro">
-          <p class="section-index">02 / THE SIGNAL PATH</p>
-          <h2 id="signal-title">A jam goes both ways.</h2>
-          <p>Jam Frog listens to the chords you play, offers a few next moves, then takes a turn of its own when your phrase lands.</p>
-        </div>
-
-        <div class="signal-demo">
-          <div class="step-controls" role="group" aria-label="Explore the Jam Frog signal path">
-            <button class="step-button is-active" type="button" data-step="0" aria-pressed="true"><span>01</span> Play</button>
-            <button class="step-button" type="button" data-step="1" aria-pressed="false"><span>02</span> Listen</button>
-            <button class="step-button" type="button" data-step="2" aria-pressed="false"><span>03</span> Answer</button>
-          </div>
+      <section class="process-section" id="how-it-works" aria-labelledby="process-title"><div class="section-wrap">
+        <div class="section-heading section-heading-wide"><div><p class="eyebrow">From input to response</p><h2 id="process-title">A simple musical loop.</h2></div><p>Notes enter from Live. A few small modules interpret them, choose possibilities, and return a phrase over the local connection.</p></div>
+        <div class="process-demo">
+          <div class="step-controls" role="group" aria-label="Explore the Jam Frog signal path"><button class="step-button is-active" type="button" data-step="0" aria-pressed="true"><span>01</span> Play</button><button class="step-button" type="button" data-step="1" aria-pressed="false"><span>02</span> Listen</button><button class="step-button" type="button" data-step="2" aria-pressed="false"><span>03</span> Answer</button></div>
           <div class="signal-stage" aria-live="polite">
-            <div class="signal-visual" aria-hidden="true">
-              <div class="note-stream"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-              <span class="flow-arrow">→</span>
-              <div class="frog-signal"><span class="frog-sprite frog-listen"></span></div>
-              <span class="flow-arrow">→</span>
-              <div class="chord-stack"><b>Fmaj7</b><b>G7</b><b>Am7</b></div>
-            </div>
-            <div class="signal-explanation">
-              <p class="signal-kicker" data-signal-kicker>PLAYER INPUT</p>
-              <h3 data-signal-title>Start with the chords you play.</h3>
-              <p data-signal-copy>Frog Ear sends note-on and note-off events from your Live instrument track to Jam Frog over localhost OSC. The IAC virtual MIDI ports are a fallback.</p>
-              <a class="source-link" data-signal-link href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Read the Ableton routing guide <span aria-hidden="true">↗</span></a>
-            </div>
+            <div class="signal-visual" aria-hidden="true"><div class="note-stream"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="flow-arrow">→</span><div class="frog-signal"><span class="frog-sprite frog-listen"></span></div><span class="flow-arrow">→</span><div class="chord-stack"><b>Fmaj7</b><b>G7</b><b>Am7</b></div></div>
+            <div class="signal-explanation"><p class="signal-kicker" data-signal-kicker>PLAYER INPUT</p><h3 data-signal-title>Start with the chords you play.</h3><p data-signal-copy>Frog Ear sends note-on and note-off events from your Live instrument track to Jam Frog over localhost OSC.</p><a class="source-link" data-signal-link href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Read the Ableton routing guide <span aria-hidden="true">↗</span></a></div>
           </div>
-          <div class="signal-sequence" aria-label="Processing sequence">
-            <div><span>01</span><strong>OnsetGrouper</strong><small>Groups close note-ons</small><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/grouper.ts" target="_blank" rel="noreferrer" aria-label="View OnsetGrouper source">↗</a></div>
-            <div><span>02</span><strong>detectChord</strong><small>Names the chord shape</small><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/chords.ts" target="_blank" rel="noreferrer" aria-label="View chord detection source">↗</a></div>
-            <div><span>03</span><strong>suggest + reshape</strong><small>Ranks three next chords</small><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/suggest.ts" target="_blank" rel="noreferrer" aria-label="View suggestion source">↗</a></div>
-            <div><span>04</span><strong>AnswerEngine</strong><small>Plans a phrase response</small><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/answer.ts" target="_blank" rel="noreferrer" aria-label="View answer engine source">↗</a></div>
-          </div>
-          <p class="signal-footnote">Every step runs in the desktop app. This walkthrough is an illustration, not an interactive MIDI demo.</p>
+          <div class="module-flow" aria-label="Jam Frog processing modules"><article><span>INPUT</span><h3>OnsetGrouper</h3><p>Groups notes played close together.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/grouper.ts" target="_blank" rel="noreferrer">Source ↗</a></article><article><span>RECOGNIZE</span><h3>detectChord</h3><p>Names the chord from its pitch set.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/chords.ts" target="_blank" rel="noreferrer">Source ↗</a></article><article><span>RANK</span><h3>suggest + reshape</h3><p>Ranks options using model output and player controls.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/suggest.ts" target="_blank" rel="noreferrer">Source ↗</a></article><article><span>RESPOND</span><h3>AnswerEngine</h3><p>Plans and voices a phrase for Live.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/answer.ts" target="_blank" rel="noreferrer">Source ↗</a></article></div>
+          <p class="process-note">The desktop app handles every step. The website walkthrough is illustrative; it has no Ableton connection or MIDI input.</p>
         </div>
+      </div></section>
+
+      <section class="architecture section-wrap" aria-labelledby="architecture-title"><div class="section-heading"><p class="eyebrow">The implementation</p><h2 id="architecture-title">How the local pipeline fits together.</h2><p>Jam Frog keeps the music loop inspectable: input, recognition, choice, response, and transport each have a clear boundary.</p></div>
+        <div class="architecture-grid"><article><span>A · TRANSPORT</span><h3>Max for Live + OSC</h3><p>Frog Ear sends note events; Frog Voice reports Live’s bar and tempo. Both communicate with the app over OSC on localhost.</p><a href="https://github.com/AlexS-127/jam-frog/tree/main/ableton" target="_blank" rel="noreferrer">Ableton devices and setup ↗</a></article><article><span>B · CHORD CHOICE</span><h3>Models + controls</h3><p>The selected local model predicts candidates. <code>reshape</code> applies key, genre, and weirdness preferences before three options are shown.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/model.ts" target="_blank" rel="noreferrer">Model interface ↗</a></article><article><span>C · MUSICAL RESPONSE</span><h3>Plan + voice</h3><p>AnswerEngine plans to the next bar; voicing keeps the response near the player's register. Copy My Rhythm can reuse timing, lengths, and dynamics.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/voicing.ts" target="_blank" rel="noreferrer">Voicing logic ↗</a></article></div>
       </section>
 
-      <section class="architecture-section" id="architecture" aria-labelledby="architecture-title">
-        <div class="architecture-inner">
-          <div class="architecture-heading">
-            <p class="section-index">03 / THE MODULES</p>
-            <h2 id="architecture-title">Small modules.<br />One musical loop.</h2>
-            <p>The app keeps transport, recognition, chord choice, answer planning, and Ableton I/O in separate pieces. That makes the music logic easier to inspect and lets the models share one prediction interface.</p>
-          </div>
-          <div class="module-flow" aria-label="Jam Frog architecture from Live input to Live output">
-            <article class="module-card"><span class="module-number">A / INPUT</span><h3>Frog Ear + OSC</h3><p>Frog Ear sends note events; Frog Voice sends Live’s bar/tempo clock to the desktop app over localhost OSC. IAC MIDI is the fallback route.</p><a href="https://github.com/AlexS-127/jam-frog/tree/main/ableton" target="_blank" rel="noreferrer">Ableton devices ↗</a></article>
-            <span class="module-arrow" aria-hidden="true">→</span>
-            <article class="module-card"><span class="module-number">B / RECOGNIZE</span><h3>OnsetGrouper → detectChord</h3><p>Nearby note-ons are grouped, then the pitch set is named as a chord. Non-chords are ignored.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/grouper.ts" target="_blank" rel="noreferrer">Grouper ↗</a><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/chords.ts" target="_blank" rel="noreferrer">Chord detection ↗</a></article>
-            <span class="module-arrow" aria-hidden="true">→</span>
-            <article class="module-card"><span class="module-number">C / DECIDE</span><h3>ChordModel + suggest</h3><p>The selected local model predicts candidates; reshape applies key, genre, and weirdness preferences before the app presents three choices.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/model.ts" target="_blank" rel="noreferrer">Model interface ↗</a><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/suggest.ts" target="_blank" rel="noreferrer">Suggestion logic ↗</a></article>
-            <span class="module-arrow" aria-hidden="true">→</span>
-            <article class="module-card"><span class="module-number">D / PLAN</span><h3>AnswerEngine + voicing</h3><p>The engine plans the next phrase against the session key and timing; voicing keeps the notes near the player’s register.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/answer.ts" target="_blank" rel="noreferrer">Answer planner ↗</a><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/voicing.ts" target="_blank" rel="noreferrer">Voicing ↗</a></article>
-            <span class="module-arrow" aria-hidden="true">→</span>
-            <article class="module-card"><span class="module-number">E / PLAY</span><h3>OSC → Frog Voice</h3><p>Notes return to Live on localhost OSC and are voiced by the Frog Voice device on the frog’s track.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/main/osc.ts" target="_blank" rel="noreferrer">OSC bridge ↗</a><a href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Routing setup ↗</a></article>
-          </div>
-          <p class="architecture-footnote">The website does not receive MIDI, connect to Ableton, or call the chord models. These modules run in the local desktop app.</p>
-        </div>
-      </section>
-
-      <section class="response-section" aria-labelledby="response-title">
-        <div class="response-art" aria-hidden="true"><span class="frog-keyboard"></span><div class="amp-stack"><i></i><i></i><i></i><i></i><i></i></div></div>
-        <div class="response-copy">
-          <p class="section-index">04 / CALL AND RESPONSE</p>
-          <h2 id="response-title">Your phrase.<br />Frog’s turn.</h2>
-          <p>Choose 4 or 8 bars. The answer lands on the next downbeat and stays in your register. Copy my rhythm can mirror timing, note lengths, and dynamics; rhythm mode can generate up to 8 chords.</p>
-          <ul class="response-points">
-            <li><span class="pixel-check" aria-hidden="true">✓</span><span><strong>On the bar</strong><small>Follows Live’s bar messages, with a BPM clock as backup.</small></span></li>
-            <li><span class="pixel-check" aria-hidden="true">✓</span><span><strong>Near your hands</strong><small>Voicing selection keeps the frog in your played register.</small></span></li>
-            <li><span class="pixel-check" aria-hidden="true">✓</span><span><strong>Your rhythm, optionally</strong><small>Re-strikes, held lengths, and velocities can shape the answer.</small></span></li>
-          </ul>
-          <a class="inline-code-link" href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/voicing.ts" target="_blank" rel="noreferrer">See the voicing logic <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
-
-      <section class="looks-section section-wrap" id="looks" aria-labelledby="looks-title">
-        <div class="looks-heading">
-          <div class="section-intro">
-            <p class="section-index">05 / PICK A GENRE</p>
-            <h2 id="looks-title">Same frog.<br />New stage look.</h2>
-            <p>Eight pixel-art players for Jam Frog’s supported styles. Each one has its own idle and instrument-playing animation.</p>
-          </div>
-          <div class="looks-note"><span class="looks-star" aria-hidden="true">✦</span><p><strong>In the app too.</strong> The app’s genre setting guides its chord model, and the frog on the amp wears the matching outfit.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/vocab.ts" target="_blank" rel="noreferrer">See supported genres <span aria-hidden="true">↗</span></a></div>
-        </div>
-        <div class="movement-picker">
-          <p class="movement-label">TRY A MOVE <span>· FULL OUTFIT SPRITES STAY TOGETHER</span></p>
-          <div class="movement-controls" role="group" aria-label="Choose a frog movement">
-            <button class="movement-button is-active" type="button" data-action="idle" aria-pressed="true">Idle</button>
-            <button class="movement-button" type="button" data-action="waving" aria-pressed="false">Wave</button>
-            <button class="movement-button" type="button" data-action="jumping" aria-pressed="false">Jump</button>
-            <button class="movement-button" type="button" data-action="failed" aria-pressed="false">Sad</button>
-            <button class="movement-button" type="button" data-action="waiting" aria-pressed="false">Wait</button>
-            <button class="movement-button" type="button" data-action="review" aria-pressed="false">Think</button>
-            <button class="movement-button" type="button" data-action="playing" aria-pressed="false">Play</button>
-          </div>
-          <p class="movement-status" data-movement-status aria-live="polite">All eight frogs: Idle</p>
-        </div>
+      <section class="character-section" aria-labelledby="character-title"><div class="character-inner section-wrap"><div class="section-heading"><p class="eyebrow">Genre and character</p><h2 id="character-title">One loop, eight musical styles.</h2><p>Genre changes how Jam Frog approaches chord suggestions. The character’s instrument and performance pose make that musical role visible.</p></div>
+        <div class="movement-picker"><p class="movement-label">Preview the shared movement set</p><div class="movement-controls" role="group" aria-label="Choose a frog movement"><button class="movement-button is-active" type="button" data-action="idle" aria-pressed="true">Idle</button><button class="movement-button" type="button" data-action="waving" aria-pressed="false">Wave</button><button class="movement-button" type="button" data-action="jumping" aria-pressed="false">Jump</button><button class="movement-button" type="button" data-action="failed" aria-pressed="false">Sad</button><button class="movement-button" type="button" data-action="waiting" aria-pressed="false">Wait</button><button class="movement-button" type="button" data-action="review" aria-pressed="false">Think</button><button class="movement-button" type="button" data-action="playing" aria-pressed="false">Play</button></div><p class="movement-status" data-movement-status aria-live="polite">All eight frogs: Idle</p></div>
         <div class="look-picker" role="group" aria-label="Choose a frog genre outfit">
-          <button class="look-card is-selected" type="button" data-look="jazz" aria-pressed="true" aria-label="Jazz outfit: beret, scarf, and hollow-body rhythm guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="jazz"></canvas></span><span class="look-caption"><strong>Jazz</strong><small>Hollow-body rhythm guitar</small></span><span class="look-status" aria-hidden="true">SELECTED</span>
-          </button>
-          <button class="look-card" type="button" data-look="rock" aria-pressed="false" aria-label="Rock outfit: denim jacket and Telecaster-style guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rock"></canvas></span><span class="look-caption"><strong>Rock</strong><small>Denim · Telecaster-style guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-          <button class="look-card" type="button" data-look="punk" aria-pressed="false" aria-label="Punk outfit: red mohawk and Ibanez-style rhythm guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="punk"></canvas></span><span class="look-caption"><strong>Punk</strong><small>Mohawk · Ibanez-style rhythm guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-          <button class="look-card" type="button" data-look="alternative" aria-pressed="false" aria-label="Alternative outfit: flannel and offset electric guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="alternative"></canvas></span><span class="look-caption"><strong>Alternative</strong><small>Flannel · offset electric guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-          <button class="look-card" type="button" data-look="pop" aria-pressed="false" aria-label="Pop outfit: coral cardigan and acoustic piano">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="pop"></canvas></span><span class="look-caption"><strong>Pop</strong><small>Cardigan · acoustic piano</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-          <button class="look-card" type="button" data-look="country" aria-pressed="false" aria-label="Country outfit: cowboy hat, neckerchief, and acoustic guitar">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="country"></canvas></span><span class="look-caption"><strong>Country</strong><small>Cowboy hat · acoustic guitar</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-          <button class="look-card" type="button" data-look="electronic" aria-pressed="false" aria-label="Electronic outfit: headphones and DJ deck">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="electronic"></canvas></span><span class="look-caption"><strong>Electronic</strong><small>Headphones · DJ deck</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-          <button class="look-card" type="button" data-look="rap" aria-pressed="false" aria-label="Rap outfit: backwards cap, hoodie, and microphone">
-            <span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rap"></canvas></span><span class="look-caption"><strong>Rap</strong><small>Backwards cap · microphone</small></span><span class="look-status" aria-hidden="true">SELECT</span>
-          </button>
-        </div>
-        <p class="look-announcement" data-look-announcement aria-live="polite">Jazz frog is ready to sit in. Try another look.</p>
+          <button class="look-card is-selected" type="button" data-look="jazz" aria-pressed="true" aria-label="Jazz outfit: beret, scarf, and hollow-body rhythm guitar"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="jazz"></canvas></span><span class="look-caption"><strong>Jazz</strong><small>Hollow-body rhythm guitar</small></span></button>
+          <button class="look-card" type="button" data-look="rock" aria-pressed="false" aria-label="Rock outfit: denim jacket and Telecaster-style guitar"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rock"></canvas></span><span class="look-caption"><strong>Rock</strong><small>Telecaster-style guitar</small></span></button>
+          <button class="look-card" type="button" data-look="punk" aria-pressed="false" aria-label="Punk outfit: red mohawk and Ibanez-style rhythm guitar"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="punk"></canvas></span><span class="look-caption"><strong>Punk</strong><small>Ibanez-style rhythm guitar</small></span></button>
+          <button class="look-card" type="button" data-look="alternative" aria-pressed="false" aria-label="Alternative outfit: flannel and offset electric guitar"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="alternative"></canvas></span><span class="look-caption"><strong>Alternative</strong><small>Offset electric guitar</small></span></button>
+          <button class="look-card" type="button" data-look="pop" aria-pressed="false" aria-label="Pop outfit: cardigan and piano"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="pop"></canvas></span><span class="look-caption"><strong>Pop</strong><small>Acoustic piano</small></span></button>
+          <button class="look-card" type="button" data-look="country" aria-pressed="false" aria-label="Country outfit: cowboy hat, neckerchief, and acoustic guitar"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="country"></canvas></span><span class="look-caption"><strong>Country</strong><small>Acoustic guitar</small></span></button>
+          <button class="look-card" type="button" data-look="electronic" aria-pressed="false" aria-label="Electronic outfit: headphones and DJ deck"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="electronic"></canvas></span><span class="look-caption"><strong>Electronic</strong><small>DJ deck</small></span></button>
+          <button class="look-card" type="button" data-look="rap" aria-pressed="false" aria-label="Rap outfit: backwards cap, hoodie, and microphone"><span class="look-art" aria-hidden="true"><canvas width="192" height="176" data-frog-look="rap"></canvas></span><span class="look-caption"><strong>Rap</strong><small>Microphone</small></span></button>
+        </div><p class="look-announcement" data-look-announcement aria-live="polite">Jazz look selected. Choose Play to preview its instrument animation.</p>
+      </div></section>
+
+      <section class="evidence section-wrap" id="evidence" aria-labelledby="evidence-title"><div class="section-heading"><p class="eyebrow">What we can measure</p><h2 id="evidence-title">Prediction is only one part of music.</h2><p>Two bundled models rank likely next chords. The app also includes a blind listening test because accuracy alone cannot tell us which continuation a musician would choose.</p></div>
+        <div class="evidence-content"><div class="model-board"><div class="model-board-head"><span>Next-chord accuracy</span><span>20,000-section test set · seed 0</span></div><div class="model-columns">
+          <article class="model-column"><div class="model-name"><h3>n-gram</h3><p>Context and genre counts</p></div><div class="metric-row"><span>Top-1</span><div class="metric-track"><i style="--score:56.2%"></i></div><strong>56.2%</strong></div><div class="metric-row"><span>Top-3</span><div class="metric-track"><i style="--score:79.6%"></i></div><strong>79.6%</strong></div><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/ngram.ts" target="_blank" rel="noreferrer">Model source ↗</a></article>
+          <article class="model-column"><div class="model-name"><h3>GRU</h3><p>Recurrent neural network</p></div><div class="metric-row"><span>Top-1</span><div class="metric-track"><i style="--score:61.5%"></i></div><strong>61.5%</strong></div><div class="metric-row"><span>Top-3</span><div class="metric-track"><i style="--score:83.3%"></i></div><strong>83.3%</strong></div><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/gru.ts" target="_blank" rel="noreferrer">Model source ↗</a></article>
+        </div><p class="model-caveat">These figures measure next-chord prediction on the same sampled 20,000-section test set. They do not measure musical quality or listener preference.</p></div>
+          <aside class="listening-note"><p class="eyebrow">A second measure</p><h3>Which answer would you keep?</h3><p>The blind listening test hides and shuffles whether an answer came from the n-gram or GRU model. Listeners vote first, then reveal the source.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/listening.ts" target="_blank" rel="noreferrer">Explore the listening-test code ↗</a></aside>
+        </div><p class="dataset-credit">Training data: <a href="https://huggingface.co/datasets/ailsntua/Chordonomicon" target="_blank" rel="noreferrer">Chordonomicon</a> by Kantarelis et al. (2024), licensed CC BY-NC 4.0.</p>
       </section>
 
-      <section class="models-section section-wrap" id="models" aria-labelledby="models-title">
-        <div class="section-intro model-intro">
-          <p class="section-index">06 / TWO LOCAL MODELS</p>
-          <h2 id="models-title">Same jam.<br />Different instincts.</h2>
-          <p>Both models implement the same <code>ChordModel</code> interface and run on your Mac. A blind listening test lets the team compare their musical continuations.</p>
-        </div>
-        <div class="model-board">
-          <div class="model-board-head"><span>TEST-SET NEXT-CHORD ACCURACY</span><span>20,000 SAMPLED SECTIONS</span></div>
-          <div class="model-columns">
-            <article class="model-column">
-              <div class="model-name"><span class="model-pixel model-pixel-one" aria-hidden="true"></span><div><h3>n-gram</h3><p>Context and genre counts</p></div></div>
-              <div class="metric-row"><span>Top-1</span><div class="metric-track"><i style="--score:56.2%"></i></div><strong>56.2%</strong></div>
-              <div class="metric-row"><span>Top-3</span><div class="metric-track"><i style="--score:79.6%"></i></div><strong>79.6%</strong></div>
-              <a class="source-link" href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/ngram.ts" target="_blank" rel="noreferrer">Read the n-gram model <span aria-hidden="true">↗</span></a>
-            </article>
-            <div class="model-divider" aria-hidden="true"><span>VS</span></div>
-            <article class="model-column">
-              <div class="model-name"><span class="model-pixel model-pixel-two" aria-hidden="true"></span><div><h3>GRU</h3><p>Recurrent neural network</p></div></div>
-              <div class="metric-row"><span>Top-1</span><div class="metric-track"><i style="--score:61.5%"></i></div><strong>61.5%</strong></div>
-              <div class="metric-row"><span>Top-3</span><div class="metric-track"><i style="--score:83.3%"></i></div><strong>83.3%</strong></div>
-              <a class="source-link" href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/gru.ts" target="_blank" rel="noreferrer">Read the GRU model <span aria-hidden="true">↗</span></a>
-            </article>
-          </div>
-          <p class="model-caveat">Shipped model results on the same 20k-section test sample (seed 0): GRU 61.5% / 83.3%; n-gram 56.2% / 79.6%. This measures next-chord prediction, not which answer sounds better. The app also includes a blind listening test.</p>
-        </div>
-        <div class="model-note"><span class="frog-sprite frog-think" aria-hidden="true"></span><p><strong>Training data:</strong> Chordonomicon — 666,000 songs and their chord progressions. Chord data is licensed CC BY-NC 4.0.</p></div>
+      <section class="product-thinking section-wrap" aria-labelledby="thinking-title"><div class="section-heading"><p class="eyebrow">Product thinking</p><h2 id="thinking-title">A hypothesis to test, not a market claim.</h2><p>We have built a working prototype. We have not established retention, willingness to pay, or commercial readiness.</p></div>
+        <div class="thinking-grid"><article><span>FIRST USER</span><h3>Ableton musicians who compose with chords.</h3><p>Start with people who already work in Live and sometimes pause to search for a progression or test a continuation.</p></article><article><span>VALUE HYPOTHESIS</span><h3>Keep momentum without taking authorship.</h3><p>A playable answer may help more than a static suggestion list, as long as the musician can steer, reject, or reshape it.</p></article><article><span>WHAT TO LEARN</span><h3>Does the response earn another session?</h3><p>Watch first-use setup, which suggestions get tried, and whether players choose to keep or change the frog’s phrase.</p></article><article><span>CONSTRAINTS</span><h3>Setup and data rights matter.</h3><p>The prototype targets macOS, Live 12 Suite, and Max for Live. Chordonomicon is CC BY-NC 4.0, so commercial use needs a cleared data path.</p></article></div>
       </section>
 
-      <section class="jam-facts section-wrap" aria-labelledby="facts-title">
-        <div class="facts-heading"><p class="section-index">07 / BUILT FOR THE JAM</p><h2 id="facts-title">Small frog.<br />Full-stack rhythm section.</h2></div>
-        <div class="fact-list">
-          <article class="fact-row"><span class="fact-icon" aria-hidden="true">⌂</span><h3>Runs on your Mac</h3><p>Bundled models, no account, no analytics, no cookies, and no persistent note storage.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/README.md" target="_blank" rel="noreferrer">Project README <span aria-hidden="true">↗</span></a></article>
-          <article class="fact-row"><span class="fact-icon" aria-hidden="true">⌁</span><h3>Two ways into Live</h3><p>Max for Live over localhost OSC is the primary bridge. IAC virtual MIDI ports are the fallback.</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Bridge setup <span aria-hidden="true">↗</span></a></article>
-          <article class="fact-row"><span class="fact-icon" aria-hidden="true">♫</span><h3>Made for call and response</h3><p>Play 4 or 8 bars, then hear a 2–4 chord continuation on the frog track (up to 8 chords with Copy my rhythm).</p><a href="https://github.com/AlexS-127/jam-frog/blob/main/app/src/core/answer.ts" target="_blank" rel="noreferrer">Answer engine <span aria-hidden="true">↗</span></a></article>
-        </div>
-      </section>
-
-      <section class="business-section section-wrap" id="business" aria-labelledby="business-title">
-        <div class="business-heading">
-          <p class="section-index">08 / BUSINESS THINKING</p>
-          <h2 id="business-title">A product hypothesis,<br />not a victory lap.</h2>
-          <p>Jam Frog is a hackathon prototype with a defined first-user hypothesis. Retention, willingness to pay, and commercial readiness have not been established.</p>
-        </div>
-        <div class="business-grid">
-          <article class="business-card business-thesis"><span>WHO / JOB / VALUE</span><h3>Start with Ableton musicians who want a low-friction collaborator.</h3><p><strong>Job:</strong> get unstuck or extend a phrase while staying in the DAW. <strong>Value bet:</strong> a partner that can answer in time may create more momentum than a static list of chord options.</p></article>
-          <article class="business-card"><span>HOW TO VALIDATE</span><h3>Test the loop with real players.</h3><ul><li>Observe whether first-time users can route MIDI and hear an answer.</li><li>Measure how often suggestions are tried, changed, or ignored in sessions.</li><li>Use the blind listening test to compare model continuations by preference, not just accuracy.</li></ul></article>
-          <article class="business-card"><span>WHAT COULD BLOCK IT</span><h3>Resolve fit, friction, and data rights.</h3><p>The current setup targets macOS, Live 12 Suite, and Max for Live, which narrows the first audience. The training data is Chordonomicon under CC BY-NC 4.0; commercial use needs a licensing review and a cleared data path.</p></article>
-          <article class="business-card business-next"><span>BUSINESS MODEL / NEXT QUESTION</span><h3>Earn the right to discuss pricing.</h3><p>No pricing or revenue model has been validated. First learn whether musicians return to the tool, whether setup is acceptable, and which session problem they value enough to solve. Then test distribution and packaging with that audience.</p></article>
-        </div>
-        <p class="business-source">Grounded in the current README and implementation. This section describes hypotheses and proposed validation, not user research results or commercial claims.</p>
-      </section>
-
-      <section class="setup-section" id="setup" aria-labelledby="setup-title">
-        <div class="setup-inner">
-          <div class="setup-copy">
-            <p class="section-index">09 / GET IN THE ROOM</p>
-            <h2 id="setup-title">Bring a Mac.<br />Bring a progression.</h2>
-            <p>Jam Frog is a desktop overlay for Ableton Live 12 Suite. The Max for Live devices carry notes and Live’s bar clock between the set and the app.</p>
-            <a class="pixel-button pixel-button-bright" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Open the project <span aria-hidden="true">↗</span></a>
-          </div>
-          <div class="setup-terminal" aria-label="Commands to start Jam Frog">
-            <div class="terminal-top"><span class="pixel-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>TERMINAL / LOCAL</span></div>
-            <p><span class="terminal-prompt">$</span> cd app</p>
-            <p><span class="terminal-prompt">$</span> npm install</p>
-            <p><span class="terminal-prompt">$</span> npm run dev</p>
-            <div class="terminal-rule"></div>
-            <ol>
-              <li>Add <strong>Frog Ear</strong> to your playing track.</li>
-              <li>Add <strong>Frog Voice</strong> to the Frog track.</li>
-              <li>Choose <strong>Max for Live</strong> in Jam Frog, then play.</li>
-            </ol>
-            <a href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Full Ableton and IAC steps <span aria-hidden="true">↗</span></a>
-          </div>
-        </div>
-        <p class="requirements">macOS · Node 20+ · Ableton Live 12 Suite · Max 9.1.5 for the included devices</p>
+      <section class="project-section" id="project" aria-labelledby="project-title"><div class="project-inner section-wrap"><div class="project-copy"><p class="eyebrow">Try the prototype</p><h2 id="project-title">Run it locally.</h2><p>Jam Frog runs as a desktop overlay on macOS. The bundled chord models run locally; OSC carries notes between the app and Live on the same machine.</p><a class="button button-light" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Read the project on GitHub <span aria-hidden="true">↗</span></a></div>
+          <div class="setup-panel"><p class="setup-label">LOCAL SETUP</p><pre><code>cd app
+npm install
+npm run dev</code></pre><ol><li>Add Frog Ear to the instrument track.</li><li>Add Frog Voice to the Frog track.</li><li>Choose Max for Live in Jam Frog and play.</li></ol><a href="https://github.com/AlexS-127/jam-frog/blob/main/ableton/SETUP.md" target="_blank" rel="noreferrer">Full Ableton routing instructions ↗</a></div>
+        </div><p class="requirements">macOS · Node 20+ · Ableton Live 12 Suite · Max 9.1.5 for the included devices</p>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <a class="wordmark" href="#top"><span class="wordmark-frog" aria-hidden="true"></span><span>JAM FROG</span></a>
-      <p>Keep the jam going. Keep the notes local.</p>
-      <p class="dataset-credit">Chord data: <a href="https://huggingface.co/datasets/ailsntua/Chordonomicon" target="_blank" rel="noreferrer">Chordonomicon</a> by Kantarelis et al. (2024), CC BY-NC 4.0.</p>
-      <a class="footer-source" href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Source on GitHub <span aria-hidden="true">↗</span></a>
-    </footer>
-    <dialog class="demo-dialog" data-demo-dialog aria-label="Jam Frog demo tape">
-      <div class="demo-panel">
-        <div class="demo-panel-head"><span>JAM FROG / DEMO TAPE</span><button class="demo-close" type="button" data-demo-close aria-label="Close demo">×</button></div>
-        <div class="demo-screen"><canvas width="960" height="540" data-demo-canvas aria-label="Illustrative Jam Frog walkthrough"></canvas><video controls playsinline hidden data-demo-video aria-label="Rendered Jam Frog walkthrough"></video></div>
-        <div class="demo-panel-foot"><p data-demo-status role="status">Preparing a short illustrated walkthrough…</p><a class="demo-download" data-demo-download download="jam-frog-demo.webm" hidden>Download video ↓</a></div>
-      </div>
-    </dialog>
+    <footer class="site-footer section-wrap"><a class="wordmark" href="#top"><span class="wordmark-frog" aria-hidden="true"></span><span>Jam Frog</span></a><p>An Ableton Live music-making prototype.</p><a href="https://github.com/AlexS-127/jam-frog" target="_blank" rel="noreferrer">Source on GitHub ↗</a></footer>
+    <dialog class="demo-dialog" data-demo-dialog aria-label="Jam Frog demo walkthrough"><div class="demo-panel"><div class="demo-panel-head"><span>JAM FROG · PRODUCT WALKTHROUGH</span><button class="demo-close" type="button" data-demo-close aria-label="Close demo">×</button></div><div class="demo-screen"><canvas width="960" height="540" data-demo-canvas aria-label="Illustrative Jam Frog walkthrough"></canvas><video controls playsinline hidden data-demo-video aria-label="Rendered Jam Frog walkthrough"></video></div><div class="demo-panel-foot"><p data-demo-status role="status">Preparing a short illustrated walkthrough…</p><a class="demo-download" data-demo-download download="jam-frog-demo.webm" hidden>Download video</a></div></div></dialog>
     <script type="module" src="./frog-looks.js"></script>
     <script type="module" src="./demo-video.js"></script>
   </body>
